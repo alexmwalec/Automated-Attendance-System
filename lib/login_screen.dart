@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'invigilator_dashboard.dart';
 
 class LoginScreen extends StatelessWidget {
   const LoginScreen({super.key});
@@ -128,9 +129,12 @@ class LoginScreen extends StatelessWidget {
                     width: double.infinity,
                     child: ElevatedButton(
                       onPressed: () {
-                        // transition not yet added
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(content: Text('Sign in clicked')),
+                        // Using pushReplacement for "through one step back"
+                        Navigator.pushReplacement(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => const InvigilatorDashboard(),
+                          ),
                         );
                       },
                       style: ElevatedButton.styleFrom(
