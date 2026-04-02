@@ -128,7 +128,7 @@ class LoginScreen extends StatelessWidget {
                     width: double.infinity,
                     child: ElevatedButton(
                       onPressed: () {
-                        // Dummy login transition logic removed for now
+                        // transition not yet added
                         ScaffoldMessenger.of(context).showSnackBar(
                           const SnackBar(content: Text('Sign in clicked')),
                         );
