@@ -1,4 +1,6 @@
+
 import 'package:flutter/material.dart';
+import 'login_screen.dart';
 
 void main() {
   runApp(const AttendanceApp());
@@ -13,28 +15,14 @@ class AttendanceApp extends StatelessWidget {
       title: 'Attendance System',
       debugShowCheckedModeBanner: false,
       theme: ThemeData(
-        primarySwatch: Colors.blue,
-      ),
-      home: const HomeScreen(),
-    );
-  }
-}
-
-class HomeScreen extends StatelessWidget {
-  const HomeScreen({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('Automated Attendance System'),
-      ),
-      body: const Center(
-        child: Text(
-          "Project Setup Complete Team,Let's build it",
-          style: TextStyle(fontSize: 26),
+        useMaterial3: true,
+        primaryColor: const Color(0xFF5D00D2),
+        colorScheme: ColorScheme.fromSeed(
+          seedColor: const Color(0xFF5D00D2),
+          primary: const Color(0xFF5D00D2),
         ),
       ),
+      home: const LoginScreen(),
     );
   }
 }
