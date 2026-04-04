@@ -122,53 +122,64 @@ class InvigilatorDashboard extends StatelessWidget {
     );
   }
 }
-
 class AppDrawer extends StatelessWidget {
   const AppDrawer({super.key});
 
   @override
   Widget build(BuildContext context) {
     return Drawer(
-      child: Column(
+      child: ListView(
         children: [
-          // Custom Header with Close Button
-          Container(
-            padding: const EdgeInsets.only(top: 40, right: 8, left: 16),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                const SizedBox.shrink(), // Placeholder to keep the 'X' on the right
-                IconButton(
-                  icon: const Icon(Icons.close, color: Colors.black54),
-                  onPressed: () => Navigator.pop(context),
-                ),
-              ],
+          const SizedBox(height: 40),
+
+          const CircleAvatar(
+            radius: 40,
+            backgroundColor: Color(0xFFE0E0E0),
+            child: Icon(Icons.person, size: 50, color: Colors.grey),
+          ),
+
+          const Padding(
+            padding: EdgeInsets.all(12),
+            child: Text(
+              'MAIN NAVIGATION MENU',
+              style: TextStyle(fontWeight: FontWeight.bold),
             ),
           ),
-          Expanded(
-            child: ListView(
-              padding: EdgeInsets.zero,
-              children: const [
-                Padding(
-                  padding: EdgeInsets.symmetric(vertical: 8.0),
-                  child: CircleAvatar(
-                    radius: 40,
-                    backgroundColor: Color(0xFFE0E0E0),
-                    child: Icon(Icons.person, size: 50, color: Colors.grey),
-                  ),
-                ),
-                Padding(
-                  padding: EdgeInsets.only(left: 16.0, bottom: 8.0),
-                  child: Text('MAIN NAVIGATION MENU', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12)),
-                ),
-                DrawerItem(icon: Icons.dashboard, title: 'Dashboard'),
-                DrawerItem(icon: Icons.qr_code_scanner, title: 'Take Attendance'),
-                DrawerItem(icon: Icons.person_outline, title: 'Profile'),
-                DrawerItem(icon: Icons.assignment_outlined, title: 'Select Course'),
-                DrawerItem(icon: Icons.edit_note, title: 'Write Report'),
-                DrawerItem(icon: Icons.history, title: 'Attendance History'),
-              ],
-            ),
+
+          DrawerItem(
+            icon: Icons.dashboard,
+            title: 'Dashboard',
+            route: '/dashboard',
+          ),
+
+          DrawerItem(
+            icon: Icons.qr_code_scanner,
+            title: 'Take Attendance',
+            route: '/scanner',
+          ),
+
+          DrawerItem(
+            icon: Icons.person_outline,
+            title: 'Profile',
+            route: '/profile',
+          ),
+
+          DrawerItem(
+            icon: Icons.assignment_outlined,
+            title: 'Select Course',
+            route: '/course',
+          ),
+
+          DrawerItem(
+            icon: Icons.edit_note,
+            title: 'Write Report',
+            route: '/report',
+          ),
+
+          DrawerItem(
+            icon: Icons.history,
+            title: 'Attendance History',
+            route: '/attendance_history',
           ),
         ],
       ),
@@ -179,18 +190,27 @@ class AppDrawer extends StatelessWidget {
 class DrawerItem extends StatelessWidget {
   final IconData icon;
   final String title;
-  const DrawerItem({super.key, required this.icon, required this.title});
+  final String route;
+
+  const DrawerItem({
+    super.key,
+    required this.icon,
+    required this.title,
+    required this.route,
+  });
 
   @override
   Widget build(BuildContext context) {
     return ListTile(
       leading: Icon(icon, color: Colors.black54),
-      title: Text(title, style: const TextStyle(fontSize: 14)),
-      onTap: () => Navigator.pop(context),
+      title: Text(title),
+      onTap: () {
+        Navigator.pop(context); // close drawer
+        Navigator.pushReplacementNamed(context, route); // navigate
+      },
     );
   }
 }
-
 class InfoCard extends StatelessWidget {
   final IconData icon;
   final String title;

@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'Features/auth/screen/invigilator_dashboard.dart';
+import 'Features/invigilator/invigilator_dashboard.dart';
 
 class LoginScreen extends StatelessWidget {
   const LoginScreen({super.key});
@@ -129,13 +129,7 @@ class LoginScreen extends StatelessWidget {
                     width: double.infinity,
                     child: ElevatedButton(
                       onPressed: () {
-                        // Using pushReplacement for "through one step back"
-                        Navigator.pushReplacement(
-                          context,
-                          MaterialPageRoute(
-                            builder: (context) => const InvigilatorDashboard(),
-                          ),
-                        );
+                      Navigator.pushReplacement(context, MaterialPageRoute(builder: (context) => const InvigilatorDashboard()),);
                       },
                       style: ElevatedButton.styleFrom(
                         backgroundColor: unimaPurple,
