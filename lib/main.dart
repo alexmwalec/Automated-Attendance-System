@@ -32,7 +32,7 @@ class AttendanceApp extends StatelessWidget {
       routes: {
         "/": (context) => const LoginScreen(),
         "/dashboard": (context) => const InvigilatorDashboard(),
-        "/scanner": (context) => const TakeAttendance(),
+        "/scanner": (context) => const AttendancePage(),
         "/profile": (context) => const Profile(),
         "/course": (context) => const Course(),
         "/report": (context) => const Report(),
