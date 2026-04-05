@@ -231,7 +231,7 @@ class _AttendanceHistoryState extends State<AttendanceHistory> {
                             const SizedBox(width: 20),
                             Expanded(child: _buildStatCard('Lab Sessions 80')),
                             const SizedBox(width: 20),
-                            Expanded(child: _buildStatCard('Exam Sessiosn 40')),
+                            Expanded(child: _buildStatCard('Exam Sessions 40')),
                           ],
                         ),
                         const SizedBox(height: 40),
