@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:automated_attendance_system/Features/invigilator/invigilator_dashboard.dart';
+import 'package:automated_attendance_system/Features/Lecturer/invigilator_dashboard.dart';
 
 class AttendancePage extends StatelessWidget {
   const AttendancePage({super.key});

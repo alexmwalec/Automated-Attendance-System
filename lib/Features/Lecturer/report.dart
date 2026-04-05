@@ -1,4 +1,4 @@
-import 'package:automated_attendance_system/Features/invigilator/invigilator_dashboard.dart';
+import 'package:automated_attendance_system/Features/Lecturer//invigilator_dashboard.dart';
 import 'package:flutter/material.dart';
 
 class Report extends StatelessWidget {
@@ -55,7 +55,7 @@ class Report extends StatelessWidget {
                     style: TextStyle(
                         fontWeight: FontWeight.bold,
                         fontSize: 19,
-                        color: Colors.black),
+                        color: Colors.white),
                   ),
                 ],
               ),
