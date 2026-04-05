@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'Features/invigilator/invigilator_dashboard.dart';
+import 'Features/Lecturer/invigilator_dashboard.dart';
 
 class LoginScreen extends StatelessWidget {
   const LoginScreen({super.key});
