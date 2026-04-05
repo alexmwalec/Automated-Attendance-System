@@ -40,7 +40,7 @@ class AttendancePage extends StatelessWidget {
               width: double.infinity,
               padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
-                color: const Color(0xFFC5A021),
+                color: const Color(0xFFC5A021), // unima Gold colour
                 border: Border.all(color: Colors.grey.shade400),
 
               ),
