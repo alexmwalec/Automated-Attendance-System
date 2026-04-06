@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
-import 'Features/Lecturer/invigilator_dashboard.dart';
+import 'package:automated_attendance_system/Features/Lecturer/invigilator_dashboard.dart';
 
 class LoginScreen extends StatelessWidget {
   const LoginScreen({super.key});
 
-  static const Color unimaPurple = Color(0xFF5D00D2);
-  static const Color unimaGold = Color(0xFFC5A021);
+  static const Color appTeal = Colors.teal;
+  static const Color neutralGrey = Colors.grey;
   static const Color lightGreyBg = Color(0xFFF5F5F5);
 
   @override
@@ -19,154 +19,121 @@ class LoginScreen extends StatelessWidget {
             child: Container(
               decoration: BoxDecoration(
                 color: lightGreyBg,
-                borderRadius: BorderRadius.circular(8),
+                borderRadius: BorderRadius.circular(12),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(0.05),
+                    blurRadius: 10,
+                    offset: const Offset(0, 4),
+                  ),
+                ],
               ),
               padding: const EdgeInsets.all(32.0),
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Image.asset(
-                        'assets/unima_logo.jpg',
-                        height: 90,
-                        width: 90,
-                        fit: BoxFit.contain,
-                        errorBuilder: (context, error, stackTrace) {
-                          return const Icon(
-                            Icons.school,
-                            size: 90,
-                            color: unimaPurple,
-                          );
-                        },
-                      ),
-                      const SizedBox(width: 16),
-                      const Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            'UNIVERSITY OF',
-                            style: TextStyle(
-                              color: unimaGold,
-                              fontWeight: FontWeight.bold,
-                              fontSize: 12,
-                            ),
-                          ),
-                          Text(
-                            'MALAWI',
-                            style: TextStyle(
-                              color: unimaGold,
-                              fontWeight: FontWeight.bold,
-                              fontSize: 24,
-                              height: 1.0,
-                            ),
-                          ),
-                          Text(
-                            'AAS  PORTAL',
-                            style: TextStyle(
-                              color: unimaPurple,
-                              fontWeight: FontWeight.bold,
-                              letterSpacing: 1.5,
-                              fontSize: 14,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ],
+                  const Text(
+                    'AAS PORTAL',
+                    style: TextStyle(
+                      color: appTeal,
+                      fontSize: 24,
+                      fontWeight: FontWeight.bold,
+                      letterSpacing: 1.5,
+                    ),
                   ),
-                  const SizedBox(height: 40),
+                  const SizedBox(height: 32),
                   TextField(
+                    style: const TextStyle(color: Colors.black87),
                     decoration: InputDecoration(
                       hintText: 'Username',
                       hintStyle: const TextStyle(
-                        color: unimaGold,
-                        fontFamily: 'serif',
+                        color: neutralGrey,
                       ),
                       filled: true,
                       fillColor: Colors.white,
                       contentPadding: const EdgeInsets.symmetric(
-                          horizontal: 16, vertical: 12),
+                          horizontal: 16, vertical: 16),
                       enabledBorder: OutlineInputBorder(
                         borderSide:
-                            const BorderSide(color: Colors.grey, width: 0.5),
-                        borderRadius: BorderRadius.circular(4),
+                            const BorderSide(color: Color(0xFFE0E0E0), width: 1),
+                        borderRadius: BorderRadius.circular(8),
                       ),
                       focusedBorder: OutlineInputBorder(
                         borderSide:
-                            const BorderSide(color: unimaPurple, width: 1),
-                        borderRadius: BorderRadius.circular(4),
+                            const BorderSide(color: appTeal, width: 2),
+                        borderRadius: BorderRadius.circular(8),
                       ),
                     ),
                   ),
                   const SizedBox(height: 16),
                   TextField(
                     obscureText: true,
+                    style: const TextStyle(color: Colors.black87),
                     decoration: InputDecoration(
                       hintText: 'Password',
                       hintStyle: const TextStyle(
-                        color: unimaGold,
-                        fontFamily: 'serif',
+                        color: neutralGrey,
                       ),
                       filled: true,
                       fillColor: Colors.white,
                       contentPadding: const EdgeInsets.symmetric(
-                          horizontal: 16, vertical: 12),
+                          horizontal: 16, vertical: 16),
                       enabledBorder: OutlineInputBorder(
                         borderSide:
-                            const BorderSide(color: Colors.grey, width: 0.5),
-                        borderRadius: BorderRadius.circular(4),
+                            const BorderSide(color: Color(0xFFE0E0E0), width: 1),
+                        borderRadius: BorderRadius.circular(8),
                       ),
                       focusedBorder: OutlineInputBorder(
                         borderSide:
-                            const BorderSide(color: unimaPurple, width: 1),
-                        borderRadius: BorderRadius.circular(4),
+                            const BorderSide(color: appTeal, width: 2),
+                        borderRadius: BorderRadius.circular(8),
                       ),
                     ),
                   ),
-                  const SizedBox(height: 24),
+                  const SizedBox(height: 32),
                   SizedBox(
                     width: double.infinity,
                     child: ElevatedButton(
                       onPressed: () {
-                      Navigator.pushReplacement(context, MaterialPageRoute(builder: (context) => const InvigilatorDashboard()),);
+                        Navigator.pushReplacement(
+                          context,
+                          MaterialPageRoute(
+                              builder: (context) =>
+                                  const InvigilatorDashboard()),
+                        );
                       },
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: unimaPurple,
+                        backgroundColor: appTeal,
                         foregroundColor: Colors.white,
                         elevation: 0,
                         shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(4),
+                          borderRadius: BorderRadius.circular(8),
                         ),
                         padding: const EdgeInsets.symmetric(vertical: 16),
                       ),
                       child: const Text(
-                        'SIGN IN',
+                        'LOG IN',
                         style: TextStyle(
                           fontWeight: FontWeight.bold,
                           fontSize: 16,
+                          letterSpacing: 1.1,
                         ),
                       ),
                     ),
                   ),
                   const SizedBox(height: 24),
-                  const Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      Text(
-                        'visit us',
-                        style: TextStyle(
-                          color: unimaPurple,
-                          fontSize: 12,
-                          fontWeight: FontWeight.w500,
-                        ),
-                      ),
-                      Text(
-                        'Forgot password',
-                        style: TextStyle(
-                          color: unimaPurple,
-                          fontSize: 12,
-                          fontWeight: FontWeight.w500,
+                      GestureDetector(
+                        onTap: () {},
+                        child: const Text(
+                          'Forgot password?',
+                          style: TextStyle(
+                            color: appTeal,
+                            fontSize: 14,
+                            fontWeight: FontWeight.w600,
+                          ),
                         ),
                       ),
                     ],
