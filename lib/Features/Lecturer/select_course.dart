@@ -1,4 +1,6 @@
+import 'package:automated_attendance_system/Features/Lecturer/take_attendance.dart';
 import 'package:flutter/material.dart';
+
 
 // Match the colors from your dashboard
 const Color tealPrimary = Color(0xFF2E9E8E);
@@ -269,24 +271,17 @@ class _CourseSelectionScreenState extends State<CourseSelectionScreen> {
 
           const SizedBox(height: 24),
 
-          // Proceed Button
+          // Proceed Button - LINKED TO AttendancePage
           SizedBox(
             width: double.infinity,
             child: ElevatedButton(
               onPressed: () {
                 if (selectedSessionType != null && selectedCourse != null) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(
-                      content: Text(
-                        'Selected: $selectedSessionType - $selectedCourse',
-                        style: const TextStyle(fontSize: 14),
-                      ),
-                      backgroundColor: Colors.green,
-                      duration: const Duration(seconds: 2),
-                    ),
+                  // Navigate to AttendancePage
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (context) => const AttendancePage()),
                   );
-                  // Navigate to take attendance page
-                  // Navigator.pushNamed(context, '/scanner');
                 } else {
                   ScaffoldMessenger.of(context).showSnackBar(
                     const SnackBar(
