@@ -6,14 +6,9 @@ class Course extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text("Select Course"),
-      ),
+      appBar: AppBar(title: const Text("Select Course")),
       body: const Center(
-        child: Text(
-          "Course Selection",
-          style: TextStyle(fontSize: 20),
-        ),
+        child: Text("Course Selection", style: TextStyle(fontSize: 20)),
       ),
     );
   }
