@@ -1,13 +1,13 @@
 import 'package:flutter/material.dart';
 import 'select_course.dart'; // Import the Course page
 
-// ─── Constants ───────────────────────────────────────────────────────────────
+//Constants
 const Color tealPrimary = Color(0xFF2E9E8E); // main teal from screenshot
 const Color tealDark = Color(0xFF227A6D); // darker shade for headers
 const Color tealLight = Color(0xFFE0F2F0); // light teal background tint
 const Color tealAccent = Color(0xFF26A69A); // accent / active items
 
-// ─── Entry Widget ─────────────────────────────────────────────────────────────
+// Entry Widget
 class InvigilatorDashboard extends StatefulWidget {
   const InvigilatorDashboard({super.key});
 
@@ -67,7 +67,9 @@ class _InvigilatorDashboardState extends State<InvigilatorDashboard> {
                     color: Colors.white,
                     size: 26,
                   ),
-                  onPressed: () {},
+                  onPressed: () {
+                    Navigator.pushReplacementNamed(context, '/profile');
+                  },
                 ),
               ],
             ),
@@ -75,10 +77,10 @@ class _InvigilatorDashboardState extends State<InvigilatorDashboard> {
         ),
       ),
 
-      // ── Body ────────────────────────────────────────────────────────────────
+      // Body
       body: _pages[_currentIndex],
 
-      // ── Bottom Navigation — teal style ──────────────────────────────────────
+      // Bottom Navigation 
       bottomNavigationBar: BottomNavigationBar(
         currentIndex: _currentIndex,
         onTap: (i) => setState(() => _currentIndex = i),
@@ -118,7 +120,7 @@ class _InvigilatorDashboardState extends State<InvigilatorDashboard> {
   }
 }
 
-// ─── Dashboard Page ───────────────────────────────────────────────────────────
+// Dashboard Page
 class _DashboardPage extends StatelessWidget {
   const _DashboardPage();
 
@@ -129,25 +131,25 @@ class _DashboardPage extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // ── Welcome Card — matches screenshot card style ────────────────
+          // Welcome Card
           Container(
             width: double.infinity,
             padding: const EdgeInsets.all(18),
             decoration: BoxDecoration(
-              color: Colors.white.withOpacity(0.75),
-              border: Border.all(color: tealPrimary.withOpacity(0.3)),
+              color: Colors.white.withValues(alpha: 0.75),
+              border: Border.all(color: tealPrimary.withValues(alpha: 0.3)),
               borderRadius: BorderRadius.circular(12),
               boxShadow: [
                 BoxShadow(
-                  color: tealPrimary.withOpacity(0.1),
+                  color: tealPrimary.withValues(alpha: 0.1),
                   blurRadius: 8,
                   offset: const Offset(0, 3),
                 ),
               ],
             ),
-            child: Column(
+            child: const Column(
               crossAxisAlignment: CrossAxisAlignment.start,
-              children: const [
+              children: [
                 Text(
                   'Welcome Back!',
                   style: TextStyle(
@@ -166,8 +168,8 @@ class _DashboardPage extends StatelessWidget {
           ),
           const SizedBox(height: 16),
 
-          // ── Info Cards Row ─────────────────────────────────────────────
-          Row(
+          //Info Cards Row 
+      const Row(
             children: [
               Expanded(
                 child: _InfoCard(
@@ -177,7 +179,7 @@ class _DashboardPage extends StatelessWidget {
                   subtitle: '3 Courses',
                 ),
               ),
-              const SizedBox(width: 12),
+              SizedBox(width: 12),
               Expanded(
                 child: _InfoCard(
                   icon: Icons.calendar_today,
@@ -190,13 +192,13 @@ class _DashboardPage extends StatelessWidget {
           ),
           const SizedBox(height: 20),
 
-          // ── Today's Sessions ───────────────────────────────────────────
+          // Today's Sessions
           const _SectionHeader(title: "TODAY'S SESSIONS"),
           const SizedBox(height: 8),
           const _TodaysSessionsTable(),
           const SizedBox(height: 20),
 
-          // ── Approved Absence ───────────────────────────────────────────
+          // Approved Absence
           const _SectionHeader(title: 'APPROVED ABSENCE'),
           const SizedBox(height: 8),
           const _ApprovedAbsenceTable(),
@@ -207,7 +209,7 @@ class _DashboardPage extends StatelessWidget {
   }
 }
 
-// ─── Placeholder Pages ────────────────────────────────────────────────────────
+// Placeholder Pages
 class _TakeAttendancePage extends StatelessWidget {
   const _TakeAttendancePage();
   @override
@@ -254,7 +256,7 @@ class _PlaceholderPage extends StatelessWidget {
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Icon(icon, size: 64, color: tealPrimary.withOpacity(0.4)),
+          Icon(icon, size: 64, color: tealPrimary.withValues(alpha: 0.4)),
           const SizedBox(height: 16),
           Text(
             title,
@@ -275,7 +277,7 @@ class _PlaceholderPage extends StatelessWidget {
   }
 }
 
-// ─── Info Card ────────────────────────────────────────────────────────────────
+// Info Card
 class _InfoCard extends StatelessWidget {
   final IconData icon;
   final Color iconColor;
@@ -295,11 +297,11 @@ class _InfoCard extends StatelessWidget {
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
         color: Colors.white,
-        border: Border.all(color: tealPrimary.withOpacity(0.2)),
+        border: Border.all(color: tealPrimary.withValues(alpha: 0.2)),
         borderRadius: BorderRadius.circular(10),
         boxShadow: [
           BoxShadow(
-            color: tealPrimary.withOpacity(0.07),
+            color: tealPrimary.withValues(alpha: 0.07),
             blurRadius: 6,
             offset: const Offset(0, 2),
           ),
@@ -310,7 +312,7 @@ class _InfoCard extends StatelessWidget {
           Container(
             padding: const EdgeInsets.all(10),
             decoration: BoxDecoration(
-              color: iconColor.withOpacity(0.12),
+              color: iconColor.withValues(alpha: 0.12),
               borderRadius: BorderRadius.circular(8),
             ),
             child: Icon(icon, size: 26, color: iconColor),
@@ -342,7 +344,7 @@ class _InfoCard extends StatelessWidget {
   }
 }
 
-// ─── Section Header ───────────────────────────────────────────────────────────
+// Section Header
 class _SectionHeader extends StatelessWidget {
   final String title;
   const _SectionHeader({required this.title});
@@ -361,7 +363,7 @@ class _SectionHeader extends StatelessWidget {
   }
 }
 
-// ─── Today's Sessions Table ───────────────────────────────────────────────────
+// Today's Sessions Table
 class _TodaysSessionsTable extends StatelessWidget {
   const _TodaysSessionsTable();
 
@@ -382,7 +384,7 @@ class _TodaysSessionsTable extends StatelessWidget {
 
     return Container(
       decoration: BoxDecoration(
-        border: Border.all(color: tealPrimary.withOpacity(0.3)),
+        border: Border.all(color: tealPrimary.withValues(alpha: 0.3)),
         borderRadius: BorderRadius.circular(8),
         color: Colors.white,
       ),
@@ -422,7 +424,7 @@ class _TodaysSessionsTable extends StatelessWidget {
               final row = entry.value;
               final typeColor = typeColors[row[0]] ?? Colors.grey;
               return Container(
-                color: i.isEven ? Colors.white : tealLight.withOpacity(0.5),
+                color: i.isEven ? Colors.white : tealLight.withValues(alpha: 0.5),
                 child: Row(
                   children: row.asMap().entries.map((cell) {
                     final isType = cell.key == 0;
@@ -439,7 +441,7 @@ class _TodaysSessionsTable extends StatelessWidget {
                                   vertical: 2,
                                 ),
                                 decoration: BoxDecoration(
-                                  color: typeColor.withOpacity(0.13),
+                                  color: typeColor.withValues(alpha: 0.13),
                                   borderRadius: BorderRadius.circular(4),
                                 ),
                                 child: Text(
@@ -471,7 +473,7 @@ class _TodaysSessionsTable extends StatelessWidget {
   }
 }
 
-// ─── Approved Absence Table ───────────────────────────────────────────────────
+// Approved Absence Table
 class _ApprovedAbsenceTable extends StatelessWidget {
   const _ApprovedAbsenceTable();
 
@@ -494,7 +496,7 @@ class _ApprovedAbsenceTable extends StatelessWidget {
 
     return Container(
       decoration: BoxDecoration(
-        border: Border.all(color: tealPrimary.withOpacity(0.3)),
+        border: Border.all(color: tealPrimary.withValues(alpha: 0.3)),
         borderRadius: BorderRadius.circular(8),
         color: Colors.white,
       ),
@@ -536,7 +538,7 @@ class _ApprovedAbsenceTable extends StatelessWidget {
               final i = entry.key;
               final row = entry.value;
               return Container(
-                color: i.isEven ? Colors.white : tealLight.withOpacity(0.5),
+                color: i.isEven ? Colors.white : tealLight.withValues(alpha: 0.5),
                 child: Row(
                   children: row
                       .asMap()
