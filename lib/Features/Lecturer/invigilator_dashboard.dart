@@ -157,7 +157,7 @@ class _DashboardPage extends StatelessWidget {
                 ),
                 SizedBox(height: 6),
                 Text(
-                  'Ready to manage your class attendance efficiently.',
+                  'Use this dashboard to manage class, lab, and exam attendance, assign invigilators, and monitor attendance reports',
                   style: TextStyle(fontSize: 13, color: Colors.black54),
                 ),
               ],
