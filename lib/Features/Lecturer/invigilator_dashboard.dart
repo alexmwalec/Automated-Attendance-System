@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'select_course.dart'; // Import the Course page
 
 // ─── Constants ───────────────────────────────────────────────────────────────
 const Color tealPrimary = Color(0xFF2E9E8E); // main teal from screenshot
@@ -17,11 +18,11 @@ class InvigilatorDashboard extends StatefulWidget {
 class _InvigilatorDashboardState extends State<InvigilatorDashboard> {
   int _currentIndex = 0;
 
-  final List<Widget> _pages = const [
-    _DashboardPage(),
-    _TakeAttendancePage(),
-    _AttendanceHistoryPage(),
-    _AssignTaskPage(),
+  final List<Widget> _pages = [
+    const _DashboardPage(),
+    const Course(), // This now opens your select-course.dart page
+    const _AttendanceHistoryPage(),
+    const _AssignTaskPage(),
   ];
 
   @override
