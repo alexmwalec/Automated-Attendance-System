@@ -149,7 +149,7 @@ class _DashboardPage extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: const [
                 Text(
-                  'Welcome Back!',
+                  'Welcome Back',
                   style: TextStyle(
                     fontSize: 18,
                     fontWeight: FontWeight.bold,
