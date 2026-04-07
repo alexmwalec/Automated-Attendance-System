@@ -20,7 +20,8 @@ class _InvigilatorDashboardState extends State<InvigilatorDashboard> {
 
   final List<Widget> _pages = [
     const _DashboardPage(),
-    const Course(), // This now opens your select-course.dart page
+    const Course(), // Replace with the Course page
+    const _TakeAttendancePage(),
     const _AttendanceHistoryPage(),
     const _AssignTaskPage(),
   ];
@@ -30,7 +31,6 @@ class _InvigilatorDashboardState extends State<InvigilatorDashboard> {
     return Scaffold(
       backgroundColor: tealLight,
 
-      // ── AppBar — matches screenshot header style ─────────────────────────
       appBar: AppBar(
         backgroundColor: tealPrimary,
         automaticallyImplyLeading: false,
