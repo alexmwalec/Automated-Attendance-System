@@ -11,14 +11,21 @@ const Color tealAccent = Color(0xFF26A69A);
 
 // ─── Entry Widget ─────────────────────────────────────────────────────────────
 class InvigilatorDashboard extends StatefulWidget {
-  const InvigilatorDashboard({super.key});
+  final int initialIndex;
+  const InvigilatorDashboard({super.key, this.initialIndex = 0});
 
   @override
   State<InvigilatorDashboard> createState() => _InvigilatorDashboardState();
 }
 
 class _InvigilatorDashboardState extends State<InvigilatorDashboard> {
-  int _currentIndex = 0;
+  late int _currentIndex;
+
+  @override
+  void initState() {
+    super.initState();
+    _currentIndex = widget.initialIndex;
+  }
 
   final List<Widget> _pages = [
     const _DashboardPage(),
