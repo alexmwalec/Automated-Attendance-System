@@ -2,7 +2,6 @@ import 'package:automated_attendance_system/Features/Lecturer/take_attendance.da
 import 'package:flutter/material.dart';
 
 
-// Match the colors from your dashboard
 const Color tealPrimary = Color(0xFF2E9E8E);
 const Color tealDark = Color(0xFF227A6D);
 const Color tealLight = Color(0xFFE0F2F0);
@@ -17,8 +16,9 @@ class Course extends StatelessWidget {
       backgroundColor: tealLight,
       appBar: AppBar(
         title: const Text(
-          "Select Course",
-          style: TextStyle(fontWeight: FontWeight.bold),
+          "",
+          style: TextStyle(fontWeight: FontWeight.bold , color: Colors.white),
+
         ),
         backgroundColor: tealPrimary,
         elevation: 0,
@@ -304,7 +304,7 @@ class _CourseSelectionScreenState extends State<CourseSelectionScreen> {
                 elevation: 2,
               ),
               child: const Text(
-                'Proceed to Attendance',
+                'Proceed to Scanning',
                 style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
               ),
             ),
