@@ -1,13 +1,15 @@
 import 'package:flutter/material.dart';
-import 'select_course.dart'; // Import the Course page
+import 'select_course.dart';
 
-// ─── Constants ───────────────────────────────────────────────────────────────
-const Color tealPrimary = Color(0xFF2E9E8E); // main teal from screenshot
-const Color tealDark = Color(0xFF227A6D); // darker shade for headers
+
+
+
+const Color tealPrimary = Color(0xFF2E9E8E);
+const Color tealDark = Color(0xFF227A6D);
 const Color tealLight = Color(0xFFE0F2F0); // light teal background tint
 const Color tealAccent = Color(0xFF26A69A); // accent / active items
 
-// ─── Entry Widget ─────────────────────────────────────────────────────────────
+
 class InvigilatorDashboard extends StatefulWidget {
   const InvigilatorDashboard({super.key});
 
@@ -75,10 +77,10 @@ class _InvigilatorDashboardState extends State<InvigilatorDashboard> {
         ),
       ),
 
-      // ── Body ────────────────────────────────────────────────────────────────
+
       body: _pages[_currentIndex],
 
-      // ── Bottom Navigation — teal style ──────────────────────────────────────
+
       bottomNavigationBar: BottomNavigationBar(
         currentIndex: _currentIndex,
         onTap: (i) => setState(() => _currentIndex = i),
@@ -118,7 +120,7 @@ class _InvigilatorDashboardState extends State<InvigilatorDashboard> {
   }
 }
 
-// ─── Dashboard Page ───────────────────────────────────────────────────────────
+//  Dashboard Page
 class _DashboardPage extends StatelessWidget {
   const _DashboardPage();
 
@@ -129,7 +131,7 @@ class _DashboardPage extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // ── Welcome Card — matches screenshot card style ────────────────
+
           Container(
             width: double.infinity,
             padding: const EdgeInsets.all(18),
@@ -196,7 +198,7 @@ class _DashboardPage extends StatelessWidget {
           const _TodaysSessionsTable(),
           const SizedBox(height: 20),
 
-          // ── Approved Absence ───────────────────────────────────────────
+
           const _SectionHeader(title: 'APPROVED ABSENCE'),
           const SizedBox(height: 8),
           const _ApprovedAbsenceTable(),
@@ -207,7 +209,7 @@ class _DashboardPage extends StatelessWidget {
   }
 }
 
-// ─── Placeholder Pages ────────────────────────────────────────────────────────
+
 class _TakeAttendancePage extends StatelessWidget {
   const _TakeAttendancePage();
   @override
@@ -275,7 +277,7 @@ class _PlaceholderPage extends StatelessWidget {
   }
 }
 
-// ─── Info Card ────────────────────────────────────────────────────────────────
+//Info Card
 class _InfoCard extends StatelessWidget {
   final IconData icon;
   final Color iconColor;
@@ -342,7 +344,7 @@ class _InfoCard extends StatelessWidget {
   }
 }
 
-// ─── Section Header ───────────────────────────────────────────────────────────
+
 class _SectionHeader extends StatelessWidget {
   final String title;
   const _SectionHeader({required this.title});
@@ -361,7 +363,7 @@ class _SectionHeader extends StatelessWidget {
   }
 }
 
-// ─── Today's Sessions Table ───────────────────────────────────────────────────
+
 class _TodaysSessionsTable extends StatelessWidget {
   const _TodaysSessionsTable();
 
@@ -471,7 +473,7 @@ class _TodaysSessionsTable extends StatelessWidget {
   }
 }
 
-// ─── Approved Absence Table ───────────────────────────────────────────────────
+// Approved Absence Table
 class _ApprovedAbsenceTable extends StatelessWidget {
   const _ApprovedAbsenceTable();
 
