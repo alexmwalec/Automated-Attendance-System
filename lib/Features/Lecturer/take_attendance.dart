@@ -107,8 +107,7 @@ class _AttendancePageState extends State<AttendancePage> {
                 ],
               ),
               const SizedBox(height: 30),
-
-              Container(
+               Container(
                 height: 350,
                 width: double.infinity,
                 decoration: BoxDecoration(
