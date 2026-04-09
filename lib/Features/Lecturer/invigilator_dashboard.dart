@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'select_course.dart'; // Import the Course page
 import 'assign.dart'; // Import the Assign Invigilator page (class: Assign)
+import 'attendance_history.dart'; // Import the Attendance History page
 
 // ─── Constants ───────────────────────────────────────────────────────────────
 const Color tealPrimary = Color(0xFF2E9E8E);
@@ -94,7 +95,15 @@ class _InvigilatorDashboardState extends State<InvigilatorDashboard> {
       bottomNavigationBar: BottomNavigationBar(
         currentIndex: _currentIndex,
         onTap: (i) {
-          if (i == 3) {
+          if (i == 2) {
+            // Navigate to Attendance History page as a new route
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (_) => const AttendanceHistory(),
+              ),
+            );
+          } else if (i == 3) {
             // Navigate to Assign Invigilator page as a new route
             Navigator.push(
               context,
