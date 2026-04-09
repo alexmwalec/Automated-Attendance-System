@@ -4,6 +4,8 @@
 <dict>
 	<key>CFBundleDevelopmentRegion</key>
 	<string>$(DEVELOPMENT_LANGUAGE)</string>
+	<Key>NSCameraUsageDescription></key>
+	<string>To scan QR code for student ID to take attendance for classes,exams and labs</string>
 	<key>CFBundleDisplayName</key>
 	<string>Automated Attendance System</string>
 	<key>CFBundleExecutable</key>
