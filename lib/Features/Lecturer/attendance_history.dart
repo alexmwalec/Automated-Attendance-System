@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'invigilator_dashboard.dart';
 import 'select_course.dart';
 import 'assign.dart';
+import 'viewlist.dart';
 
 const Color tealPrimary = Color(0xFF2E9E8E);
 const Color tealDark = Color(0xFF227A6D);
@@ -153,15 +154,28 @@ class _AttendanceHistoryState extends State<AttendanceHistory> {
                       _TableCellText(item['absent']!),
                       Expanded(
                         child: Center(
-                          child: Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                            decoration: BoxDecoration(
-                              color: tealPrimary,
-                              borderRadius: BorderRadius.circular(2),
-                            ),
-                            child: const Text(
-                              "VIEW",
-                              style: TextStyle(color: Colors.white, fontSize: 10),
+                          child: GestureDetector(
+                            behavior: HitTestBehavior.opaque,
+                            onTap: () {
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(builder: (_) => const ViewList()),
+                              );
+                            },
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                              decoration: BoxDecoration(
+                                color: tealPrimary,
+                                borderRadius: BorderRadius.circular(4),
+                              ),
+                              child: const Text(
+                                "VIEW",
+                                style: TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 10,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
                             ),
                           ),
                         ),
