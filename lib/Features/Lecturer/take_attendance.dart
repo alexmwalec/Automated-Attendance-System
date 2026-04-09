@@ -99,8 +99,7 @@ class _AttendancePageState extends State<AttendancePage> {
           padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 20.0),
           child: Column(
             children: [
-              // Internal Back Header (Optional, keeps UI functional)
-              Row(
+                        Row(
                 children: [
                   IconButton(
                     icon: const Icon(Icons.arrow_back, color: tealDark),
@@ -152,18 +151,6 @@ class _AttendancePageState extends State<AttendancePage> {
                   ),
                 ),
               ),
-
-              const SizedBox(height: 40),
-              const Text(
-                'Align QR code within frame',
-                style: TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.w600,
-                  color: Colors.black87,
-                ),
-              ),
-              const SizedBox(height: 24),
-
               // Instructions Card
               Container(
                 width: double.infinity,
