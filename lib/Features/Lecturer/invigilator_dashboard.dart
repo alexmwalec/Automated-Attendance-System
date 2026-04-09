@@ -1,13 +1,15 @@
 import 'package:flutter/material.dart';
-import 'select_course.dart'; // Import the Course page
+import 'select_course.dart';
 
-// ─── Constants ───────────────────────────────────────────────────────────────
+
+
+
 const Color tealPrimary = Color(0xFF2E9E8E);
 const Color tealDark = Color(0xFF227A6D);
-const Color tealLight = Color(0xFFDFF2EF);
-const Color tealAccent = Color(0xFF26A69A);
+const Color tealLight = Color(0xFFE0F2F0); // light teal background tint
+const Color tealAccent = Color(0xFF26A69A); // accent / active items
 
-// ─── Entry Widget ─────────────────────────────────────────────────────────────
+
 class InvigilatorDashboard extends StatefulWidget {
   const InvigilatorDashboard({super.key});
 
@@ -86,10 +88,10 @@ class _InvigilatorDashboardState extends State<InvigilatorDashboard> {
         ),
       ),
 
-      // ── Body ─────────────────────────────────────────────────────────────────
+
       body: _pages[_currentIndex],
 
-      // ── Bottom Navigation ────────────────────────────────────────────────────
+
       bottomNavigationBar: BottomNavigationBar(
         currentIndex: _currentIndex,
         onTap: (i) => setState(() => _currentIndex = i),
@@ -129,7 +131,7 @@ class _InvigilatorDashboardState extends State<InvigilatorDashboard> {
   }
 }
 
-// ─── Dashboard Page ───────────────────────────────────────────────────────────
+//  Dashboard Page
 class _DashboardPage extends StatelessWidget {
   const _DashboardPage();
 
@@ -140,9 +142,42 @@ class _DashboardPage extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // ── Welcome Card ──────────────────────────────────────────────────
-          _WelcomeCard(),
-          const SizedBox(height: 14),
+
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.all(18),
+            decoration: BoxDecoration(
+              color: Colors.white.withOpacity(0.75),
+              border: Border.all(color: tealPrimary.withOpacity(0.3)),
+              borderRadius: BorderRadius.circular(12),
+              boxShadow: [
+                BoxShadow(
+                  color: tealPrimary.withOpacity(0.1),
+                  blurRadius: 8,
+                  offset: const Offset(0, 3),
+                ),
+              ],
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: const [
+                Text(
+                  'Welcome Back!',
+                  style: TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                    color: tealPrimary,
+                  ),
+                ),
+                SizedBox(height: 6),
+                Text(
+                  'Use this dashboard to manage class, lab, and exam attendance, assign invigilators, and monitor attendance reports',
+                  style: TextStyle(fontSize: 13, color: Colors.black54),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 16),
 
           // ── Info Cards Row ────────────────────────────────────────────────
           Row(
@@ -172,6 +207,12 @@ class _DashboardPage extends StatelessWidget {
           const _SectionHeader(title: "TODAY'S SESSION'S"),
           const SizedBox(height: 8),
           const _TodaysSessionsTable(),
+          const SizedBox(height: 20),
+
+
+          const _SectionHeader(title: 'APPROVED ABSENCE'),
+          const SizedBox(height: 8),
+          const _ApprovedAbsenceTable(),
           const SizedBox(height: 16),
         ],
       ),
@@ -179,8 +220,47 @@ class _DashboardPage extends StatelessWidget {
   }
 }
 
-// ─── Welcome Card ─────────────────────────────────────────────────────────────
-class _WelcomeCard extends StatelessWidget {
+
+class _TakeAttendancePage extends StatelessWidget {
+  const _TakeAttendancePage();
+  @override
+  Widget build(BuildContext context) => const _PlaceholderPage(
+    icon: Icons.check_circle_outline,
+    title: 'Take Attendance',
+    subtitle: 'Record student attendance',
+  );
+}
+
+class _AttendanceHistoryPage extends StatelessWidget {
+  const _AttendanceHistoryPage();
+  @override
+  Widget build(BuildContext context) => const _PlaceholderPage(
+    icon: Icons.history_outlined,
+    title: 'Attendance History',
+    subtitle: 'View past attendance records',
+  );
+}
+
+class _AssignTaskPage extends StatelessWidget {
+  const _AssignTaskPage();
+  @override
+  Widget build(BuildContext context) => const _PlaceholderPage(
+    icon: Icons.assignment_outlined,
+    title: 'Assign Task',
+    subtitle: 'Assign tasks to students',
+  );
+}
+
+class _PlaceholderPage extends StatelessWidget {
+  final IconData icon;
+  final String title;
+  final String subtitle;
+  const _PlaceholderPage({
+    required this.icon,
+    required this.title,
+    required this.subtitle,
+  });
+
   @override
   Widget build(BuildContext context) {
     return Container(
@@ -226,7 +306,7 @@ class _WelcomeCard extends StatelessWidget {
   }
 }
 
-// ─── Info Card ────────────────────────────────────────────────────────────────
+//Info Card
 class _InfoCard extends StatelessWidget {
   final IconData icon;
   final Color iconColor;
@@ -299,7 +379,7 @@ class _InfoCard extends StatelessWidget {
   }
 }
 
-// ─── Section Header ───────────────────────────────────────────────────────────
+
 class _SectionHeader extends StatelessWidget {
   final String title;
   const _SectionHeader({required this.title});
@@ -318,7 +398,7 @@ class _SectionHeader extends StatelessWidget {
   }
 }
 
-// ─── Today's Sessions Table ───────────────────────────────────────────────────
+
 class _TodaysSessionsTable extends StatelessWidget {
   const _TodaysSessionsTable();
 
@@ -419,16 +499,9 @@ class _TodaysSessionsTable extends StatelessWidget {
   }
 }
 
-// ─── Placeholder Pages ────────────────────────────────────────────────────────
-class _TakeAttendancePage extends StatelessWidget {
-  const _TakeAttendancePage();
-  @override
-  Widget build(BuildContext context) => const _PlaceholderPage(
-        icon: Icons.check_circle_outline,
-        title: 'Take Attendance',
-        subtitle: 'Record student attendance',
-      );
-}
+// Approved Absence Table
+class _ApprovedAbsenceTable extends StatelessWidget {
+  const _ApprovedAbsenceTable();
 
 class _AttendanceHistoryPage extends StatelessWidget {
   const _AttendanceHistoryPage();

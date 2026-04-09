@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 
-// Using constants from invigilator_dashboard.dart
+
 const Color tealPrimary = Color(0xFF2E9E8E);
 const Color tealDark = Color(0xFF227A6D);
 const Color tealLight = Color(0xFFE0F2F0);
@@ -13,14 +13,13 @@ class AttendanceHistory extends StatefulWidget {
 }
 
 class _AttendanceHistoryState extends State<AttendanceHistory> {
-  // Using the teal theme
   static const Color scanBg = tealLight;
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: scanBg,
-      // Header matching invigilator_dashboard.dart
+
       appBar: AppBar(
         backgroundColor: tealPrimary,
         automaticallyImplyLeading: true, // Allows back button if needed
@@ -50,7 +49,7 @@ class _AttendanceHistoryState extends State<AttendanceHistory> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Header Card matching the "Welcome Back" style
+
             Container(
               width: double.infinity,
               padding: const EdgeInsets.all(18),
@@ -92,7 +91,7 @@ class _AttendanceHistoryState extends State<AttendanceHistory> {
             ),
             const SizedBox(height: 20),
 
-            // Stats Row using the Teal Info Card style
+
             Row(
               children: [
                 Expanded(
@@ -138,7 +137,7 @@ class _AttendanceHistoryState extends State<AttendanceHistory> {
     );
   }
 
-  // Helper to build cards matching the dashboard style
+
   Widget _buildTealStatCard(IconData icon, String title, String value) {
     return Container(
       padding: const EdgeInsets.all(12),
