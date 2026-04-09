@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'select_course.dart'; // Import the Course page
+import 'assign.dart'; // Import the Assign Invigilator page (class: Assign)
 
 // ─── Constants ───────────────────────────────────────────────────────────────
 const Color tealPrimary = Color(0xFF2E9E8E);
@@ -92,7 +93,19 @@ class _InvigilatorDashboardState extends State<InvigilatorDashboard> {
       // ── Bottom Navigation ────────────────────────────────────────────────────
       bottomNavigationBar: BottomNavigationBar(
         currentIndex: _currentIndex,
-        onTap: (i) => setState(() => _currentIndex = i),
+        onTap: (i) {
+          if (i == 3) {
+            // Navigate to Assign Invigilator page as a new route
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (_) => const Assign(),
+              ),
+            );
+          } else {
+            setState(() => _currentIndex = i);
+          }
+        },
         type: BottomNavigationBarType.fixed,
         backgroundColor: tealPrimary,
         selectedItemColor: Colors.white,
@@ -443,11 +456,19 @@ class _AttendanceHistoryPage extends StatelessWidget {
 class _AssignTaskPage extends StatelessWidget {
   const _AssignTaskPage();
   @override
-  Widget build(BuildContext context) => const _PlaceholderPage(
-        icon: Icons.assignment_outlined,
-        title: 'Assign Task',
-        subtitle: 'Assign tasks to students',
+  Widget build(BuildContext context) {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (_) => const Assign(),
+        ),
       );
+    });
+    return const Center(
+      child: CircularProgressIndicator(color: tealPrimary),
+    );
+  }
 }
 
 class _PlaceholderPage extends StatelessWidget {
