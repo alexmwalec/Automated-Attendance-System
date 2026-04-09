@@ -1,8 +1,11 @@
 import 'package:flutter/material.dart';
+import 'invigilator_dashboard.dart';
+import 'select_course.dart';
+import 'assign.dart';
 
 const Color tealPrimary = Color(0xFF2E9E8E);
 const Color tealDark = Color(0xFF227A6D);
-const Color tealLight = Color(0xFFE0F2F0);
+const Color tealLight = Color(0xFFDFF2EF);
 
 class AttendanceHistory extends StatefulWidget {
   const AttendanceHistory({super.key});
@@ -12,36 +15,46 @@ class AttendanceHistory extends StatefulWidget {
 }
 
 class _AttendanceHistoryState extends State<AttendanceHistory> {
-  // Mock data representing the table
+
+  int _currentIndex = 2; // Attendance History tab active
+
+  void _onNavTap(int index) {
+    if (index == _currentIndex) return;
+
+    if (index == 0) {
+      Navigator.pushAndRemoveUntil(
+        context,
+        MaterialPageRoute(builder: (_) => const InvigilatorDashboard(initialIndex: 0)),
+        (route) => false,
+      );
+    } else if (index == 1) {
+      Navigator.pushAndRemoveUntil(
+        context,
+        MaterialPageRoute(builder: (_) => const InvigilatorDashboard(initialIndex: 1)),
+        (route) => false,
+      );
+    } else if (index == 3) {
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(builder: (_) => const Assign()),
+      );
+    }
+  }
+
+  // Dummy data to show table representation
   final List<Map<String, String>> attendanceData = [
-    {"date": "14 may", "course": "com411", "type": "Class", "year": "4", "present": "70", "absent": "0"},
-    {"date": "14 may", "course": "com411", "type": "Class", "year": "4", "present": "24", "absent": "0"},
-    {"date": "14 may", "course": "com411", "type": "Class", "year": "4", "present": "89", "absent": "7"},
-    {"date": "14 may", "course": "com411", "type": "Class", "year": "4", "present": "99", "absent": "1"},
-    {"date": "14 may", "course": "com411", "type": "Class", "year": "4", "present": "98", "absent": "7"},
-    {"date": "14 may", "course": "com411", "type": "Lab", "year": "4", "present": "64", "absent": "7"},
-    {"date": "14 may", "course": "com411", "type": "Lab", "year": "3", "present": "70", "absent": "4"},
-    {"date": "14 may", "course": "com411", "type": "Lab", "year": "3", "present": "24", "absent": "2"},
-    {"date": "14 may", "course": "com411", "type": "Lab", "year": "3", "present": "25", "absent": "1"},
-    {"date": "14 may", "course": "com411", "type": "Lab", "year": "3", "present": "58", "absent": "0"},
-    {"date": "14 may", "course": "com411", "type": "Lab", "year": "3", "present": "70", "absent": "0"},
-    {"date": "14 may", "course": "com411", "type": "Lab", "year": "2", "present": "21", "absent": "7"},
-    {"date": "14 may", "course": "com411", "type": "Lab", "year": "2", "present": "70", "absent": "0"},
-    {"date": "14 may", "course": "com411", "type": "Exam", "year": "2", "present": "70", "absent": "0"},
-    {"date": "14 may", "course": "com411", "type": "Exam", "year": "2", "present": "70", "absent": "5"},
-    {"date": "14 may", "course": "com411", "type": "Exam", "year": "2", "present": "70", "absent": "0"},
-    {"date": "14 may", "course": "com411", "type": "Exam", "year": "2", "present": "67", "absent": "0"},
-    {"date": "14 may", "course": "com411", "type": "Exam", "year": "2", "present": "45", "absent": "0"},
-    {"date": "14 may", "course": "com411", "type": "Exam", "year": "1", "present": "100", "absent": "0"},
-    {"date": "14 may", "course": "com411", "type": "Exam", "year": "1", "present": "60", "absent": "4"},
+    {"date": "02 March", "course": "COM411", "type": "Class", "year": "4", "present": "70", "absent": "0"},
+    {"date": "12 March", "course": "COM411", "type": "lab", "year": "4", "present": "24", "absent": "0"},
+    {"date": "1 April", "course": "COM411", "type": "Exam", "year": "4", "present": "89", "absent": "7"},
   ];
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.white,
+      backgroundColor: tealLight,
       appBar: AppBar(
         backgroundColor: tealPrimary,
+        automaticallyImplyLeading: false,
         elevation: 0,
         title: const Text(
           'AAS',
@@ -55,22 +68,31 @@ class _AttendanceHistoryState extends State<AttendanceHistory> {
           const Padding(
             padding: EdgeInsets.only(right: 16.0),
             child: CircleAvatar(
-              backgroundColor: Colors.grey,
+              backgroundColor: Colors.teal,
               radius: 15,
+
+                child: const Icon(Icons.person_outline,
+                    color: Colors.white, size: 18)
             ),
+
           ),
+
         ],
       ),
       body: SingleChildScrollView(
+        padding: const EdgeInsets.all(14),
         child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Placeholder for the top empty section
-            Container(
-              height: 80,
-              color: tealLight.withOpacity(0.3),
+            const Text(
+              'Attendance History',
+              style: TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.bold,
+                color: tealPrimary,
+              ),
             ),
-            const SizedBox(height: 20),
-            // Stats Row
+            const SizedBox(height: 14),
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 10.0),
               child: Row(
@@ -84,7 +106,6 @@ class _AttendanceHistoryState extends State<AttendanceHistory> {
               ),
             ),
             const SizedBox(height: 20),
-            // Filters Row - "Select Year" removed here
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 10.0),
               child: Row(
@@ -97,9 +118,7 @@ class _AttendanceHistoryState extends State<AttendanceHistory> {
               ),
             ),
             const SizedBox(height: 40),
-            // Divider line
             const Divider(color: tealPrimary, thickness: 2, indent: 10, endIndent: 10),
-            // Table Headers
             const Padding(
               padding: EdgeInsets.symmetric(horizontal: 10.0, vertical: 8.0),
               child: Row(
@@ -115,7 +134,6 @@ class _AttendanceHistoryState extends State<AttendanceHistory> {
                 ],
               ),
             ),
-            // Table Content
             ListView.builder(
               shrinkWrap: true,
               physics: const NeverScrollableScrollPhysics(),
@@ -142,7 +160,7 @@ class _AttendanceHistoryState extends State<AttendanceHistory> {
                               borderRadius: BorderRadius.circular(2),
                             ),
                             child: const Text(
-                              "View",
+                              "VIEW",
                               style: TextStyle(color: Colors.white, fontSize: 10),
                             ),
                           ),
@@ -154,34 +172,44 @@ class _AttendanceHistoryState extends State<AttendanceHistory> {
               },
             ),
             const SizedBox(height: 40),
-            // Bottom Action Buttons
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 20.0),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.end,
-                children: [
-                  _buildActionButton("Generate report"),
-                  const SizedBox(width: 20),
-                  _buildActionButton("Downloaded"),
-                ],
-              ),
-            ),
-            const SizedBox(height: 40),
           ],
         ),
       ),
+
+      //NAVIGATION ONLY
       bottomNavigationBar: BottomNavigationBar(
-        backgroundColor: tealPrimary,
+        currentIndex: _currentIndex,
+        onTap: _onNavTap,
         type: BottomNavigationBarType.fixed,
-        showSelectedLabels: false,
-        showUnselectedLabels: false,
+        backgroundColor: tealPrimary,
         selectedItemColor: Colors.white,
-        unselectedItemColor: Colors.white70,
+        unselectedItemColor: Colors.white54,
+        selectedLabelStyle: const TextStyle(
+          fontWeight: FontWeight.bold,
+          fontSize: 10,
+        ),
+        unselectedLabelStyle: const TextStyle(fontSize: 10),
         items: const [
-          BottomNavigationBarItem(icon: Icon(Icons.home), label: "Home"),
-          BottomNavigationBarItem(icon: Icon(Icons.qr_code_scanner), label: "Scan"),
-          BottomNavigationBarItem(icon: Icon(Icons.history), label: "History"),
-          BottomNavigationBarItem(icon: Icon(Icons.person_outline), label: "Profile"),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.home_outlined),
+            activeIcon: Icon(Icons.home),
+            label: 'Home',
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.check_circle_outline),
+            activeIcon: Icon(Icons.check_circle),
+            label: 'Attendance',
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.history_outlined),
+            activeIcon: Icon(Icons.history),
+            label: 'Attendance History',
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.assignment_outlined),
+            activeIcon: Icon(Icons.assignment),
+            label: 'Assign Task',
+          ),
         ],
       ),
     );

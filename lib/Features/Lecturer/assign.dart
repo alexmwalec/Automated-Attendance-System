@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'invigilator_dashboard.dart';
+import 'attendance_history.dart';
 
 // ─── Constants (shared with dashboard) ───────────────────────────────────────
 const Color tealPrimary = Color(0xFF2E9E8E);
@@ -122,8 +124,25 @@ class _AssignState extends State<Assign> {
   // ── Bottom nav tap ────────────────────────────────────────────────────────
   void _onNavTap(int i) {
     if (i == _currentIndex) return;
-    // Pop back to dashboard for any other tab
-    Navigator.pop(context);
+    
+    if (i == 0) {
+      Navigator.pushAndRemoveUntil(
+        context,
+        MaterialPageRoute(builder: (_) => const InvigilatorDashboard(initialIndex: 0)),
+        (route) => false,
+      );
+    } else if (i == 1) {
+      Navigator.pushAndRemoveUntil(
+        context,
+        MaterialPageRoute(builder: (_) => const InvigilatorDashboard(initialIndex: 1)),
+        (route) => false,
+      );
+    } else if (i == 2) {
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(builder: (_) => const AttendanceHistory()),
+      );
+    }
   }
 
   @override
