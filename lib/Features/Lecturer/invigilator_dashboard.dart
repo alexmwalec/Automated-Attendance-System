@@ -9,7 +9,7 @@ const Color tealDark = Color(0xFF227A6D);
 const Color tealLight = Color(0xFFDFF2EF);
 const Color tealAccent = Color(0xFF26A69A);
 
-// ─── Entry Widget ─────────────────────────────────────────────────────────────
+// Entry Widget
 class InvigilatorDashboard extends StatefulWidget {
   final int initialIndex;
   const InvigilatorDashboard({super.key, this.initialIndex = 0});
@@ -158,7 +158,7 @@ class _InvigilatorDashboardState extends State<InvigilatorDashboard> {
   }
 }
 
-// ─── Dashboard Page ───────────────────────────────────────────────────────────
+// Dashboard Page
 class _DashboardPage extends StatelessWidget {
   const _DashboardPage();
 
@@ -255,7 +255,7 @@ class _WelcomeCard extends StatelessWidget {
   }
 }
 
-// ─── Info Card ────────────────────────────────────────────────────────────────
+// Info Card
 class _InfoCard extends StatelessWidget {
   final IconData icon;
   final Color iconColor;
@@ -328,7 +328,7 @@ class _InfoCard extends StatelessWidget {
   }
 }
 
-// ─── Section Header ───────────────────────────────────────────────────────────
+// Section Header
 class _SectionHeader extends StatelessWidget {
   final String title;
   const _SectionHeader({required this.title});
@@ -347,7 +347,7 @@ class _SectionHeader extends StatelessWidget {
   }
 }
 
-// ─── Today's Sessions Table ───────────────────────────────────────────────────
+// Today's Sessions Table
 class _TodaysSessionsTable extends StatelessWidget {
   const _TodaysSessionsTable();
 
