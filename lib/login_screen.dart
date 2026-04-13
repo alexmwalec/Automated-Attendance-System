@@ -45,6 +45,7 @@ class LoginScreen extends StatelessWidget {
                   TextField(
                     style: const TextStyle(color: Colors.black87),
                     decoration: InputDecoration(
+                      prefixIcon: const Icon(Icons.email, color: appTeal),
                       hintText: 'Username',
                       hintStyle: const TextStyle(
                         color: neutralGrey,
@@ -70,6 +71,7 @@ class LoginScreen extends StatelessWidget {
                     obscureText: true,
                     style: const TextStyle(color: Colors.black87),
                     decoration: InputDecoration(
+                      prefixIcon: const Icon(Icons.lock, color: appTeal),
                       hintText: 'Password',
                       hintStyle: const TextStyle(
                         color: neutralGrey,
