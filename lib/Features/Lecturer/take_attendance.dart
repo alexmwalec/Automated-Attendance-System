@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
 
-
 const Color tealPrimary = Color(0xFF2E9E8E);
 const Color tealDark = Color(0xFF227A6D);
 const Color tealLight = Color(0xFFE0F2F0);
@@ -16,7 +15,6 @@ class AttendancePage extends StatefulWidget {
 class _AttendancePageState extends State<AttendancePage> {
   static const Color scanAccent = Color(0xFF2D9B8C);
 
-  // Set index to 1 because this IS the Attendance page
   int _currentIndex = 1;
   MobileScannerController cameraController = MobileScannerController();
 
@@ -26,7 +24,6 @@ class _AttendancePageState extends State<AttendancePage> {
     super.dispose();
   }
 
-  // Navigation Logic
   void _onTabTapped(int index) {
     if (index == _currentIndex) return;
 
@@ -34,21 +31,16 @@ class _AttendancePageState extends State<AttendancePage> {
       _currentIndex = index;
     });
 
-    // Navigation routing based on index
     switch (index) {
       case 0:
-      // Navigate back to Dashboard/Home
         Navigator.pushReplacementNamed(context, '/dashboard');
         break;
       case 1:
-      // Already on Attendance
         break;
       case 2:
-      // Navigate to History (Update route name as per your main.dart)
         Navigator.pushReplacementNamed(context, '/attendance_history');
         break;
       case 3:
-      // Navigate to Assign Task
         Navigator.pushReplacementNamed(context, '/assign_task');
         break;
     }
@@ -59,7 +51,6 @@ class _AttendancePageState extends State<AttendancePage> {
     return Scaffold(
       backgroundColor: tealLight,
 
-      // ── AppBar: Replaced with InvigilatorDashboard style ──────────────────
       appBar: AppBar(
         backgroundColor: tealPrimary,
         automaticallyImplyLeading: false,
@@ -93,13 +84,11 @@ class _AttendancePageState extends State<AttendancePage> {
         ),
       ),
 
-      // ── Main Content ──────────────────────────────────────────────────────
       body: SingleChildScrollView(
         child: Padding(
           padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 20.0),
           child: Column(
             children: [
-              // Internal Back Header (Optional, keeps UI functional)
               Row(
                 children: [
                   IconButton(
@@ -118,9 +107,7 @@ class _AttendancePageState extends State<AttendancePage> {
                 ],
               ),
               const SizedBox(height: 30),
-
-              // Camera View / Scanner Window
-              Container(
+               Container(
                 height: 350,
                 width: double.infinity,
                 decoration: BoxDecoration(
@@ -142,8 +129,29 @@ class _AttendancePageState extends State<AttendancePage> {
                         controller: cameraController,
                         onDetect: (capture) {
                           final List<Barcode> barcodes = capture.barcodes;
+
                           for (final barcode in barcodes) {
-                            debugPrint('Barcode found! ${barcode.rawValue}');
+                            final String? code = barcode.rawValue;
+
+                            if (code != null) {
+                              // 1. Stop scanning to prevent multiple triggers
+                              cameraController.stop();
+
+                              // 2. Show feedback to user
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(content: Text('ID Scanned: $code')),
+                              );
+
+                              // 3. TODO: Call your backend API here
+                              debugPrint('Barcode found! $code');
+
+                              // 4. Optionally restart scanner after delay
+                              // Future.delayed(const Duration(seconds: 2), () {
+                              //   cameraController.start();
+                              // });
+
+                              break; // important: stop loop after first valid scan
+                            }
                           }
                         },
                       ),
@@ -153,18 +161,8 @@ class _AttendancePageState extends State<AttendancePage> {
                 ),
               ),
 
-              const SizedBox(height: 40),
-              const Text(
-                'Align QR code within frame',
-                style: TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.w600,
-                  color: Colors.black87,
-                ),
-              ),
-              const SizedBox(height: 24),
+              const SizedBox(height: 30),
 
-              // Instructions Card
               Container(
                 width: double.infinity,
                 padding: const EdgeInsets.all(24),
@@ -196,7 +194,6 @@ class _AttendancePageState extends State<AttendancePage> {
         ),
       ),
 
-      // ── Bottom Navigation: Replaced with InvigilatorDashboard style ────────
       bottomNavigationBar: BottomNavigationBar(
         currentIndex: _currentIndex,
         onTap: _onTabTapped,
