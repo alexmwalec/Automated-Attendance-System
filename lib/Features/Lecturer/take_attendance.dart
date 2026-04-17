@@ -17,10 +17,7 @@ class AttendancePage extends StatefulWidget {
 class _AttendancePageState extends State<AttendancePage> {
   static const Color scanAccent = Color(0xFF2D9B8C);
 
-  // Controller to manage the camera
   final MobileScannerController cameraController = MobileScannerController();
-
-  // Storage for unique IDs (Sets automatically prevent duplicates)
   final Set<String> _scannedStudentIds = {};
 
   bool _isProcessing = false;
@@ -32,13 +29,12 @@ class _AttendancePageState extends State<AttendancePage> {
     _resetTimeoutTimer();
   }
 
-
   void _resetTimeoutTimer() {
     _noDetectionTimer?.cancel();
     _noDetectionTimer = Timer(const Duration(seconds: 3), () {
       if (mounted && !_isProcessing) {
         debugPrint("3 seconds passed: No QR code found. Ready for next attempt.");
-        // We stay "ready" or can pulse the UI to show it's still looking
+        cameraController.stop().then((_) => cameraController.start());
         _resetTimeoutTimer();
       }
     });
@@ -52,17 +48,16 @@ class _AttendancePageState extends State<AttendancePage> {
   }
 
   void _handleCapture(BarcodeCapture capture) {
-    if (_isProcessing) return; // Ignore scans while we are "processing" a previous result
+    if (_isProcessing) return;
 
     final List<Barcode> barcodes = capture.barcodes;
     for (final barcode in barcodes) {
       final String? code = barcode.rawValue;
 
       if (code != null && code.isNotEmpty) {
-        _isProcessing = true; // Lock scanning
-        _noDetectionTimer?.cancel(); // Stop the 3s timeout
+        _isProcessing = true;
+        _noDetectionTimer?.cancel();
 
-        // Check for Duplicates
         if (_scannedStudentIds.contains(code)) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
@@ -72,7 +67,6 @@ class _AttendancePageState extends State<AttendancePage> {
             ),
           );
         } else {
-          // Add to list immediately (Visible  integrated list)
           setState(() {
             _scannedStudentIds.add(code);
           });
@@ -86,7 +80,6 @@ class _AttendancePageState extends State<AttendancePage> {
           );
         }
 
-        // Wait 2 seconds before allowing the next scan (prevents rapid-fire scanning)
         Future.delayed(const Duration(seconds: 2), () {
           if (mounted) {
             setState(() => _isProcessing = false);
@@ -106,15 +99,30 @@ class _AttendancePageState extends State<AttendancePage> {
         title: const Text('Live Attendance', style: TextStyle(color: Colors.white)),
         backgroundColor: tealPrimary,
         actions: [
+          IconButton(
+            icon: const Icon(Icons.list_alt, color: Colors.white),
+            onPressed: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => ScannedStudentsPage(scannedIds: _scannedStudentIds),
+                ),
+              );
+            },
+          ),
           Padding(
             padding: const EdgeInsets.all(16.0),
-            child: Center(child: Text("Total: ${_scannedStudentIds.length}", style: const TextStyle(fontWeight: FontWeight.bold))),
+            child: Center(
+              child: Text(
+                "Total: ${_scannedStudentIds.length}",
+                style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.white),
+              ),
+            ),
           )
         ],
       ),
       body: Column(
         children: [
-          // 1. SCANNER SECTION
           Expanded(
             flex: 2,
             child: Container(
@@ -132,13 +140,11 @@ class _AttendancePageState extends State<AttendancePage> {
               ),
             ),
           ),
-
-          // 2. ATTENDANCE LIST SECTION ("Another Page" content integrated here)
           const Padding(
             padding: EdgeInsets.symmetric(vertical: 8.0),
-            child: Text("Verified Attendance List", style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: tealDark)),
+            child: Text("Verified Attendance List",
+                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: tealDark)),
           ),
-
           Expanded(
             flex: 3,
             child: Container(
@@ -163,6 +169,49 @@ class _AttendancePageState extends State<AttendancePage> {
             ),
           ),
         ],
+      ),
+    );
+  }
+}
+
+class ScannedStudentsPage extends StatelessWidget {
+  final Set<String> scannedIds;
+
+  const ScannedStudentsPage({super.key, required this.scannedIds});
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: Colors.black,
+      appBar: AppBar(
+        backgroundColor: Colors.grey[900],
+        title: const Text("Attendance List", style: TextStyle(color: Colors.white)),
+        iconTheme: const IconThemeData(color: Colors.white),
+      ),
+      body: scannedIds.isEmpty
+          ? const Center(
+        child: Text(
+          "No students scanned yet.",
+          style: TextStyle(color: Colors.white, fontSize: 16),
+        ),
+      )
+          : ListView.builder(
+        itemCount: scannedIds.length,
+        itemBuilder: (context, index) {
+          String id = scannedIds.elementAt(index);
+          return ListTile(
+            leading: const Icon(Icons.person, color: tealPrimary),
+            title: Text(
+              "Student ID / Name: $id",
+              style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+            ),
+            subtitle: Text(
+              "Status: Present",
+              style: TextStyle(color: Colors.grey[400]),
+            ),
+            trailing: const Icon(Icons.verified, color: Colors.green),
+          );
+        },
       ),
     );
   }
