@@ -11,38 +11,7 @@ class Course extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: tealLight,
-      appBar: AppBar(
-        title: const Text(
-          "AAS",
-          style: TextStyle(
-            fontWeight: FontWeight.bold,
-            color: Colors.white,
-            fontSize: 20,
-          ),
-        ),
-        backgroundColor: tealPrimary,
-        elevation: 0,
-        centerTitle: false,
-        automaticallyImplyLeading: false,
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.notifications_outlined, color: Colors.white),
-            onPressed: () {},
-          ),
-          Padding(
-            padding: const EdgeInsets.only(right: 12.0),
-            child: CircleAvatar(
-              radius: 16,
-              backgroundColor: Colors.white.withOpacity(0.3),
-              child: const Icon(Icons.person, color: Colors.white, size: 18),
-            ),
-          ),
-        ],
-      ),
-      body: const CourseSelectionScreen(),
-    );
+    return const CourseSelectionScreen();
   }
 }
 
@@ -236,45 +205,45 @@ class _CourseSelectionScreenState extends State<CourseSelectionScreen> {
 
           const SizedBox(height: 28),
 
-          // Proceed Button - aligned to the right
+          // Proceed Button - wider, aligned to the right
           Align(
             alignment: Alignment.centerRight,
-            child: ElevatedButton(
-              onPressed: () {
-                if (selectedSessionType != null && selectedCourse != null) {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (context) => const AttendancePage(),
-                    ),
-                  );
-                } else {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(
-                      content: Text(
-                        'Please select both session type and course',
+            child: SizedBox(
+              width: 160,
+              child: ElevatedButton(
+                onPressed: () {
+                  if (selectedSessionType != null && selectedCourse != null) {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => const AttendancePage(),
                       ),
-                      backgroundColor: Colors.red,
-                      duration: Duration(seconds: 2),
-                    ),
-                  );
-                }
-              },
-              style: ElevatedButton.styleFrom(
-                backgroundColor: tealPrimary,
-                foregroundColor: Colors.white,
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 28,
-                  vertical: 14,
+                    );
+                  } else {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        content: Text(
+                          'Please select both session type and course',
+                        ),
+                        backgroundColor: Colors.red,
+                        duration: Duration(seconds: 2),
+                      ),
+                    );
+                  }
+                },
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: tealPrimary,
+                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(vertical: 9),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(30),
+                  ),
+                  elevation: 2,
                 ),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(30),
+                child: const Text(
+                  'Proceed to scanning',
+                  style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
                 ),
-                elevation: 2,
-              ),
-              child: const Text(
-                'Proceed to scanning',
-                style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
               ),
             ),
           ),
