@@ -55,7 +55,7 @@ class _ProfileState extends State<Profile> {
         child: Column(
           children: [
             // ── Profile Header ──────────────────────────────────────────────
-            const SizedBox(height: 30),
+            const SizedBox(height: 60),
             Center(
               child: CircleAvatar(
                 radius: 52,
@@ -268,7 +268,7 @@ class _EditProfileState extends State<EditProfile> {
         child: Column(
           children: [
             // ── Avatar placeholder (image picker will be added when DB is connected) ──
-            const SizedBox(height: 20),
+            const SizedBox(height: 40),
             Center(
               child: CircleAvatar(
                 radius: 52,
