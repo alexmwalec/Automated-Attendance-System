@@ -31,9 +31,9 @@ class _AttendancePageState extends State<AttendancePage> {
 
   void _resetTimeoutTimer() {
     _noDetectionTimer?.cancel();
-    _noDetectionTimer = Timer(const Duration(seconds: 3), () {
+    _noDetectionTimer = Timer(const Duration(seconds: 4), () {
       if (mounted && !_isProcessing) {
-        debugPrint("3 seconds passed: No QR code found. Ready for next attempt.");
+        debugPrint("4 seconds passed: No QR code found. Ready for next attempt.");
         cameraController.stop().then((_) => cameraController.start());
         _resetTimeoutTimer();
       }
