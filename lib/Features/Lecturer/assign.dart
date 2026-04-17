@@ -215,7 +215,7 @@ class _AssignState extends State<Assign> {
             children: [
               // Title
               const Text(
-                'Design Invigilator',
+                'Assign Invigilator',
                 style: TextStyle(
                   fontSize: 22,
                   fontWeight: FontWeight.bold,
