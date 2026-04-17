@@ -150,7 +150,7 @@ class _AttendancePageState extends State<AttendancePage> {
                               //   cameraController.start();
                               // });
 
-                              break; // important: stop loop after first valid scan
+                              break;
                             }
                           }
                         },
