@@ -1,12 +1,13 @@
 import 'package:flutter/material.dart';
+import 'invigilator_dashboard.dart';
+import 'attendance_history.dart';
 
-// ─── Constants (shared with dashboard) ───────────────────────────────────────
+// ─── Constants ───────────────────────────────────────────────────────────────
 const Color tealPrimary = Color(0xFF2E9E8E);
 const Color tealDark = Color(0xFF227A6D);
 const Color tealLight = Color(0xFFDFF2EF);
 
 // ─── Assign Invigilator Page ──────────────────────────────────────────────────
-// Replaces the original Assign class — same name, same file, teal UI.
 class Assign extends StatefulWidget {
   const Assign({super.key});
 
@@ -15,7 +16,7 @@ class Assign extends StatefulWidget {
 }
 
 class _AssignState extends State<Assign> {
-  int _currentIndex = 3; // "Assign Task" tab is active
+  final int _currentIndex = 3;
 
   // ── Form ──────────────────────────────────────────────────────────────────
   final _formKey = GlobalKey<FormState>();
@@ -25,7 +26,6 @@ class _AssignState extends State<Assign> {
   final _roomController = TextEditingController();
   final _invigilatorController = TextEditingController();
 
-  // Holds the confirmed row after tapping Assign
   Map<String, String>? _confirmedRow;
 
   @override
@@ -122,8 +122,29 @@ class _AssignState extends State<Assign> {
   // ── Bottom nav tap ────────────────────────────────────────────────────────
   void _onNavTap(int i) {
     if (i == _currentIndex) return;
-    // Pop back to dashboard for any other tab
-    Navigator.pop(context);
+
+    if (i == 0) {
+      Navigator.pushAndRemoveUntil(
+        context,
+        MaterialPageRoute(
+          builder: (_) => const InvigilatorDashboard(initialIndex: 0),
+        ),
+        (route) => false,
+      );
+    } else if (i == 1) {
+      Navigator.pushAndRemoveUntil(
+        context,
+        MaterialPageRoute(
+          builder: (_) => const InvigilatorDashboard(initialIndex: 1),
+        ),
+        (route) => false,
+      );
+    } else if (i == 2) {
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(builder: (_) => const AttendanceHistory()),
+      );
+    }
   }
 
   @override
@@ -154,8 +175,11 @@ class _AssignState extends State<Assign> {
                 ),
                 const Spacer(),
                 IconButton(
-                  icon: const Icon(Icons.notifications_outlined,
-                      color: Colors.white, size: 24),
+                  icon: const Icon(
+                    Icons.notifications_outlined,
+                    color: Colors.white,
+                    size: 24,
+                  ),
                   onPressed: () {},
                   padding: EdgeInsets.zero,
                   constraints: const BoxConstraints(),
@@ -169,8 +193,11 @@ class _AssignState extends State<Assign> {
                     color: tealDark,
                     border: Border.all(color: Colors.white38, width: 1.5),
                   ),
-                  child: const Icon(Icons.person_outline,
-                      color: Colors.white, size: 18),
+                  child: const Icon(
+                    Icons.person_outline,
+                    color: Colors.white,
+                    size: 18,
+                  ),
                 ),
               ],
             ),
@@ -186,7 +213,6 @@ class _AssignState extends State<Assign> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // Page title
               const Text(
                 'Assign Invigilator',
                 style: TextStyle(
@@ -254,8 +280,11 @@ class _AssignState extends State<Assign> {
                               onTap: _pickDate,
                               validator: (v) =>
                                   v == null || v.isEmpty ? '*' : null,
-                              suffixIcon: const Icon(Icons.calendar_today,
-                                  size: 12, color: tealPrimary),
+                              suffixIcon: const Icon(
+                                Icons.calendar_today,
+                                size: 12,
+                                color: tealPrimary,
+                              ),
                             ),
                           ),
                           Expanded(
@@ -267,8 +296,11 @@ class _AssignState extends State<Assign> {
                               onTap: _pickTime,
                               validator: (v) =>
                                   v == null || v.isEmpty ? '*' : null,
-                              suffixIcon: const Icon(Icons.access_time,
-                                  size: 12, color: tealPrimary),
+                              suffixIcon: const Icon(
+                                Icons.access_time,
+                                size: 12,
+                                color: tealPrimary,
+                              ),
                             ),
                           ),
                           Expanded(
@@ -293,7 +325,7 @@ class _AssignState extends State<Assign> {
                       ),
                     ),
 
-                    // Confirmed data row — appears after Assign is pressed
+                    // Confirmed data row
                     if (_confirmedRow != null)
                       Container(
                         color: const Color(0xFFF0FAF9),
@@ -308,7 +340,6 @@ class _AssignState extends State<Assign> {
                         ),
                       ),
 
-                    // Blank space so card looks tall like the screenshot
                     const SizedBox(height: 120),
                   ],
                 ),
@@ -316,11 +347,14 @@ class _AssignState extends State<Assign> {
 
               const SizedBox(height: 20),
 
-              // ── Note / instruction text ───────────────────────────────────
+              // ── Note text ─────────────────────────────────────────────────
               RichText(
                 text: TextSpan(
                   style: const TextStyle(
-                      fontSize: 12, color: Colors.black54, height: 1.55),
+                    fontSize: 12,
+                    color: Colors.black54,
+                    height: 1.55,
+                  ),
                   children: [
                     const TextSpan(
                       text:
@@ -362,8 +396,10 @@ class _AssignState extends State<Assign> {
                     ),
                     child: const Text(
                       'Assign',
-                      style:
-                          TextStyle(fontSize: 13, fontWeight: FontWeight.bold),
+                      style: TextStyle(
+                        fontSize: 13,
+                        fontWeight: FontWeight.bold,
+                      ),
                     ),
                   ),
                 ),
@@ -374,7 +410,7 @@ class _AssignState extends State<Assign> {
         ),
       ),
 
-      // ── Bottom Navigation — identical to dashboard ─────────────────────────
+      // ── Bottom Navigation ─────────────────────────────────────────────────
       bottomNavigationBar: BottomNavigationBar(
         currentIndex: _currentIndex,
         onTap: _onNavTap,
