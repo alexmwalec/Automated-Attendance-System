@@ -1,4 +1,7 @@
 import 'package:flutter/material.dart';
+import 'invigilator_dashboard.dart';
+import 'attendance_history.dart';
+import 'assign.dart';
 
 const Color tealPrimary = Color(0xFF2E9E8E);
 const Color tealDark = Color(0xFF227A6D);
@@ -12,6 +15,9 @@ class Profile extends StatefulWidget {
 }
 
 class _ProfileState extends State<Profile> {
+  // Navigation index (usually profile isn't on the main bar, but we use the bar for consistency)
+  int _currentIndex = 0;
+
   // Profile Data
   String fullName = 'Dr Sulphuric Moyo';
   String role = 'Senior Lecturer - Computer Science';
@@ -20,20 +26,57 @@ class _ProfileState extends State<Profile> {
   String email = 'harris@unima.ac.mw';
   String phone = '+265 888 123 456';
 
+  void _onNavTap(int index) {
+    if (index == 0) {
+      Navigator.pushAndRemoveUntil(
+        context,
+        MaterialPageRoute(builder: (_) => const InvigilatorDashboard(initialIndex: 0)),
+            (route) => false,
+      );
+    } else if (index == 1) {
+      Navigator.pushAndRemoveUntil(
+        context,
+        MaterialPageRoute(builder: (_) => const InvigilatorDashboard(initialIndex: 1)),
+            (route) => false,
+      );
+    } else if (index == 2) {
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(builder: (_) => const AttendanceHistory()),
+      );
+    } else if (index == 3) {
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(builder: (_) => const Assign()),
+      );
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
         backgroundColor: tealPrimary,
         elevation: 0,
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: Colors.white),
-          onPressed: () => Navigator.pop(context),
-        ),
+        automaticallyImplyLeading: false, // Removed back button to favor Nav Bar
         title: const Text(
-          'My Profile',
-          style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 18),
+          'AAS',
+          style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
         ),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.notifications_none, color: Colors.white),
+            onPressed: () {},
+          ),
+          const Padding(
+            padding: EdgeInsets.only(right: 16.0),
+            child: CircleAvatar(
+              backgroundColor: tealDark,
+              radius: 15,
+              child: Icon(Icons.person, color: Colors.white, size: 18),
+            ),
+          ),
+        ],
       ),
       body: SingleChildScrollView(
         child: Column(
@@ -155,6 +198,22 @@ class _ProfileState extends State<Profile> {
             ),
           ],
         ),
+      ),
+      bottomNavigationBar: BottomNavigationBar(
+        currentIndex: _currentIndex,
+        onTap: _onNavTap,
+        type: BottomNavigationBarType.fixed,
+        backgroundColor: tealPrimary,
+        selectedItemColor: Colors.white,
+        unselectedItemColor: Colors.white54,
+        selectedLabelStyle: const TextStyle(fontWeight: FontWeight.bold, fontSize: 10),
+        unselectedLabelStyle: const TextStyle(fontSize: 10),
+        items: const [
+          BottomNavigationBarItem(icon: Icon(Icons.home_outlined), activeIcon: Icon(Icons.home), label: 'Home'),
+          BottomNavigationBarItem(icon: Icon(Icons.check_circle_outline), activeIcon: Icon(Icons.check_circle), label: 'Attendance'),
+          BottomNavigationBarItem(icon: Icon(Icons.history_outlined), activeIcon: Icon(Icons.history), label: 'Attendance History'),
+          BottomNavigationBarItem(icon: Icon(Icons.assignment_outlined), activeIcon: Icon(Icons.assignment), label: 'Assign Task'),
+        ],
       ),
     );
   }
