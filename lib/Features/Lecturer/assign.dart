@@ -122,21 +122,17 @@ class _AssignState extends State<Assign> {
   // ── Bottom nav tap ────────────────────────────────────────────────────────
   void _onNavTap(int i) {
     if (i == _currentIndex) return;
-
+    
     if (i == 0) {
       Navigator.pushAndRemoveUntil(
         context,
-        MaterialPageRoute(
-          builder: (_) => const InvigilatorDashboard(initialIndex: 0),
-        ),
+        MaterialPageRoute(builder: (_) => const InvigilatorDashboard(initialIndex: 0)),
         (route) => false,
       );
     } else if (i == 1) {
       Navigator.pushAndRemoveUntil(
         context,
-        MaterialPageRoute(
-          builder: (_) => const InvigilatorDashboard(initialIndex: 1),
-        ),
+        MaterialPageRoute(builder: (_) => const InvigilatorDashboard(initialIndex: 1)),
         (route) => false,
       );
     } else if (i == 2) {

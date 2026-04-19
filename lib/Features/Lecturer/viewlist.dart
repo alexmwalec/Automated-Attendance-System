@@ -1,314 +1,253 @@
 import 'package:flutter/material.dart';
+import 'invigilator_dashboard.dart';
+import 'attendance_history.dart';
+import 'assign.dart';
 
 const Color tealPrimary = Color(0xFF2E9E8E);
 const Color tealDark = Color(0xFF227A6D);
 const Color tealLight = Color(0xFFDFF2EF);
 
-class ViewList extends StatelessWidget {
+class ViewList extends StatefulWidget {
   const ViewList({super.key});
 
-  // Sample student attendance data
-  final List<Map<String, String>> students = const [
-    {'id': 'CS2001', 'name': 'Alice Banda', 'status': 'Present'},
-    {'id': 'CS2002', 'name': 'Brian Phiri', 'status': 'Present'},
-    {'id': 'CS2003', 'name': 'Chisomo Mwale', 'status': 'Absent'},
-    {'id': 'CS2004', 'name': 'Diana Tembo', 'status': 'Present'},
-    {'id': 'CS2005', 'name': 'Edward Lungu', 'status': 'Present'},
-    {'id': 'CS2006', 'name': 'Fatima Osman', 'status': 'Absent'},
-    {'id': 'CS2007', 'name': 'George Kamau', 'status': 'Present'},
-    {'id': 'CS2008', 'name': 'Hannah Moyo', 'status': 'Present'},
-    {'id': 'CS2009', 'name': 'Isaac Chirwa', 'status': 'Present'},
-    {'id': 'CS2010', 'name': 'Jane Mbewe', 'status': 'Absent'},
+  @override
+  State<ViewList> createState() => _ViewListState();
+}
+
+class _ViewListState extends State<ViewList> {
+  int _currentIndex = 2; // Keep Attendance History tab highlighted
+
+  final List<Map<String, String>> presentStudents = [
+    {
+      "reg": "bed-com-27-22",
+      "name": "Sulphuric moyo",
+      "status": "Present"
+    },
+    {
+      "reg": "BSC",
+      "name": "King Sley",
+      "status": "Present"
+    },
   ];
+
+  final List<Map<String, String>> absentStudents = [
+    {
+      "reg": "bed-com-27-22",
+      "name": "Sulphuric moyo",
+      "status": "Absent",
+      "reason": "Approved"
+    },
+    {
+      "reg": "BED",
+      "name": "Alex",
+      "status": "Absent",
+      "reason": "Not Approved"
+    },
+  ];
+
+  void _onNavTap(int index) {
+    if (index == _currentIndex) return;
+
+    if (index == 0) {
+      Navigator.pushAndRemoveUntil(
+        context,
+        MaterialPageRoute(builder: (_) => const InvigilatorDashboard(initialIndex: 0)),
+        (route) => false,
+      );
+    } else if (index == 1) {
+      Navigator.pushAndRemoveUntil(
+        context,
+        MaterialPageRoute(builder: (_) => const InvigilatorDashboard(initialIndex: 1)),
+        (route) => false,
+      );
+    } else if (index == 2) {
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(builder: (_) => const AttendanceHistory()),
+      );
+    } else if (index == 3) {
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(builder: (_) => const Assign()),
+      );
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
-    final presentCount = students.where((s) => s['status'] == 'Present').length;
-    final absentCount = students.where((s) => s['status'] == 'Absent').length;
-
     return Scaffold(
       backgroundColor: tealLight,
-
-      // ── AppBar ────────────────────────────────────────────────────────────
       appBar: AppBar(
         backgroundColor: tealPrimary,
         automaticallyImplyLeading: false,
         elevation: 0,
-        toolbarHeight: 60,
-        flexibleSpace: SafeArea(
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-            child: Row(
-              crossAxisAlignment: CrossAxisAlignment.center,
-              children: [
-                // Back button
-                GestureDetector(
-                  onTap: () => Navigator.pop(context),
-                  child: const Icon(
-                    Icons.arrow_back_ios,
-                    color: Colors.white,
-                    size: 20,
-                  ),
-                ),
-                const SizedBox(width: 8),
-                const Text(
-                  'AAS',
-                  style: TextStyle(
-                    color: Colors.white,
-                    fontSize: 20,
-                    fontWeight: FontWeight.bold,
-                    letterSpacing: 1.2,
-                  ),
-                ),
-                const Spacer(),
-                IconButton(
-                  icon: const Icon(
-                    Icons.notifications_outlined,
-                    color: Colors.white,
-                    size: 24,
-                  ),
-                  onPressed: () {},
-                  padding: EdgeInsets.zero,
-                  constraints: const BoxConstraints(),
-                ),
-                const SizedBox(width: 12),
-                Container(
-                  width: 32,
-                  height: 32,
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    color: tealDark,
-                    border: Border.all(color: Colors.white38, width: 1.5),
-                  ),
-                  child: const Icon(
-                    Icons.person_outline,
-                    color: Colors.white,
-                    size: 18,
-                  ),
-                ),
-              ],
+        title: const Text(
+          'AAS',
+          style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+        ),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.notifications_none, color: Colors.white),
+            onPressed: () {},
+          ),
+          const Padding(
+            padding: EdgeInsets.only(right: 16.0),
+            child: CircleAvatar(
+              backgroundColor: Colors.teal,
+              radius: 15,
+              child: Icon(Icons.person_outline, color: Colors.white, size: 18),
             ),
           ),
-        ),
+        ],
       ),
-
-      // ── Body ──────────────────────────────────────────────────────────────
       body: SingleChildScrollView(
-        padding: const EdgeInsets.all(14),
         child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Page title
-            const Text(
-              'Attendance List',
-              style: TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeight.bold,
-                color: tealPrimary,
-              ),
-            ),
-            const SizedBox(height: 4),
-            const Text(
-              'COM411 — Class Session',
-              style: TextStyle(fontSize: 12, color: Colors.black54),
-            ),
-            const SizedBox(height: 14),
-
-            // ── Summary row ───────────────────────────────────────────────
-            Row(
-              children: [
-                _SummaryChip(
-                  label: 'Total',
-                  value: '${students.length}',
-                  color: tealPrimary,
-                ),
-                const SizedBox(width: 10),
-                _SummaryChip(
-                  label: 'Present',
-                  value: '$presentCount',
-                  color: const Color(0xFF43A047),
-                ),
-                const SizedBox(width: 10),
-                _SummaryChip(
-                  label: 'Absent',
-                  value: '$absentCount',
-                  color: const Color(0xFFEF6C00),
-                ),
-              ],
-            ),
-            const SizedBox(height: 16),
-
-            // ── Student Table ─────────────────────────────────────────────
             Container(
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(8),
-                border: Border.all(color: tealPrimary.withOpacity(0.3)),
-              ),
-              clipBehavior: Clip.antiAlias,
-              child: Column(
+              height: 80,
+              width: double.infinity,
+              color: Colors.white.withOpacity(0.5),
+              margin: const EdgeInsets.all(16),
+            ),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16.0),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  // Header
-                  Container(
-                    color: tealPrimary,
-                    child: const Row(
-                      children: [
-                        _TH('#', flex: 1),
-                        _TH('STUDENT ID', flex: 2),
-                        _TH('NAME', flex: 4),
-                        _TH('STATUS', flex: 2),
-                      ],
-                    ),
-                  ),
-
-                  // Rows
-                  ...students.asMap().entries.map((entry) {
-                    final index = entry.key;
-                    final student = entry.value;
-                    final isPresent = student['status'] == 'Present';
-                    final rowColor =
-                        index.isEven ? Colors.white : const Color(0xFFF0FAF9);
-
-                    return Container(
-                      color: rowColor,
-                      child: Row(
-                        children: [
-                          _TD('${index + 1}', flex: 1),
-                          _TD(student['id']!, flex: 2),
-                          _TD(student['name']!, flex: 4),
-                          Expanded(
-                            flex: 2,
-                            child: Padding(
-                              padding: const EdgeInsets.symmetric(
-                                vertical: 8,
-                                horizontal: 4,
-                              ),
-                              child: Container(
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 6,
-                                  vertical: 2,
-                                ),
-                                decoration: BoxDecoration(
-                                  color: isPresent
-                                      ? const Color(0xFF43A047)
-                                          .withOpacity(0.12)
-                                      : const Color(0xFFEF6C00)
-                                          .withOpacity(0.12),
-                                  borderRadius: BorderRadius.circular(4),
-                                ),
-                                child: Text(
-                                  student['status']!,
-                                  style: TextStyle(
-                                    fontSize: 10,
-                                    fontWeight: FontWeight.bold,
-                                    color: isPresent
-                                        ? const Color(0xFF43A047)
-                                        : const Color(0xFFEF6C00),
-                                  ),
-                                ),
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                    );
-                  }),
+                  _buildDetailBox("Class"),
+                  _buildDetailBox("Com 411"),
+                  _buildDetailBox("11 March"),
+                  _buildDetailBox("08:30"),
+                  _buildDetailBox("Ck 2"),
                 ],
               ),
             ),
-            const SizedBox(height: 24),
+            const SizedBox(height: 20),
+            const Divider(color: tealPrimary, thickness: 8),
+            
+            // Present Table
+            _buildTableHeader(["REG NO", "FULL NAME", "STATUS"]),
+            ListView.builder(
+              shrinkWrap: true,
+              physics: const NeverScrollableScrollPhysics(),
+              itemCount: presentStudents.length,
+              itemBuilder: (context, index) {
+                final student = presentStudents[index];
+                return _buildTableRow([student["reg"]!, student["name"]!, student["status"]!]);
+              },
+            ),
+
+            const Divider(color: tealPrimary, thickness: 2, indent: 16, endIndent: 16),
+
+            // Absent Table
+            _buildTableHeader(["REG NO", "FULL NAME", "STATUS", "REASON"]),
+            ListView.builder(
+              shrinkWrap: true,
+              physics: const NeverScrollableScrollPhysics(),
+              itemCount: absentStudents.length,
+              itemBuilder: (context, index) {
+                final student = absentStudents[index];
+                return _buildTableRow([
+                  student["reg"]!,
+                  student["name"]!,
+                  student["status"]!,
+                  student["reason"]!
+                ]);
+              },
+            ),
+
+            const SizedBox(height: 20),
+            Padding(
+              padding: const EdgeInsets.only(right: 20.0, bottom: 20.0),
+              child: Align(
+                alignment: Alignment.centerRight,
+                child: GestureDetector(
+                  onTap: () {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        content: Text('Downloading attendance list...'),
+                        backgroundColor: tealPrimary,
+                      ),
+                    );
+                  },
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
+                    decoration: BoxDecoration(
+                      color: tealPrimary,
+                      borderRadius: BorderRadius.circular(2),
+                    ),
+                    child: const Text(
+                      "Download",
+                      style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+                    ),
+                  ),
+                ),
+              ),
+            ),
           ],
         ),
       ),
-    );
-  }
-}
-
-// ─── Summary Chip ─────────────────────────────────────────────────────────────
-class _SummaryChip extends StatelessWidget {
-  final String label;
-  final String value;
-  final Color color;
-
-  const _SummaryChip({
-    required this.label,
-    required this.value,
-    required this.color,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-      decoration: BoxDecoration(
-        color: color.withOpacity(0.1),
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: color.withOpacity(0.3)),
-      ),
-      child: Column(
-        children: [
-          Text(
-            value,
-            style: TextStyle(
-              fontSize: 16,
-              fontWeight: FontWeight.bold,
-              color: color,
-            ),
-          ),
-          const SizedBox(height: 2),
-          Text(
-            label,
-            style: TextStyle(fontSize: 10, color: color),
-          ),
+      bottomNavigationBar: BottomNavigationBar(
+        currentIndex: _currentIndex,
+        onTap: _onNavTap,
+        type: BottomNavigationBarType.fixed,
+        backgroundColor: tealPrimary,
+        selectedItemColor: Colors.white,
+        unselectedItemColor: Colors.white54,
+        selectedLabelStyle: const TextStyle(fontWeight: FontWeight.bold, fontSize: 10),
+        unselectedLabelStyle: const TextStyle(fontSize: 10),
+        items: const [
+          BottomNavigationBarItem(icon: Icon(Icons.home_outlined), activeIcon: Icon(Icons.home), label: 'Home'),
+          BottomNavigationBarItem(icon: Icon(Icons.check_circle_outline), activeIcon: Icon(Icons.check_circle), label: 'Attendance'),
+          BottomNavigationBarItem(icon: Icon(Icons.history_outlined), activeIcon: Icon(Icons.history), label: 'Attendance History'),
+          BottomNavigationBarItem(icon: Icon(Icons.assignment_outlined), activeIcon: Icon(Icons.assignment), label: 'Assign Task'),
         ],
       ),
     );
   }
-}
 
-// ─── Table Header Cell ────────────────────────────────────────────────────────
-class _TH extends StatelessWidget {
-  final String text;
-  final int flex;
-  const _TH(this.text, {this.flex = 1});
-
-  @override
-  Widget build(BuildContext context) {
-    return Expanded(
-      flex: flex,
-      child: Padding(
-        padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 4),
-        child: Text(
-          text,
-          style: const TextStyle(
-            color: Colors.white,
-            fontWeight: FontWeight.bold,
-            fontSize: 10,
-          ),
-        ),
+  Widget _buildDetailBox(String text) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      decoration: BoxDecoration(
+        color: const Color(0xFFE3F2FD),
+        borderRadius: BorderRadius.circular(2),
+      ),
+      child: Text(
+        text,
+        style: const TextStyle(fontSize: 10, fontWeight: FontWeight.w500),
       ),
     );
   }
-}
 
-// ─── Table Data Cell ──────────────────────────────────────────────────────────
-class _TD extends StatelessWidget {
-  final String text;
-  final int flex;
-  const _TD(this.text, {this.flex = 1});
+  Widget _buildTableHeader(List<String> headers) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
+      child: Row(
+        children: headers
+            .map((h) => Expanded(
+                  child: Text(
+                    h,
+                    style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 10),
+                  ),
+                ))
+            .toList(),
+      ),
+    );
+  }
 
-  @override
-  Widget build(BuildContext context) {
-    return Expanded(
-      flex: flex,
-      child: Padding(
-        padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 4),
-        child: Text(
-          text,
-          overflow: TextOverflow.ellipsis,
-          maxLines: 1,
-          style: const TextStyle(fontSize: 10, color: Colors.black87),
-        ),
+  Widget _buildTableRow(List<String> cells) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 4.0),
+      child: Row(
+        children: cells
+            .map((c) => Expanded(
+                  child: Text(
+                    c,
+                    style: const TextStyle(fontSize: 9),
+                  ),
+                ))
+            .toList(),
       ),
     );
   }
