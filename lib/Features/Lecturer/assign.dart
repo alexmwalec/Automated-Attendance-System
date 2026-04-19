@@ -2,13 +2,12 @@ import 'package:flutter/material.dart';
 import 'invigilator_dashboard.dart';
 import 'attendance_history.dart';
 
-// ─── Constants (shared with dashboard) ───────────────────────────────────────
+// ─── Constants ───────────────────────────────────────────────────────────────
 const Color tealPrimary = Color(0xFF2E9E8E);
 const Color tealDark = Color(0xFF227A6D);
 const Color tealLight = Color(0xFFDFF2EF);
 
 // ─── Assign Invigilator Page ──────────────────────────────────────────────────
-// Replaces the original Assign class — same name, same file, teal UI.
 class Assign extends StatefulWidget {
   const Assign({super.key});
 
@@ -17,7 +16,7 @@ class Assign extends StatefulWidget {
 }
 
 class _AssignState extends State<Assign> {
-  int _currentIndex = 3; // "Assign Task" tab is active
+  final int _currentIndex = 3;
 
   // ── Form ──────────────────────────────────────────────────────────────────
   final _formKey = GlobalKey<FormState>();
@@ -27,7 +26,6 @@ class _AssignState extends State<Assign> {
   final _roomController = TextEditingController();
   final _invigilatorController = TextEditingController();
 
-  // Holds the confirmed row after tapping Assign
   Map<String, String>? _confirmedRow;
 
   @override
@@ -173,8 +171,11 @@ class _AssignState extends State<Assign> {
                 ),
                 const Spacer(),
                 IconButton(
-                  icon: const Icon(Icons.notifications_outlined,
-                      color: Colors.white, size: 24),
+                  icon: const Icon(
+                    Icons.notifications_outlined,
+                    color: Colors.white,
+                    size: 24,
+                  ),
                   onPressed: () {},
                   padding: EdgeInsets.zero,
                   constraints: const BoxConstraints(),
@@ -188,8 +189,11 @@ class _AssignState extends State<Assign> {
                     color: tealDark,
                     border: Border.all(color: Colors.white38, width: 1.5),
                   ),
-                  child: const Icon(Icons.person_outline,
-                      color: Colors.white, size: 18),
+                  child: const Icon(
+                    Icons.person_outline,
+                    color: Colors.white,
+                    size: 18,
+                  ),
                 ),
               ],
             ),
@@ -199,201 +203,186 @@ class _AssignState extends State<Assign> {
 
       // ── Body ───────────────────────────────────────────────────────────────
       body: SingleChildScrollView(
-        padding: const EdgeInsets.all(14),
+        padding: const EdgeInsets.all(20),
         child: Form(
           key: _formKey,
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // Page title
+              // Title
               const Text(
                 'Assign Invigilator',
                 style: TextStyle(
-                  fontSize: 18,
+                  fontSize: 22,
                   fontWeight: FontWeight.bold,
                   color: tealPrimary,
                 ),
               ),
-              const SizedBox(height: 14),
+              const SizedBox(height: 24),
 
-              // ── Table card ────────────────────────────────────────────────
+              // Course Field
+              _buildFormField(
+                label: 'COURSE',
+                controller: _courseController,
+                hint: 'Enter course name',
+                validator: (v) => v == null || v.isEmpty ? 'Required' : null,
+              ),
+              const SizedBox(height: 16),
+
+              // Date Field
+              _buildFormField(
+                label: 'DATE',
+                controller: _dateController,
+                hint: 'Select date',
+                readOnly: true,
+                onTap: _pickDate,
+                validator: (v) => v == null || v.isEmpty ? 'Required' : null,
+                suffixIcon: const Icon(
+                  Icons.calendar_today,
+                  size: 18,
+                  color: tealPrimary,
+                ),
+              ),
+              const SizedBox(height: 16),
+
+              // Time Field
+              _buildFormField(
+                label: 'TIME',
+                controller: _timeController,
+                hint: 'Select time',
+                readOnly: true,
+                onTap: _pickTime,
+                validator: (v) => v == null || v.isEmpty ? 'Required' : null,
+                suffixIcon: const Icon(
+                  Icons.access_time,
+                  size: 18,
+                  color: tealPrimary,
+                ),
+              ),
+              const SizedBox(height: 16),
+
+              // Room Field
+              _buildFormField(
+                label: 'ROOM',
+                controller: _roomController,
+                hint: 'Enter room number',
+                validator: (v) => v == null || v.isEmpty ? 'Required' : null,
+              ),
+              const SizedBox(height: 16),
+
+              // Invigilator Field
+              _buildFormField(
+                label: 'INVIGILATOR',
+                controller: _invigilatorController,
+                hint: 'Enter invigilator name',
+                validator: (v) => v == null || v.isEmpty ? 'Required' : null,
+              ),
+              const SizedBox(height: 24),
+
+              // Note Text
               Container(
+                padding: const EdgeInsets.all(14),
                 decoration: BoxDecoration(
                   color: Colors.white,
                   borderRadius: BorderRadius.circular(8),
-                  border: Border.all(color: tealPrimary.withOpacity(0.35)),
-                  boxShadow: [
-                    BoxShadow(
-                      color: tealPrimary.withOpacity(0.07),
-                      blurRadius: 6,
-                      offset: const Offset(0, 2),
-                    ),
-                  ],
+                  border: Border.all(color: tealPrimary.withOpacity(0.2)),
                 ),
-                clipBehavior: Clip.antiAlias,
-                child: Column(
-                  children: [
-                    // Header row
-                    Container(
-                      color: tealPrimary,
-                      child: const Row(
-                        children: [
-                          _TH('COURSE', flex: 2),
-                          _TH('DATE', flex: 3),
-                          _TH('TIME', flex: 2),
-                          _TH('ROOM', flex: 1),
-                          _TH('INVIGILATOR', flex: 2),
-                        ],
-                      ),
+                child: RichText(
+                  text: TextSpan(
+                    style: const TextStyle(
+                      fontSize: 12,
+                      color: Colors.black54,
+                      height: 1.55,
                     ),
-
-                    // Input row
-                    Container(
-                      color: Colors.white,
-                      padding: const EdgeInsets.symmetric(
-                          vertical: 6, horizontal: 2),
-                      child: Row(
-                        crossAxisAlignment: CrossAxisAlignment.center,
-                        children: [
-                          Expanded(
-                            flex: 2,
-                            child: _TableInput(
-                              controller: _courseController,
-                              hint: 'COM 432',
-                              validator: (v) =>
-                                  v == null || v.isEmpty ? '*' : null,
-                            ),
-                          ),
-                          Expanded(
-                            flex: 3,
-                            child: _TableInput(
-                              controller: _dateController,
-                              hint: 'Pick date',
-                              readOnly: true,
-                              onTap: _pickDate,
-                              validator: (v) =>
-                                  v == null || v.isEmpty ? '*' : null,
-                              suffixIcon: const Icon(Icons.calendar_today,
-                                  size: 12, color: tealPrimary),
-                            ),
-                          ),
-                          Expanded(
-                            flex: 2,
-                            child: _TableInput(
-                              controller: _timeController,
-                              hint: 'Pick time',
-                              readOnly: true,
-                              onTap: _pickTime,
-                              validator: (v) =>
-                                  v == null || v.isEmpty ? '*' : null,
-                              suffixIcon: const Icon(Icons.access_time,
-                                  size: 12, color: tealPrimary),
-                            ),
-                          ),
-                          Expanded(
-                            flex: 1,
-                            child: _TableInput(
-                              controller: _roomController,
-                              hint: 'CK2',
-                              validator: (v) =>
-                                  v == null || v.isEmpty ? '*' : null,
-                            ),
-                          ),
-                          Expanded(
-                            flex: 2,
-                            child: _TableInput(
-                              controller: _invigilatorController,
-                              hint: 'Name',
-                              validator: (v) =>
-                                  v == null || v.isEmpty ? '*' : null,
-                            ),
-                          ),
-                        ],
+                    children: [
+                      const TextSpan(
+                        text:
+                            'Before confirming, ensure that the exam details are correct, '
+                            'the invigilator is available at the selected time, the venue is '
+                            'correct, and no scheduling conflict exists. Submit the form only '
+                            'after verifying all information. ',
                       ),
-                    ),
-
-                    // Confirmed data row — appears after Assign is pressed
-                    if (_confirmedRow != null)
-                      Container(
-                        color: const Color(0xFFF0FAF9),
-                        child: Row(
-                          children: [
-                            _TD(_confirmedRow!['course']!, flex: 2),
-                            _TD(_confirmedRow!['date']!, flex: 3),
-                            _TD(_confirmedRow!['time']!, flex: 2),
-                            _TD(_confirmedRow!['room']!, flex: 1),
-                            _TD(_confirmedRow!['invigilator']!, flex: 2),
-                          ],
+                      TextSpan(
+                        text:
+                            'Assign the Invigilator only after verifying all information.',
+                        style: TextStyle(
+                          color: Colors.red.shade400,
+                          fontWeight: FontWeight.bold,
                         ),
                       ),
-
-                    // Blank space so card looks tall like the screenshot
-                    const SizedBox(height: 120),
-                  ],
+                    ],
+                  ),
                 ),
               ),
 
-              const SizedBox(height: 20),
+              const SizedBox(height: 24),
 
-              // ── Note / instruction text ───────────────────────────────────
-              RichText(
-                text: TextSpan(
-                  style: const TextStyle(
-                      fontSize: 12, color: Colors.black54, height: 1.55),
-                  children: [
-                    const TextSpan(
-                      text:
-                          'Before confirming, ensure that the exam details are correct, '
-                          'the invigilator is available at the selected time, the venue is '
-                          'correct, and no scheduling conflict exists. Submit the form only '
-                          'after verifying all information. ',
-                    ),
-                    TextSpan(
-                      text:
-                          'Assign the Invigilator only after verifying all information.',
-                      style: TextStyle(
-                        color: Colors.redAccent.shade200,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-
-              const SizedBox(height: 20),
-
-              // ── Assign button ─────────────────────────────────────────────
+              // Assign Button
               Align(
                 alignment: Alignment.centerRight,
                 child: SizedBox(
-                  width: 100,
-                  height: 36,
+                  width: 120,
+                  height: 42,
                   child: ElevatedButton(
                     onPressed: _onAssign,
                     style: ElevatedButton.styleFrom(
                       backgroundColor: tealPrimary,
                       foregroundColor: Colors.white,
                       shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(20),
+                        borderRadius: BorderRadius.circular(25),
                       ),
                       elevation: 2,
-                      padding: EdgeInsets.zero,
                     ),
                     child: const Text(
                       'Assign',
-                      style:
-                          TextStyle(fontSize: 13, fontWeight: FontWeight.bold),
+                      style: TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.bold,
+                      ),
                     ),
                   ),
                 ),
               ),
-              const SizedBox(height: 16),
+              const SizedBox(height: 20),
+
+              // Confirmed assignment card (shows after assign)
+              if (_confirmedRow != null)
+                Container(
+                  margin: const EdgeInsets.only(top: 20),
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(color: tealPrimary.withOpacity(0.3)),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Assigned Successfully!',
+                        style: TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.bold,
+                          color: tealPrimary,
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      _buildConfirmationRow(
+                          'Course:', _confirmedRow!['course']!),
+                      _buildConfirmationRow('Date:', _confirmedRow!['date']!),
+                      _buildConfirmationRow('Time:', _confirmedRow!['time']!),
+                      _buildConfirmationRow('Room:', _confirmedRow!['room']!),
+                      _buildConfirmationRow(
+                          'Invigilator:', _confirmedRow!['invigilator']!),
+                    ],
+                  ),
+                ),
             ],
           ),
         ),
       ),
 
-      // ── Bottom Navigation — identical to dashboard ─────────────────────────
+      // ── Bottom Navigation ─────────────────────────────────────────────────
       bottomNavigationBar: BottomNavigationBar(
         currentIndex: _currentIndex,
         onTap: _onNavTap,
@@ -429,108 +418,91 @@ class _AssignState extends State<Assign> {
       ),
     );
   }
-}
 
-// ─── Table Header Cell ────────────────────────────────────────────────────────
-class _TH extends StatelessWidget {
-  final String text;
-  final int flex;
-  const _TH(this.text, {this.flex = 1});
-
-  @override
-  Widget build(BuildContext context) {
-    return Expanded(
-      flex: flex,
-      child: Padding(
-        padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 4),
-        child: Text(
-          text,
+  // Helper method to build form fields
+  Widget _buildFormField({
+    required String label,
+    required TextEditingController controller,
+    required String hint,
+    bool readOnly = false,
+    VoidCallback? onTap,
+    String? Function(String?)? validator,
+    Widget? suffixIcon,
+  }) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          label,
           style: const TextStyle(
-            color: Colors.white,
-            fontWeight: FontWeight.bold,
-            fontSize: 9,
+            fontSize: 13,
+            fontWeight: FontWeight.w600,
+            color: tealDark,
           ),
         ),
-      ),
-    );
-  }
-}
-
-// ─── Table Data Cell ──────────────────────────────────────────────────────────
-class _TD extends StatelessWidget {
-  final String text;
-  final int flex;
-  const _TD(this.text, {this.flex = 1});
-
-  @override
-  Widget build(BuildContext context) {
-    return Expanded(
-      flex: flex,
-      child: Padding(
-        padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 4),
-        child: Text(
-          text,
-          overflow: TextOverflow.ellipsis,
-          maxLines: 1,
-          style: const TextStyle(fontSize: 9.5, color: Colors.black87),
+        const SizedBox(height: 6),
+        TextFormField(
+          controller: controller,
+          readOnly: readOnly,
+          onTap: onTap,
+          validator: validator,
+          style: const TextStyle(fontSize: 14, color: Colors.black87),
+          decoration: InputDecoration(
+            hintText: hint,
+            hintStyle: TextStyle(fontSize: 13, color: Colors.grey.shade400),
+            suffixIcon: suffixIcon,
+            filled: true,
+            fillColor: Colors.white,
+            contentPadding:
+                const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(8),
+              borderSide: BorderSide(color: tealPrimary.withOpacity(0.3)),
+            ),
+            enabledBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(8),
+              borderSide: BorderSide(color: tealPrimary.withOpacity(0.2)),
+            ),
+            focusedBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(8),
+              borderSide: const BorderSide(color: tealPrimary, width: 1.5),
+            ),
+            errorBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(8),
+              borderSide: const BorderSide(color: Colors.red, width: 1),
+            ),
+            focusedErrorBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(8),
+              borderSide: const BorderSide(color: Colors.red, width: 1.5),
+            ),
+            errorStyle: const TextStyle(fontSize: 10),
+          ),
         ),
-      ),
+      ],
     );
   }
-}
 
-// ─── Inline Table Input Field ─────────────────────────────────────────────────
-class _TableInput extends StatelessWidget {
-  final TextEditingController controller;
-  final String hint;
-  final bool readOnly;
-  final VoidCallback? onTap;
-  final String? Function(String?)? validator;
-  final Widget? suffixIcon;
-
-  const _TableInput({
-    required this.controller,
-    required this.hint,
-    this.readOnly = false,
-    this.onTap,
-    this.validator,
-    this.suffixIcon,
-  });
-
-  @override
-  Widget build(BuildContext context) {
+  Widget _buildConfirmationRow(String label, String value) {
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 3),
-      child: TextFormField(
-        controller: controller,
-        readOnly: readOnly,
-        onTap: onTap,
-        validator: validator,
-        style: const TextStyle(fontSize: 9.5, color: Colors.black87),
-        decoration: InputDecoration(
-          hintText: hint,
-          hintStyle: TextStyle(fontSize: 9, color: Colors.grey.shade400),
-          suffixIcon: suffixIcon,
-          suffixIconConstraints:
-              const BoxConstraints(minWidth: 20, minHeight: 20),
-          isDense: true,
-          contentPadding:
-              const EdgeInsets.symmetric(horizontal: 4, vertical: 6),
-          enabledBorder: UnderlineInputBorder(
-            borderSide:
-                BorderSide(color: tealPrimary.withOpacity(0.4), width: 1),
+      padding: const EdgeInsets.symmetric(vertical: 4),
+      child: Row(
+        children: [
+          Text(
+            label,
+            style: const TextStyle(
+              fontSize: 12,
+              fontWeight: FontWeight.w600,
+              color: tealDark,
+            ),
           ),
-          focusedBorder: const UnderlineInputBorder(
-            borderSide: BorderSide(color: tealPrimary, width: 1.5),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Text(
+              value,
+              style: const TextStyle(fontSize: 12, color: Colors.black87),
+            ),
           ),
-          errorBorder: const UnderlineInputBorder(
-            borderSide: BorderSide(color: Colors.red, width: 1),
-          ),
-          focusedErrorBorder: const UnderlineInputBorder(
-            borderSide: BorderSide(color: Colors.red, width: 1.5),
-          ),
-          errorStyle: const TextStyle(fontSize: 7, height: 0.8),
-        ),
+        ],
       ),
     );
   }

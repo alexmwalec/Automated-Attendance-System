@@ -91,6 +91,7 @@ class _AttendanceHistoryState extends State<AttendanceHistory> {
 
         ],
       ),
+
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(14),
         child: Column(
@@ -280,6 +281,41 @@ class _AttendanceHistoryState extends State<AttendanceHistory> {
           }).toList(),
         ),
       ),
+
+      // ── Bottom Navigation ─────────────────────────────────────────────────
+      bottomNavigationBar: BottomNavigationBar(
+        currentIndex: _currentIndex,
+        onTap: _onNavTap,
+        type: BottomNavigationBarType.fixed,
+        backgroundColor: tealPrimary,
+        selectedItemColor: Colors.white,
+        unselectedItemColor: Colors.white54,
+        selectedLabelStyle:
+            const TextStyle(fontWeight: FontWeight.bold, fontSize: 10),
+        unselectedLabelStyle: const TextStyle(fontSize: 10),
+        items: const [
+          BottomNavigationBarItem(
+            icon: Icon(Icons.home_outlined),
+            activeIcon: Icon(Icons.home),
+            label: 'Home',
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.check_circle_outline),
+            activeIcon: Icon(Icons.check_circle),
+            label: 'Attendance',
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.history_outlined),
+            activeIcon: Icon(Icons.history),
+            label: 'Attendance History',
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.assignment_outlined),
+            activeIcon: Icon(Icons.assignment),
+            label: 'Assign Task',
+          ),
+        ],
+      ),
     );
   }
 
@@ -355,6 +391,20 @@ class _TableCellText extends StatelessWidget {
         textAlign: TextAlign.center,
         style: const TextStyle(fontSize: 10, color: Colors.black87),
       ),
+    );
+  }
+}
+
+// ─── Table Cell Text ──────────────────────────────────────────────────────────
+class _TableCellText extends StatelessWidget {
+  final String text;
+  const _TableCellText(this.text);
+
+  @override
+  Widget build(BuildContext context) {
+    return Text(
+      text,
+      style: const TextStyle(fontSize: 10, color: Colors.black87),
     );
   }
 }

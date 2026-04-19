@@ -1,7 +1,6 @@
 import 'package:automated_attendance_system/Features/Lecturer/take_attendance.dart';
 import 'package:flutter/material.dart';
 
-
 const Color tealPrimary = Color(0xFF2E9E8E);
 const Color tealDark = Color(0xFF227A6D);
 const Color tealLight = Color(0xFFE0F2F0);
@@ -12,20 +11,7 @@ class Course extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: tealLight,
-      appBar: AppBar(
-        title: const Text(
-          "",
-          style: TextStyle(fontWeight: FontWeight.bold , color: Colors.white),
-
-        ),
-        backgroundColor: tealPrimary,
-        elevation: 0,
-        centerTitle: false,
-      ),
-      body: const CourseSelectionScreen(),
-    );
+    return const CourseSelectionScreen();
   }
 }
 
@@ -43,269 +29,221 @@ class _CourseSelectionScreenState extends State<CourseSelectionScreen> {
   final List<String> sessionTypes = ['Class', 'Lab', 'Exam'];
 
   final List<Map<String, String>> courses = [
-    {'code': 'COM 323', 'year': '3 Year', 'name': 'Computer Science'},
-    {'code': 'COM 321', 'year': '3 Year', 'name': 'Information Technology'},
-    {'code': 'COM 325', 'year': '3 Year', 'name': 'Software Engineering'},
-    {'code': 'COM 330', 'year': '4 Year', 'name': 'Data Science'},
-    {'code': 'COM J23', 'year': '3 Year', 'name': 'Java Programming'},
-    {'code': 'COM S21', 'year': '3 Year', 'name': 'Cyber Security'},
+    {'code': 'COM 323', 'year': '3 Year'},
+    {'code': 'COM 321', 'year': '3 Year'},
+    {'code': 'COM 325', 'year': '3 Year'},
+    {'code': 'COM 330', 'year': '4 Year'},
+    {'code': 'COM J23', 'year': '3 Year'},
+    {'code': 'COM S21', 'year': '3 Year'},
+    {'code': 'COM 401', 'year': '4 Year'},
+    {'code': 'COM 402', 'year': '4 Year'},
+    {'code': 'COM 403', 'year': '4 Year'},
+    {'code': 'COM 404', 'year': '4 Year'},
+    {'code': 'COM 405', 'year': '4 Year'},
+    {'code': 'COM 406', 'year': '4 Year'},
   ];
 
   @override
   Widget build(BuildContext context) {
     return SingleChildScrollView(
-      padding: EdgeInsets.all(MediaQuery.of(context).size.width * 0.05),
+      padding: const EdgeInsets.all(16),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Title Section
+          // Info Box
           Container(
             width: double.infinity,
-            padding: const EdgeInsets.all(16),
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
             decoration: BoxDecoration(
-              color: Colors.white.withOpacity(0.75),
-              border: Border.all(color: tealPrimary.withOpacity(0.3)),
-              borderRadius: BorderRadius.circular(12),
-              boxShadow: [
-                BoxShadow(
-                  color: tealPrimary.withOpacity(0.1),
-                  blurRadius: 8,
-                  offset: const Offset(0, 3),
-                ),
-              ],
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: const [
-                Text(
-                  'Course/Lab/Exam Selection',
-                  style: TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
-                    color: tealPrimary,
-                  ),
-                ),
-                SizedBox(height: 8),
-                Text(
-                  'Select course and session type before proceeding to recording attendance',
-                  style: TextStyle(fontSize: 13, color: Colors.black54),
-                ),
-              ],
-            ),
-          ),
-
-          const SizedBox(height: 24),
-
-          // SESSION TYPE Section
-          Container(
-            padding: const EdgeInsets.all(12),
-            decoration: BoxDecoration(
-              color: Colors.white,
+              color: Colors.white.withOpacity(0.85),
+              border: Border.all(color: tealPrimary.withOpacity(0.4)),
               borderRadius: BorderRadius.circular(10),
-              border: Border.all(color: tealPrimary.withOpacity(0.2)),
             ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const Text(
-                  'SESSION TYPE',
-                  style: TextStyle(
-                    fontSize: 14,
-                    fontWeight: FontWeight.bold,
-                    color: tealDark,
-                  ),
-                ),
-                const SizedBox(height: 12),
-
-                // Session Type Buttons
-                Row(
-                  children: sessionTypes.map((type) {
-                    final isSelected = selectedSessionType == type;
-                    return Expanded(
-                      child: Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 4),
-                        child: GestureDetector(
-                          onTap: () {
-                            setState(() {
-                              selectedSessionType = type;
-                            });
-                          },
-                          child: Container(
-                            padding: const EdgeInsets.symmetric(vertical: 12),
-                            decoration: BoxDecoration(
-                              color: isSelected ? tealPrimary : Colors.white,
-                              borderRadius: BorderRadius.circular(8),
-                              border: Border.all(
-                                color: isSelected
-                                    ? tealPrimary
-                                    : tealPrimary.withOpacity(0.3),
-                                width: 1.5,
-                              ),
-                            ),
-                            child: Center(
-                              child: Text(
-                                type,
-                                style: TextStyle(
-                                  fontSize: 14,
-                                  color: isSelected
-                                      ? Colors.white
-                                      : tealPrimary,
-                                  fontWeight: isSelected
-                                      ? FontWeight.bold
-                                      : FontWeight.normal,
-                                ),
-                              ),
-                            ),
-                          ),
-                        ),
-                      ),
-                    );
-                  }).toList(),
-                ),
-              ],
-            ),
-          ),
-
-          const SizedBox(height: 24),
-
-          // Course Selection Section
-          Container(
-            padding: const EdgeInsets.all(12),
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(10),
-              border: Border.all(color: tealPrimary.withOpacity(0.2)),
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const Text(
-                  'SELECT COURSE',
-                  style: TextStyle(
-                    fontSize: 14,
-                    fontWeight: FontWeight.bold,
-                    color: tealDark,
-                  ),
-                ),
-                const SizedBox(height: 12),
-
-                // Course Grid
-                GridView.builder(
-                  shrinkWrap: true,
-                  physics: const NeverScrollableScrollPhysics(),
-                  gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                    crossAxisCount: 2,
-                    crossAxisSpacing: 12,
-                    mainAxisSpacing: 12,
-                    childAspectRatio: 1.5,
-                  ),
-                  itemCount: courses.length,
-                  itemBuilder: (context, index) {
-                    final course = courses[index];
-                    final isSelected = selectedCourse == course['code'];
-
-                    return GestureDetector(
-                      onTap: () {
-                        setState(() {
-                          selectedCourse = course['code'];
-                        });
-                      },
-                      child: Container(
-                        decoration: BoxDecoration(
-                          color: isSelected
-                              ? tealPrimary.withOpacity(0.1)
-                              : Colors.grey.shade50,
-                          borderRadius: BorderRadius.circular(10),
-                          border: Border.all(
-                            color: isSelected
-                                ? tealPrimary
-                                : tealPrimary.withOpacity(0.2),
-                            width: isSelected ? 2 : 1,
-                          ),
-                        ),
-                        child: Column(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            Text(
-                              course['code']!,
-                              style: TextStyle(
-                                fontSize: 16,
-                                fontWeight: isSelected
-                                    ? FontWeight.bold
-                                    : FontWeight.w600,
-                                color: isSelected
-                                    ? tealPrimary
-                                    : Colors.black87,
-                              ),
-                            ),
-                            const SizedBox(height: 6),
-                            Text(
-                              course['year']!,
-                              style: TextStyle(
-                                fontSize: 12,
-                                color: isSelected
-                                    ? tealPrimary
-                                    : Colors.grey.shade600,
-                              ),
-                            ),
-                            const SizedBox(height: 4),
-                            Text(
-                              course['name']!,
-                              style: TextStyle(
-                                fontSize: 11,
-                                color: isSelected
-                                    ? tealPrimary
-                                    : Colors.grey.shade500,
-                              ),
-                              textAlign: TextAlign.center,
-                            ),
-                          ],
-                        ),
-                      ),
-                    );
-                  },
-                ),
-              ],
-            ),
-          ),
-
-          const SizedBox(height: 24),
-
-          // Proceed Button - LINKED TO AttendancePage
-          SizedBox(
-            width: double.infinity,
-            child: ElevatedButton(
-              onPressed: () {
-                if (selectedSessionType != null && selectedCourse != null) {
-                  // Navigate to AttendancePage
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(builder: (context) => const AttendancePage()),
-                  );
-                } else {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(
-                      content: Text(
-                        'Please select both session type and course',
-                      ),
-                      backgroundColor: Colors.red,
-                      duration: Duration(seconds: 2),
+            child: RichText(
+              text: const TextSpan(
+                style: TextStyle(fontSize: 13, color: Colors.black87),
+                children: [
+                  TextSpan(text: 'Select '),
+                  TextSpan(
+                    text: 'course',
+                    style: TextStyle(
+                      color: Colors.blue,
+                      fontWeight: FontWeight.w600,
                     ),
-                  );
-                }
-              },
-              style: ElevatedButton.styleFrom(
-                backgroundColor: tealPrimary,
-                foregroundColor: Colors.white,
-                padding: const EdgeInsets.symmetric(vertical: 16),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(10),
-                ),
-                elevation: 2,
+                  ),
+                  TextSpan(text: ' and '),
+                  TextSpan(
+                    text: 'session type',
+                    style: TextStyle(
+                      color: Colors.red,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                  TextSpan(
+                    text: ' before proceeding to recording attendance',
+                  ),
+                ],
               ),
-              child: const Text(
-                'Proceed to Scanning',
-                style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+            ),
+          ),
+
+          const SizedBox(height: 24),
+
+          // SESSION TYPE Label
+          const Text(
+            'SESSION TYPE',
+            style: TextStyle(
+              fontSize: 13,
+              fontWeight: FontWeight.bold,
+              color: tealDark,
+              letterSpacing: 0.5,
+            ),
+          ),
+
+          const SizedBox(height: 10),
+
+          // Session Type Buttons Row
+          Row(
+            children: sessionTypes.map((type) {
+              final isSelected = selectedSessionType == type;
+              return Padding(
+                padding: const EdgeInsets.only(right: 8),
+                child: GestureDetector(
+                  onTap: () {
+                    setState(() {
+                      selectedSessionType = type;
+                    });
+                  },
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 20,
+                      vertical: 9,
+                    ),
+                    decoration: BoxDecoration(
+                      color: isSelected ? tealPrimary : Colors.white,
+                      borderRadius: BorderRadius.circular(6),
+                      border: Border.all(
+                        color: isSelected ? tealPrimary : Colors.grey.shade400,
+                        width: 1.2,
+                      ),
+                    ),
+                    child: Text(
+                      type,
+                      style: TextStyle(
+                        fontSize: 13,
+                        color: isSelected ? Colors.white : Colors.black87,
+                        fontWeight:
+                            isSelected ? FontWeight.bold : FontWeight.normal,
+                      ),
+                    ),
+                  ),
+                ),
+              );
+            }).toList(),
+          ),
+
+          const SizedBox(height: 24),
+
+          // Course Grid (3 columns)
+          GridView.builder(
+            shrinkWrap: true,
+            physics: const NeverScrollableScrollPhysics(),
+            gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+              crossAxisCount: 3,
+              crossAxisSpacing: 10,
+              mainAxisSpacing: 10,
+              childAspectRatio: 1.4,
+            ),
+            itemCount: courses.length,
+            itemBuilder: (context, index) {
+              final course = courses[index];
+              final isSelected = selectedCourse == course['code'];
+
+              return GestureDetector(
+                onTap: () {
+                  setState(() {
+                    selectedCourse = course['code'];
+                  });
+                },
+                child: Container(
+                  decoration: BoxDecoration(
+                    color: isSelected
+                        ? tealPrimary.withOpacity(0.15)
+                        : Colors.white,
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(
+                      color: isSelected ? tealPrimary : Colors.grey.shade300,
+                      width: isSelected ? 1.8 : 1,
+                    ),
+                  ),
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Text(
+                        course['code']!,
+                        style: TextStyle(
+                          fontSize: 13,
+                          fontWeight: FontWeight.bold,
+                          color: isSelected ? tealPrimary : Colors.black87,
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        course['year']!,
+                        style: TextStyle(
+                          fontSize: 11,
+                          color:
+                              isSelected ? tealPrimary : Colors.grey.shade600,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              );
+            },
+          ),
+
+          const SizedBox(height: 28),
+
+          // Proceed Button - wider, aligned to the right
+          Align(
+            alignment: Alignment.centerRight,
+            child: SizedBox(
+              width: 160,
+              child: ElevatedButton(
+                onPressed: () {
+                  if (selectedSessionType != null && selectedCourse != null) {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => const AttendancePage(),
+                      ),
+                    );
+                  } else {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        content: Text(
+                          'Please select both session type and course',
+                        ),
+                        backgroundColor: Colors.red,
+                        duration: Duration(seconds: 2),
+                      ),
+                    );
+                  }
+                },
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: tealPrimary,
+                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(vertical: 9),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(30),
+                  ),
+                  elevation: 2,
+                ),
+                child: const Text(
+                  'Proceed to scanning',
+                  style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
+                ),
               ),
             ),
           ),

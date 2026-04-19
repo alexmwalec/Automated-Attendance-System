@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
-import 'select_course.dart'; // Import the Course page
-import 'assign.dart'; // Import the Assign Invigilator page (class: Assign)
-import 'attendance_history.dart'; // Import the Attendance History page
+import 'select_course.dart';
+import 'assign.dart';
+import 'attendance_history.dart';
+import 'profile.dart';
 
 // ─── Constants ───────────────────────────────────────────────────────────────
 const Color tealPrimary = Color(0xFF2E9E8E);
@@ -12,6 +13,7 @@ const Color tealAccent = Color(0xFF26A69A);
 // Entry Widget
 class InvigilatorDashboard extends StatefulWidget {
   final int initialIndex;
+
   const InvigilatorDashboard({super.key, this.initialIndex = 0});
 
   @override
@@ -30,7 +32,6 @@ class _InvigilatorDashboardState extends State<InvigilatorDashboard> {
   final List<Widget> _pages = [
     const _DashboardPage(),
     const Course(),
-    const _TakeAttendancePage(),
     const _AttendanceHistoryPage(),
     const _AssignTaskPage(),
   ];
@@ -62,7 +63,6 @@ class _InvigilatorDashboardState extends State<InvigilatorDashboard> {
                   ),
                 ),
                 const Spacer(),
-                // Notification bell
                 IconButton(
                   icon: const Icon(
                     Icons.notifications_outlined,
@@ -74,19 +74,27 @@ class _InvigilatorDashboardState extends State<InvigilatorDashboard> {
                   constraints: const BoxConstraints(),
                 ),
                 const SizedBox(width: 12),
-                // Profile circle
-                Container(
-                  width: 32,
-                  height: 32,
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    color: tealDark,
-                    border: Border.all(color: Colors.white38, width: 1.5),
-                  ),
-                  child: const Icon(
-                    Icons.person_outline,
-                    color: Colors.white,
-                    size: 18,
+                // Profile icon — tapping navigates to Profile page
+                GestureDetector(
+                  onTap: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(builder: (_) => const Profile()),
+                    );
+                  },
+                  child: Container(
+                    width: 32,
+                    height: 32,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      color: tealDark,
+                      border: Border.all(color: Colors.white38, width: 1.5),
+                    ),
+                    child: const Icon(
+                      Icons.person_outline,
+                      color: Colors.white,
+                      size: 18,
+                    ),
                   ),
                 ),
               ],
@@ -102,21 +110,15 @@ class _InvigilatorDashboardState extends State<InvigilatorDashboard> {
       bottomNavigationBar: BottomNavigationBar(
         currentIndex: _currentIndex,
         onTap: (i) {
-          if (i == 2) {
-            // Navigate to Attendance History page as a new route
+          if (i == 3) {
             Navigator.push(
               context,
-              MaterialPageRoute(
-                builder: (_) => const AttendanceHistory(),
-              ),
+              MaterialPageRoute(builder: (_) => const Assign()),
             );
-          } else if (i == 3) {
-            // Navigate to Assign Invigilator page as a new route
+          } else if (i == 2) {
             Navigator.push(
               context,
-              MaterialPageRoute(
-                builder: (_) => const Assign(),
-              ),
+              MaterialPageRoute(builder: (_) => const AttendanceHistory()),
             );
           } else {
             setState(() => _currentIndex = i);
@@ -169,11 +171,8 @@ class _DashboardPage extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // ── Welcome Card ──────────────────────────────────────────────────
           _WelcomeCard(),
           const SizedBox(height: 14),
-
-          // ── Info Cards Row ────────────────────────────────────────────────
           Row(
             children: [
               Expanded(
@@ -196,8 +195,6 @@ class _DashboardPage extends StatelessWidget {
             ],
           ),
           const SizedBox(height: 18),
-
-          // ── Today's Sessions ──────────────────────────────────────────────
           const _SectionHeader(title: "TODAY'S SESSION'S"),
           const SizedBox(height: 8),
           const _TodaysSessionsTable(),
@@ -375,7 +372,6 @@ class _TodaysSessionsTable extends StatelessWidget {
       clipBehavior: Clip.antiAlias,
       child: Column(
         children: [
-          // Header
           Container(
             color: tealPrimary,
             child: Row(
@@ -386,7 +382,6 @@ class _TodaysSessionsTable extends StatelessWidget {
                         const EdgeInsets.symmetric(vertical: 8, horizontal: 4),
                     child: Text(
                       h,
-                      textAlign: TextAlign.left,
                       style: const TextStyle(
                         color: Colors.white,
                         fontWeight: FontWeight.bold,
@@ -398,7 +393,6 @@ class _TodaysSessionsTable extends StatelessWidget {
               }).toList(),
             ),
           ),
-          // Rows
           ...rows.asMap().entries.map((entry) {
             final i = entry.key;
             final row = entry.value;
@@ -449,16 +443,6 @@ class _TodaysSessionsTable extends StatelessWidget {
 }
 
 // ─── Placeholder Pages ────────────────────────────────────────────────────────
-class _TakeAttendancePage extends StatelessWidget {
-  const _TakeAttendancePage();
-  @override
-  Widget build(BuildContext context) => const _PlaceholderPage(
-        icon: Icons.check_circle_outline,
-        title: 'Take Attendance',
-        subtitle: 'Record student attendance',
-      );
-}
-
 class _AttendanceHistoryPage extends StatelessWidget {
   const _AttendanceHistoryPage();
   @override
@@ -476,9 +460,7 @@ class _AssignTaskPage extends StatelessWidget {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       Navigator.push(
         context,
-        MaterialPageRoute(
-          builder: (_) => const Assign(),
-        ),
+        MaterialPageRoute(builder: (_) => const Assign()),
       );
     });
     return const Center(

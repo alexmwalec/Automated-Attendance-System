@@ -1,9 +1,53 @@
 import 'package:flutter/material.dart';
 
-class Profile extends StatelessWidget {
+const Color tealPrimary = Color(0xFF2E9E8E);
+const Color tealDark = Color(0xFF227A6D);
+const Color tealLight = Color(0xFFE0F2F0);
+
+// ─── Profile View Page ────────────────────────────────────────────────────────
+class Profile extends StatefulWidget {
   const Profile({super.key});
 
   static const Color appTeal = Colors.teal;
+
+  @override
+  State<Profile> createState() => _ProfileState();
+}
+
+class _ProfileState extends State<Profile> {
+  String fullName = 'Dr Sulphuric Moyo';
+  String role = 'Lecturer';
+  String staffId = '';
+  String department = '';
+  String email = '';
+  String phone = '';
+
+  Future<void> _openEditProfile() async {
+    final result = await Navigator.push<Map<String, dynamic>>(
+      context,
+      MaterialPageRoute(
+        builder: (_) => EditProfile(
+          initialName: fullName,
+          initialRole: role,
+          initialStaffId: staffId,
+          initialDepartment: department,
+          initialEmail: email,
+          initialPhone: phone,
+        ),
+      ),
+    );
+
+    if (result != null) {
+      setState(() {
+        fullName = result['fullName'] ?? fullName;
+        role = result['role'] ?? role;
+        staffId = result['staffId'] ?? staffId;
+        department = result['department'] ?? department;
+        email = result['email'] ?? email;
+        phone = result['phone'] ?? phone;
+      });
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
