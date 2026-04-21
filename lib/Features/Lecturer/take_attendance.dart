@@ -1,5 +1,4 @@
 import 'dart:async';
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
 
@@ -173,7 +172,6 @@ class _AttendancePageState extends State<AttendancePage> {
     );
   }
 }
-
 class ScannedStudentsPage extends StatelessWidget {
   final Set<String> scannedIds;
 
