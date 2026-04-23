@@ -34,7 +34,8 @@ class _LoginScreenState extends State<LoginScreen> {
 
     if (email.isEmpty || password.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Please enter both email and password")),
+        const SnackBar(content: Text("Please enter both email and password" , style: TextStyle(color: Colors.red),)),
+
       );
       return;
     }
@@ -61,7 +62,7 @@ class _LoginScreenState extends State<LoginScreen> {
         );
       } else {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text("User role not found in database.")),
+          const SnackBar(content: Text("User role not found in database.", style: TextStyle(color: Colors.red),)),
         );
       }
     } catch (e) {
