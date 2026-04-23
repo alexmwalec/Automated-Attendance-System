@@ -6,9 +6,14 @@ import 'Features/Lecturer/attendance_history.dart';
 import 'Features/Lecturer/report.dart';
 import 'Features/Lecturer/take_attendance.dart';
 import 'Features/Lecturer/invigilator_dashboard.dart';
+import 'package:firebase_core/firebase_core.dart';
 
-void main() {
+void main() async {
   runApp(const AttendanceApp());
+  WidgetsFlutterBinding.ensureInitialized();
+
+  // initialing firebase
+  await Firebase.initializeApp();
 }
 
 class AttendanceApp extends StatelessWidget {
