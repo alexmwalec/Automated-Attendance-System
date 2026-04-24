@@ -6,11 +6,41 @@ import 'Features/Lecturer/attendance_history.dart';
 import 'Features/Lecturer/report.dart';
 import 'Features/Lecturer/take_attendance.dart';
 import 'Features/Lecturer/invigilator_dashboard.dart';
+import 'package:firebase_core/firebase_core.dart';
+import 'firebase_options.dart';
 
-void main() {
-  runApp(const AttendanceApp());
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+
+  try {
+    await Firebase.initializeApp(
+      options: DefaultFirebaseOptions.currentPlatform,
+    );
+    print("Firebase initialized successfully");
+
+
+    runApp(const AttendanceApp());
+
+  } catch (e) {
+    print("Firebase failed to initialize: $e");
+
+    runApp(MaterialApp(
+      debugShowCheckedModeBanner: false,
+      home: Scaffold(
+        body: Center(
+          child: Padding(
+            padding: const EdgeInsets.all(20.0),
+            child: Text(
+              "CRITICAL CONFIG ERROR:\n\n$e\n\nEnsure you ran 'flutterfire configure' for this platform.",
+              textAlign: TextAlign.center,
+              style: const TextStyle(color: Colors.red),
+            ),
+          ),
+        ),
+      ),
+    ));
+  }
 }
-
 class AttendanceApp extends StatelessWidget {
   const AttendanceApp({super.key});
 
