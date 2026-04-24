@@ -17,13 +17,29 @@ void main() async {
       options: DefaultFirebaseOptions.currentPlatform,
     );
     print("Firebase initialized successfully");
+
+    // Only run the actual app if Firebase succeeds
+    runApp(const AttendanceApp());
+
   } catch (e) {
-    print("Firebasse failed to initialize: $e");
-    runApp(MaterialApp(home: Scaffold(body: Center(child: Text("Firebase Config Error: $e")))));
+    print("Firebase failed to initialize: $e");
+
+    runApp(MaterialApp(
+      debugShowCheckedModeBanner: false,
+      home: Scaffold(
+        body: Center(
+          child: Padding(
+            padding: const EdgeInsets.all(20.0),
+            child: Text(
+              "CRITICAL CONFIG ERROR:\n\n$e\n\nEnsure you ran 'flutterfire configure' for this platform.",
+              textAlign: TextAlign.center,
+              style: const TextStyle(color: Colors.red),
+            ),
+          ),
+        ),
+      ),
+    ));
   }
-
-  runApp(const AttendanceApp());
-
 }
 class AttendanceApp extends StatelessWidget {
   const AttendanceApp({super.key});
