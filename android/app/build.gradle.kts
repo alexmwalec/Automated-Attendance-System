@@ -49,4 +49,3 @@ android {
 flutter {
     source = "../.."
 }
-apply plugin : 'com.google.gms.google-services'

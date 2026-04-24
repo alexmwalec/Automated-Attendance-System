@@ -18,7 +18,7 @@ void main() async {
     );
     print("Firebase initialized successfully");
 
-    // Only run the actual app if Firebase succeeds
+
     runApp(const AttendanceApp());
 
   } catch (e) {
