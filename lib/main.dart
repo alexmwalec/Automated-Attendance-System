@@ -7,15 +7,24 @@ import 'Features/Lecturer/report.dart';
 import 'Features/Lecturer/take_attendance.dart';
 import 'Features/Lecturer/invigilator_dashboard.dart';
 import 'package:firebase_core/firebase_core.dart';
+import 'firebase_options.dart';
 
 void main() async {
-  runApp(const AttendanceApp());
   WidgetsFlutterBinding.ensureInitialized();
 
-  // initialing firebase
-  await Firebase.initializeApp();
-}
+  try {
+    await Firebase.initializeApp(
+      options: DefaultFirebaseOptions.currentPlatform,
+    );
+    print("Firebase initialized successfully");
+  } catch (e) {
+    print("Firebasse failed to initialize: $e");
+    runApp(MaterialApp(home: Scaffold(body: Center(child: Text("Firebase Config Error: $e")))));
+  }
 
+  runApp(const AttendanceApp());
+
+}
 class AttendanceApp extends StatelessWidget {
   const AttendanceApp({super.key});
 

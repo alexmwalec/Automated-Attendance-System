@@ -1,8 +1,7 @@
 import 'package:flutter/material.dart';
-import 'package:automated_attendance_system/Services/database_services.dart'; // Import your service
+import 'package:automated_attendance_system/Services/database_services.dart';
 import 'package:automated_attendance_system/Features/Lecturer/invigilator_dashboard.dart';
-
-
+import 'package:firebase_auth/firebase_auth.dart';
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
 
@@ -65,9 +64,25 @@ class _LoginScreenState extends State<LoginScreen> {
           const SnackBar(content: Text("User role not found in database.", style: TextStyle(color: Colors.red),)),
         );
       }
-    } catch (e) {
+    }
+     // error reporting
+    catch (e) {
+      
+      print("Login error: $e"); // checking login error in console
+
+      String errorMessage = 'An error occurred. Please try again later.';
+
+      if (e is FirebaseAuthException) {
+        if (e.code == 'user-not-found') {
+          errorMessage = "No user found for that email.";
+        } else if (e.code == 'wrong-password') {
+          errorMessage = "Wrong password provided.";
+        } else if (e.code == 'network-request-failed') {
+          errorMessage = "Check your internet connection.";
+        }
+      }
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text("Login Failed: ${e.toString()}")),
+        SnackBar(content: Text(errorMessage, style: const TextStyle(color: Colors.red),)),
       );
     } finally {
       if (mounted) setState(() => _isLoading = false);
