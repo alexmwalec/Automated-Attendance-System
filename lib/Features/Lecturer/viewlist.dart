@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'invigilator_dashboard.dart';
+import 'lecturer_dashboard.dart';
 import 'attendance_history.dart';
 import 'assign.dart';
 
@@ -33,13 +33,13 @@ class _ViewListState extends State<ViewList> {
     if (index == 0) {
       Navigator.pushAndRemoveUntil(
         context,
-        MaterialPageRoute(builder: (_) => const InvigilatorDashboard(initialIndex: 0)),
+        MaterialPageRoute(builder: (_) => const LecturerDashboard(initialIndex: 0)),
             (route) => false,
       );
     } else if (index == 1) {
       Navigator.pushAndRemoveUntil(
         context,
-        MaterialPageRoute(builder: (_) => const InvigilatorDashboard(initialIndex: 1)),
+        MaterialPageRoute(builder: (_) => const  LecturerDashboard(initialIndex: 1)),
             (route) => false,
       );
     } else if (index == 2) {

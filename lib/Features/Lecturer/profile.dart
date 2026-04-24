@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'invigilator_dashboard.dart';
+import 'lecturer_dashboard.dart';
 import 'attendance_history.dart';
 import 'assign.dart';
 
@@ -15,11 +15,10 @@ class Profile extends StatefulWidget {
 }
 
 class _ProfileState extends State<Profile> {
-  // Navigation index (usually profile isn't on the main bar, but we use the bar for consistency)
   int _currentIndex = 0;
 
   // Profile Data
-  String fullName = 'Dr Sulphuric Moyo';
+  String fullName = ' Gabriel  Moyo';
   String role = 'Senior Lecturer - Computer Science';
   String staffId = 'LEC-CS-2024-001';
   String department = 'Computing Department';
@@ -30,13 +29,13 @@ class _ProfileState extends State<Profile> {
     if (index == 0) {
       Navigator.pushAndRemoveUntil(
         context,
-        MaterialPageRoute(builder: (_) => const InvigilatorDashboard(initialIndex: 0)),
+        MaterialPageRoute(builder: (_) => const LecturerDashboard(initialIndex: 0)),
             (route) => false,
       );
     } else if (index == 1) {
       Navigator.pushAndRemoveUntil(
         context,
-        MaterialPageRoute(builder: (_) => const InvigilatorDashboard(initialIndex: 1)),
+        MaterialPageRoute(builder: (_) => const LecturerDashboard(initialIndex: 1)),
             (route) => false,
       );
     } else if (index == 2) {
