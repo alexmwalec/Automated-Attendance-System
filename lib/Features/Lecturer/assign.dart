@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'invigilator_dashboard.dart';
+import 'lecturer_dashboard.dart';
 import 'attendance_history.dart';
 
 // ─── Constants ───────────────────────────────────────────────────────────────

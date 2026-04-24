@@ -4,23 +4,23 @@ import 'assign.dart';
 import 'attendance_history.dart';
 import 'profile.dart';
 
-// ─── Constants ───────────────────────────────────────────────────────────────
 const Color tealPrimary = Color(0xFF2E9E8E);
 const Color tealDark = Color(0xFF227A6D);
 const Color tealLight = Color(0xFFDFF2EF);
 const Color tealAccent = Color(0xFF26A69A);
 
 // Entry Widget
-class InvigilatorDashboard extends StatefulWidget {
+class LecturerDashboard extends StatefulWidget {
   final int initialIndex;
 
-  const InvigilatorDashboard({super.key, this.initialIndex = 0});
+  const LecturerDashboard({super.key, this.initialIndex = 0});
 
   @override
-  State<InvigilatorDashboard> createState() => _InvigilatorDashboardState();
+  State<LecturerDashboard> createState() => _LecturerDashboardState();
 }
 
-class _InvigilatorDashboardState extends State<InvigilatorDashboard> {
+// Renamed from _InvigilatorDashboardState to _LecturerDashboardState
+class _LecturerDashboardState extends State<LecturerDashboard> {
   late int _currentIndex;
 
   @override
@@ -40,8 +40,6 @@ class _InvigilatorDashboardState extends State<InvigilatorDashboard> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: tealLight,
-
-      // ── AppBar ──────────────────────────────────────────────────────────────
       appBar: AppBar(
         backgroundColor: tealPrimary,
         automaticallyImplyLeading: false,
@@ -74,7 +72,6 @@ class _InvigilatorDashboardState extends State<InvigilatorDashboard> {
                   constraints: const BoxConstraints(),
                 ),
                 const SizedBox(width: 12),
-                // Profile icon — tapping navigates to Profile page
                 GestureDetector(
                   onTap: () {
                     Navigator.push(
@@ -102,14 +99,11 @@ class _InvigilatorDashboardState extends State<InvigilatorDashboard> {
           ),
         ),
       ),
-
-      // ── Body ─────────────────────────────────────────────────────────────────
       body: _pages[_currentIndex],
-
-      // ── Bottom Navigation ────────────────────────────────────────────────────
       bottomNavigationBar: BottomNavigationBar(
         currentIndex: _currentIndex,
         onTap: (i) {
+          // Keep navigation logic as per your design
           if (i == 3) {
             Navigator.push(
               context,
@@ -147,12 +141,12 @@ class _InvigilatorDashboardState extends State<InvigilatorDashboard> {
           BottomNavigationBarItem(
             icon: Icon(Icons.history_outlined),
             activeIcon: Icon(Icons.history),
-            label: 'Attendance History',
+            label: ' Attendance History',
           ),
           BottomNavigationBarItem(
             icon: Icon(Icons.assignment_outlined),
             activeIcon: Icon(Icons.assignment),
-            label: 'Assign Task',
+            label: 'Assign Task' ,
           ),
         ],
       ),

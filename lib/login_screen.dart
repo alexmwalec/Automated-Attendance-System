@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:automated_attendance_system/Services/database_services.dart';
-import 'package:automated_attendance_system/Features/Lecturer/invigilator_dashboard.dart';
+import 'package:automated_attendance_system/Features/Lecturer/lecturer_dashboard.dart';
+import 'package:automated_attendance_system/Features/Invigilator/invigilator_dashboard.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -51,7 +52,7 @@ class _LoginScreenState extends State<LoginScreen> {
         // Navigate to Lecturer Dashboard
         Navigator.pushReplacement(
           context,
-          MaterialPageRoute(builder: (context) => const InvigilatorDashboard()), // Change to LecturerDashboard if separate
+          MaterialPageRoute(builder: (context) => const LecturerDashboard()),
         );
       } else if (role == 'invigilator') {
         // Navigate to Invigilator Dashboard

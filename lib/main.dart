@@ -5,7 +5,7 @@ import 'Features/Lecturer/select_course.dart';
 import 'Features/Lecturer/attendance_history.dart';
 import 'Features/Lecturer/report.dart';
 import 'Features/Lecturer/take_attendance.dart';
-import 'Features/Lecturer/invigilator_dashboard.dart';
+import 'Features/Lecturer/lecturer_dashboard.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'firebase_options.dart';
 

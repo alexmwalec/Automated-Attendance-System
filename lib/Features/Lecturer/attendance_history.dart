@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'invigilator_dashboard.dart';
+import 'lecturer_dashboard.dart';
 import 'select_course.dart';
 import 'assign.dart';
 import 'viewlist.dart';
