@@ -1,4 +1,5 @@
-import 'package:flutter/material.dart';import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:flutter/material.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 
 class InvigilatorHome extends StatelessWidget {
   const InvigilatorHome({super.key});
@@ -51,7 +52,7 @@ class InvigilatorHome extends StatelessWidget {
 
               return Card(
                 elevation: 3,
-                // FIXED: Corrected the EdgeInsets constructor and removed invalid 'const' if necessary
+                // FIXED: Corrected EdgeInsets syntax
                 margin: const EdgeInsets.only(bottom: 16),
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(12),
@@ -78,7 +79,7 @@ class InvigilatorHome extends StatelessWidget {
                         children: [
                           const Icon(Icons.calendar_today, size: 14, color: Colors.grey),
                           const SizedBox(width: 5),
-                          Text("Date: ${data['date']}"),
+                          Text("Date: ${data['date'] ?? 'N/A'}"),
                         ],
                       ),
                       const SizedBox(height: 4),
@@ -86,7 +87,7 @@ class InvigilatorHome extends StatelessWidget {
                         children: [
                           const Icon(Icons.access_time, size: 14, color: Colors.grey),
                           const SizedBox(width: 5),
-                          Text("Time: ${data['time']}"),
+                          Text("Time: ${data['time'] ?? 'N/A'}"),
                         ],
                       ),
                       const SizedBox(height: 4),
@@ -94,15 +95,15 @@ class InvigilatorHome extends StatelessWidget {
                         children: [
                           const Icon(Icons.location_on_outlined, size: 14, color: Colors.grey),
                           const SizedBox(width: 5),
-                          Text("Room: ${data['room']}"),
+                          Text("Room: ${data['room'] ?? 'N/A'}"),
                         ],
                       ),
                       const SizedBox(height: 8),
                       Text(
-                        "Invigilator: ${data['invigilatorName']}",
+                        "Invigilator: ${data['invigilatorName'] ?? 'Unassigned'}",
                         style: const TextStyle(
                           color: Color(0xFF2E9E8E),
-                          fontWeight: FontWeight.w600,
+                          fontWeight: FontWeight.bold,
                         ),
                       ),
                     ],
