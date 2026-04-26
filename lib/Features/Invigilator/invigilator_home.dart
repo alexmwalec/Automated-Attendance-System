@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 
 class InvigilatorHome extends StatelessWidget {
   const InvigilatorHome({super.key});
@@ -32,114 +33,152 @@ class InvigilatorHome extends StatelessWidget {
           ),
         ],
       ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(16.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // Welcome Section
-            Container(
-              width: double.infinity,
-              padding: const EdgeInsets.all(20),
-              decoration: BoxDecoration(
-                gradient: const LinearGradient(
-                  colors: [tealPrimary, tealDark],
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                ),
-                borderRadius: BorderRadius.circular(12),
-                boxShadow: [
-                  BoxShadow(
-                    color: tealPrimary.withOpacity(0.3),
-                    blurRadius: 8,
-                    offset: const Offset(0, 4),
-                  ),
-                ],
-              ),
-              child: const Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    'Welcome, Invigilator',
-                    style: TextStyle(
-                      color: Colors.white,
-                      fontSize: 20,
-                      fontWeight: FontWeight.bold,
+
+      body: StreamBuilder<QuerySnapshot>(
+        stream: FirebaseFirestore.instance
+            .collection('exam_assignments')
+            .orderBy('createdAt', descending: true)
+            .limit(1) // Get only the most recent assignment
+            .snapshots(),
+        builder: (context, snapshot) {
+          if (snapshot.connectionState == ConnectionState.waiting) {
+            return const Center(child: CircularProgressIndicator(color: tealPrimary));
+          }
+
+          // Default values if no data exists yet
+          String venue = "No Venue Assigned";
+          String date = "No Date Set";
+          String course = "N/A";
+          String time = "N/A";
+
+          if (snapshot.hasData && snapshot.data!.docs.isNotEmpty) {
+            final data = snapshot.data!.docs.first.data() as Map<String, dynamic>;
+            venue = data['room'] ?? "No Venue Assigned";
+            date = data['date'] ?? "No Date Set";
+            course = data['course'] ?? "N/A";
+            time = data['time'] ?? "N/A";
+          }
+
+          return SingleChildScrollView(
+            padding: const EdgeInsets.all(16.0),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // Welcome Section
+                Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.all(20),
+                  decoration: BoxDecoration(
+                    gradient: const LinearGradient(
+                      colors: [tealPrimary, tealDark],
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
                     ),
+                    borderRadius: BorderRadius.circular(12),
+                    boxShadow: [
+                      BoxShadow(
+                        color: tealPrimary.withOpacity(0.3),
+                        blurRadius: 8,
+                        offset: const Offset(0, 4),
+                      ),
+                    ],
                   ),
-                  SizedBox(height: 8),
-                  Text(
-                    'Manage examination attendance efficiently.',
-                    style: TextStyle(color: Colors.white70, fontSize: 14),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text(
+                        'Welcome, Invigilator',
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontSize: 20,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      Text(
+                        'Assigned to: $course',
+                        style: const TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.w500),
+                      ),
+                      const Text(
+                        'Manage examination attendance efficiently.',
+                        style: TextStyle(color: Colors.white70, fontSize: 13),
+                      ),
+                    ],
                   ),
-                ],
-              ),
-            ),
-            const SizedBox(height: 24),
+                ),
+                const SizedBox(height: 24),
 
-            // Exam Details Section
-            const Text(
-              'ASSIGNED EXAM DETAILS',
-              style: TextStyle(
-                color: tealDark,
-                fontWeight: FontWeight.bold,
-                fontSize: 14,
-                letterSpacing: 1.2,
-              ),
-            ),
-            const SizedBox(height: 12),
-            _buildInfoCard(
-              icon: Icons.location_on_outlined,
-              title: 'Exam Venue',
-              value: 'Great Hall - Room 102',
-              color: Colors.blue,
-            ),
-            _buildInfoCard(
-              icon: Icons.calendar_today_outlined,
-              title: 'Exam Date',
-              value: 'Friday, 15th Nov 2024',
-              color: Colors.orange,
-            ),
-            const SizedBox(height: 24),
+                
+                const Text(
+                  'ASSIGNED EXAM DETAILS',
+                  style: TextStyle(
+                    color: tealDark,
+                    fontWeight: FontWeight.bold,
+                    fontSize: 14,
+                    letterSpacing: 1.2,
+                  ),
+                ),
+                const SizedBox(height: 12),
+                _buildInfoCard(
+                  icon: Icons.location_on_outlined,
+                  title: 'Exam Venue',
+                  value: venue,
+                  color: Colors.blue,
+                ),
+                _buildInfoCard(
+                  icon: Icons.calendar_today_outlined,
+                  title: 'Exam Date',
+                  value: date,
+                  color: Colors.orange,
+                ),
+                _buildInfoCard(
+                  icon: Icons.access_time,
+                  title: 'Exam Time',
+                  value: time,
+                  color: Colors.purple,
+                ),
+                const SizedBox(height: 24),
 
-            // General Notice Section
-            const Text(
-              'GENERAL NOTICE',
-              style: TextStyle(
-                color: tealDark,
-                fontWeight: FontWeight.bold,
-                fontSize: 14,
-                letterSpacing: 1.2,
-              ),
+                // General Notice Section
+                const Text(
+                  'GENERAL NOTICE',
+                  style: TextStyle(
+                    color: tealDark,
+                    fontWeight: FontWeight.bold,
+                    fontSize: 14,
+                    letterSpacing: 1.2,
+                  ),
+                ),
+                const SizedBox(height: 12),
+                Container(
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: Colors.red.withOpacity(0.2)),
+                  ),
+                  child: const Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      _NoticeItem(
+                        title: 'Authorized Access Only',
+                        subtitle: 'Invigilators must use official credentials. Sharing login details is strictly prohibited.',
+                      ),
+                      _NoticeItem(
+                        title: 'Correct Exam & Course Selection',
+                        subtitle: 'Before taking attendance, confirm the correct exam and course are selected.',
+                      ),
+                      _NoticeItem(
+                        title: 'Accurate Attendance Recording',
+                        subtitle: 'Scan each student ID carefully. Report any discrepancies to the Exams Office immediately.',
+                      ),
+                    ],
+                  ),
+                ),
+              ],
             ),
-            const SizedBox(height: 12),
-            Container(
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: Colors.red.withOpacity(0.2)),
-              ),
-              child: const Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  _NoticeItem(
-                    title: 'Authorized Access Only',
-                    subtitle: 'Invigilators must use official credentials. Sharing login details is strictly prohibited.',
-                  ),
-                  _NoticeItem(
-                    title: 'Correct Exam & Course Selection',
-                    subtitle: 'Before taking attendance, confirm the correct exam and course are selected.',
-                  ),
-                  _NoticeItem(
-                    title: 'Accurate Attendance Recording',
-                    subtitle: 'Scan each student ID carefully. Report any discrepancies to the Exams Office immediately.',
-                  ),
-                ],
-              ),
-            ),
-          ],
-        ),
+          );
+        },
       ),
     );
   }
@@ -175,22 +214,24 @@ class InvigilatorHome extends StatelessWidget {
             child: Icon(icon, color: color),
           ),
           const SizedBox(width: 16),
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                title,
-                style: const TextStyle(color: Colors.grey, fontSize: 12),
-              ),
-              Text(
-                value,
-                style: const TextStyle(
-                  fontWeight: FontWeight.bold,
-                  fontSize: 16,
-                  color: Colors.black87,
+          Expanded( // Wrap in Expanded to handle long text
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  title,
+                  style: const TextStyle(color: Colors.grey, fontSize: 12),
                 ),
-              ),
-            ],
+                Text(
+                  value,
+                  style: const TextStyle(
+                    fontWeight: FontWeight.bold,
+                    fontSize: 16,
+                    color: Colors.black87,
+                  ),
+                ),
+              ],
+            ),
           ),
         ],
       ),
