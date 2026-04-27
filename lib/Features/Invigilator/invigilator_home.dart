@@ -97,10 +97,6 @@ class InvigilatorHome extends StatelessWidget {
                         ),
                       ),
                       const SizedBox(height: 8),
-                      Text(
-                        'Assigned to: $course',
-                        style: const TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.w500),
-                      ),
                       const Text(
                         'Manage examination attendance efficiently.',
                         style: TextStyle(color: Colors.white70, fontSize: 13),
@@ -121,6 +117,12 @@ class InvigilatorHome extends StatelessWidget {
                   ),
                 ),
                 const SizedBox(height: 12),
+                _buildInfoCard(
+                  icon: Icons.book_outlined,
+                  title: 'Course Assigned',
+                  value: course,
+                  color: Colors.blue,
+                ),
                 _buildInfoCard(
                   icon: Icons.location_on_outlined,
                   title: 'Exam Venue',
