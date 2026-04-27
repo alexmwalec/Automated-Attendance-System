@@ -14,7 +14,7 @@ class InvigilatorHome extends StatelessWidget {
       appBar: AppBar(
         backgroundColor: tealPrimary,
         title: const Text(
-          'AAS - Invigilator Home',
+          'AAS',
           style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
         ),
         automaticallyImplyLeading: false,
@@ -87,7 +87,7 @@ class InvigilatorHome extends StatelessWidget {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       const Text(
-                        'Welcome, Invigilator',
+                        'Welcome',
                         style: TextStyle(
                           color: Colors.white,
                           fontSize: 20,
