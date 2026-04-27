@@ -15,19 +15,11 @@ class ViewList extends StatefulWidget {
 }
 
 class _ViewListState extends State<ViewList> {
-  int _currentIndex = 2; // Keep Attendance History tab highlighted
+  final int _currentIndex = 2; // Keep Attendance History tab highlighted
 
   final List<Map<String, String>> presentStudents = [
-    {
-      "reg": "bed-com-27-22",
-      "name": "Sulphuric moyo",
-      "status": "Present"
-    },
-    {
-      "reg": "BSC",
-      "name": "King Sley",
-      "status": "Present"
-    },
+    {"reg": "bed-com-27-22", "name": "Sulphuric moyo", "status": "Present"},
+    {"reg": "BSC", "name": "King Sley", "status": "Present"},
   ];
 
   final List<Map<String, String>> absentStudents = [
@@ -51,13 +43,15 @@ class _ViewListState extends State<ViewList> {
     if (index == 0) {
       Navigator.pushAndRemoveUntil(
         context,
-        MaterialPageRoute(builder: (_) => const InvigilatorDashboard(initialIndex: 0)),
+        MaterialPageRoute(
+            builder: (_) => const InvigilatorDashboard(initialIndex: 0)),
         (route) => false,
       );
     } else if (index == 1) {
       Navigator.pushAndRemoveUntil(
         context,
-        MaterialPageRoute(builder: (_) => const InvigilatorDashboard(initialIndex: 1)),
+        MaterialPageRoute(
+            builder: (_) => const InvigilatorDashboard(initialIndex: 1)),
         (route) => false,
       );
     } else if (index == 2) {
@@ -124,7 +118,7 @@ class _ViewListState extends State<ViewList> {
             ),
             const SizedBox(height: 20),
             const Divider(color: tealPrimary, thickness: 8),
-            
+
             // Present Table
             _buildTableHeader(["REG NO", "FULL NAME", "STATUS"]),
             ListView.builder(
@@ -133,11 +127,13 @@ class _ViewListState extends State<ViewList> {
               itemCount: presentStudents.length,
               itemBuilder: (context, index) {
                 final student = presentStudents[index];
-                return _buildTableRow([student["reg"]!, student["name"]!, student["status"]!]);
+                return _buildTableRow(
+                    [student["reg"]!, student["name"]!, student["status"]!]);
               },
             ),
 
-            const Divider(color: tealPrimary, thickness: 2, indent: 16, endIndent: 16),
+            const Divider(
+                color: tealPrimary, thickness: 2, indent: 16, endIndent: 16),
 
             // Absent Table
             _buildTableHeader(["REG NO", "FULL NAME", "STATUS", "REASON"]),
@@ -171,14 +167,16 @@ class _ViewListState extends State<ViewList> {
                     );
                   },
                   child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
                     decoration: BoxDecoration(
                       color: tealPrimary,
                       borderRadius: BorderRadius.circular(2),
                     ),
                     child: const Text(
                       "Download",
-                      style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+                      style: TextStyle(
+                          color: Colors.white, fontWeight: FontWeight.bold),
                     ),
                   ),
                 ),
@@ -194,13 +192,26 @@ class _ViewListState extends State<ViewList> {
         backgroundColor: tealPrimary,
         selectedItemColor: Colors.white,
         unselectedItemColor: Colors.white54,
-        selectedLabelStyle: const TextStyle(fontWeight: FontWeight.bold, fontSize: 10),
+        selectedLabelStyle:
+            const TextStyle(fontWeight: FontWeight.bold, fontSize: 10),
         unselectedLabelStyle: const TextStyle(fontSize: 10),
         items: const [
-          BottomNavigationBarItem(icon: Icon(Icons.home_outlined), activeIcon: Icon(Icons.home), label: 'Home'),
-          BottomNavigationBarItem(icon: Icon(Icons.check_circle_outline), activeIcon: Icon(Icons.check_circle), label: 'Attendance'),
-          BottomNavigationBarItem(icon: Icon(Icons.history_outlined), activeIcon: Icon(Icons.history), label: 'Attendance History'),
-          BottomNavigationBarItem(icon: Icon(Icons.assignment_outlined), activeIcon: Icon(Icons.assignment), label: 'Assign Task'),
+          BottomNavigationBarItem(
+              icon: Icon(Icons.home_outlined),
+              activeIcon: Icon(Icons.home),
+              label: 'Home'),
+          BottomNavigationBarItem(
+              icon: Icon(Icons.check_circle_outline),
+              activeIcon: Icon(Icons.check_circle),
+              label: 'Attendance'),
+          BottomNavigationBarItem(
+              icon: Icon(Icons.history_outlined),
+              activeIcon: Icon(Icons.history),
+              label: 'Attendance History'),
+          BottomNavigationBarItem(
+              icon: Icon(Icons.assignment_outlined),
+              activeIcon: Icon(Icons.assignment),
+              label: 'Assign Task'),
         ],
       ),
     );
@@ -228,7 +239,8 @@ class _ViewListState extends State<ViewList> {
             .map((h) => Expanded(
                   child: Text(
                     h,
-                    style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 10),
+                    style: const TextStyle(
+                        fontWeight: FontWeight.bold, fontSize: 10),
                   ),
                 ))
             .toList(),

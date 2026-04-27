@@ -173,7 +173,7 @@ class _DashboardPage extends StatelessWidget {
         children: [
           _WelcomeCard(),
           const SizedBox(height: 14),
-          Row(
+          const Row(
             children: [
               Expanded(
                 child: _InfoCard(
@@ -183,7 +183,7 @@ class _DashboardPage extends StatelessWidget {
                   subtitle: '3 Courses',
                 ),
               ),
-              const SizedBox(width: 10),
+              SizedBox(width: 10),
               Expanded(
                 child: _InfoCard(
                   icon: Icons.calendar_today_outlined,
@@ -224,9 +224,9 @@ class _WelcomeCard extends StatelessWidget {
           ),
         ],
       ),
-      child: Column(
+      child: const Column(
         crossAxisAlignment: CrossAxisAlignment.start,
-        children: const [
+        children: [
           Text(
             'Welcome Back!',
             style: TextStyle(

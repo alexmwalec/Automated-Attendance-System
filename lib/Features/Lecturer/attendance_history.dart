@@ -16,8 +16,7 @@ class AttendanceHistory extends StatefulWidget {
 }
 
 class _AttendanceHistoryState extends State<AttendanceHistory> {
-
-  int _currentIndex = 2; // Attendance History tab active
+  final int _currentIndex = 2; // Attendance History tab active
   String? selectedCourse;
   String? selectedType;
 
@@ -30,14 +29,16 @@ class _AttendanceHistoryState extends State<AttendanceHistory> {
     if (index == 0) {
       Navigator.pushAndRemoveUntil(
         context,
-        MaterialPageRoute(builder: (_) => const InvigilatorDashboard(initialIndex: 0)),
-            (route) => false,
+        MaterialPageRoute(
+            builder: (_) => const InvigilatorDashboard(initialIndex: 0)),
+        (route) => false,
       );
     } else if (index == 1) {
       Navigator.pushAndRemoveUntil(
         context,
-        MaterialPageRoute(builder: (_) => const InvigilatorDashboard(initialIndex: 1)),
-            (route) => false,
+        MaterialPageRoute(
+            builder: (_) => const InvigilatorDashboard(initialIndex: 1)),
+        (route) => false,
       );
     } else if (index == 3) {
       Navigator.pushReplacement(
@@ -50,13 +51,13 @@ class _AttendanceHistoryState extends State<AttendanceHistory> {
   // Dummy data to show table representation
   final List<Map<String, String>> attendanceData = List.generate(
     20,
-        (index) => {
+    (index) => {
       "date": "${index + 1} March",
       "course": "COM411",
       "type": index % 2 == 0 ? "Class" : "Lab",
       "year": "4",
       "present": "${70 + index}",
-      "absent": "${index}",
+      "absent": "$index",
     },
   );
 
@@ -82,13 +83,9 @@ class _AttendanceHistoryState extends State<AttendanceHistory> {
             child: CircleAvatar(
                 backgroundColor: Colors.teal,
                 radius: 15,
-
-                child: const Icon(Icons.person_outline,
-                    color: Colors.white, size: 18)
-            ),
-
+                child:
+                    Icon(Icons.person_outline, color: Colors.white, size: 18)),
           ),
-
         ],
       ),
 
@@ -131,7 +128,8 @@ class _AttendanceHistoryState extends State<AttendanceHistory> {
               ),
             ),
             const SizedBox(height: 40),
-            const Divider(color: tealPrimary, thickness: 2, indent: 10, endIndent: 10),
+            const Divider(
+                color: tealPrimary, thickness: 2, indent: 10, endIndent: 10),
             const Padding(
               padding: EdgeInsets.symmetric(horizontal: 10.0, vertical: 8.0),
               child: Row(
@@ -154,7 +152,8 @@ class _AttendanceHistoryState extends State<AttendanceHistory> {
               itemBuilder: (context, index) {
                 final item = attendanceData[index];
                 return Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 10.0, vertical: 4.0),
+                  padding: const EdgeInsets.symmetric(
+                      horizontal: 10.0, vertical: 4.0),
                   child: Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
@@ -171,11 +170,13 @@ class _AttendanceHistoryState extends State<AttendanceHistory> {
                             onTap: () {
                               Navigator.push(
                                 context,
-                                MaterialPageRoute(builder: (_) => const ViewList()),
+                                MaterialPageRoute(
+                                    builder: (_) => const ViewList()),
                               );
                             },
                             child: Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                              padding: const EdgeInsets.symmetric(
+                                  horizontal: 12, vertical: 4),
                               decoration: BoxDecoration(
                                 color: tealPrimary,
                                 borderRadius: BorderRadius.circular(4),
@@ -262,25 +263,6 @@ class _AttendanceHistoryState extends State<AttendanceHistory> {
         border: Border.all(color: Colors.black, width: 0.8),
         borderRadius: BorderRadius.circular(2),
       ),
-      child: DropdownButtonHideUnderline(
-        child: DropdownButton<String>(
-          value: selectedCourse,
-          hint: const Text("Select Course", style: TextStyle(fontSize: 9)),
-          icon: const Icon(Icons.keyboard_arrow_down, size: 14),
-          style: const TextStyle(fontSize: 9, color: Colors.black),
-          onChanged: (String? newValue) {
-            setState(() {
-              selectedCourse = newValue;
-            });
-          },
-          items: courses.map<DropdownMenuItem<String>>((String value) {
-            return DropdownMenuItem<String>(
-              value: value,
-              child: Text(value),
-            );
-          }).toList(),
-        ),
-      ),
 
       // ── Bottom Navigation ─────────────────────────────────────────────────
       bottomNavigationBar: BottomNavigationBar(
@@ -315,6 +297,25 @@ class _AttendanceHistoryState extends State<AttendanceHistory> {
             label: 'Assign Task',
           ),
         ],
+      ),
+      child: DropdownButtonHideUnderline(
+        child: DropdownButton<String>(
+          value: selectedCourse,
+          hint: const Text("Select Course", style: TextStyle(fontSize: 9)),
+          icon: const Icon(Icons.keyboard_arrow_down, size: 14),
+          style: const TextStyle(fontSize: 9, color: Colors.black),
+          onChanged: (String? newValue) {
+            setState(() {
+              selectedCourse = newValue;
+            });
+          },
+          items: courses.map<DropdownMenuItem<String>>((String value) {
+            return DropdownMenuItem<String>(
+              value: value,
+              child: Text(value),
+            );
+          }).toList(),
+        ),
       ),
     );
   }
@@ -357,7 +358,8 @@ class _AttendanceHistoryState extends State<AttendanceHistory> {
       ),
       child: Text(
         text,
-        style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 12),
+        style: const TextStyle(
+            color: Colors.white, fontWeight: FontWeight.bold, fontSize: 12),
       ),
     );
   }
@@ -373,7 +375,8 @@ class _TableHeaderText extends StatelessWidget {
       child: Text(
         text,
         textAlign: TextAlign.center,
-        style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 10, color: Colors.black),
+        style: const TextStyle(
+            fontWeight: FontWeight.bold, fontSize: 10, color: Colors.black),
       ),
     );
   }

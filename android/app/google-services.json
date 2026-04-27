@@ -1,0 +1,48 @@
+{
+  "project_info": {
+    "project_number": "270698623484",
+    "project_id": "automated-attendance-sys-9fc6b",
+    "storage_bucket": "automated-attendance-sys-9fc6b.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:270698623484:android:7dae01509f33a9d37b0279",
+        "android_client_info": {
+          "package_name": "auutomated.attendance"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyARDUAxm1_y5rtdZ7ubsbYJ8tRmnJbfJ-4"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:270698623484:android:5eca954a44a925777b0279",
+        "android_client_info": {
+          "package_name": "com.example.automated_attendance_system"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyARDUAxm1_y5rtdZ7ubsbYJ8tRmnJbfJ-4"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

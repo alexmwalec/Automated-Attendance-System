@@ -1,12 +1,94 @@
 import 'package:flutter/material.dart';
-import 'package:automated_attendance_system/Features/Lecturer/invigilator_dashboard.dart';
-
-class LoginScreen extends StatelessWidget {
+import 'package:automated_attendance_system/Services/database_services.dart';
+import 'package:automated_attendance_system/Features/Lecturer/lecturer_dashboard.dart';
+import 'package:automated_attendance_system/Features/Invigilator/invigilator_dashboard.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
+
+  @override
+  State<LoginScreen> createState() => _LoginScreenState();
+}
+
+class _LoginScreenState extends State<LoginScreen> {
+  // 1. Add Controllers to capture input
+  final TextEditingController _emailController = TextEditingController();
+  final TextEditingController _passwordController = TextEditingController();
+  bool _isLoading = false;
 
   static const Color appTeal = Colors.teal;
   static const Color neutralGrey = Colors.grey;
   static const Color lightGreyBg = Color(0xFFF5F5F5);
+
+  @override
+  void dispose() {
+    _emailController.dispose();
+    _passwordController.dispose();
+    super.dispose();
+  }
+
+  // 2. Logic to handle role-based login
+  void _handleLogin() async {
+    final email = _emailController.text.trim();
+    final password = _passwordController.text.trim();
+
+    if (email.isEmpty || password.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("Please enter both email and password" , style: TextStyle(color: Colors.red),)),
+
+      );
+      return;
+    }
+
+    setState(() => _isLoading = true);
+
+    try {
+      // Calling  AuthService
+      String? role = await AuthService().signIn(email, password);
+
+      if (!mounted) return;
+
+      if (role == 'lecturer') {
+        // Navigate to Lecturer Dashboard
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(builder: (context) => const LecturerDashboard()),
+        );
+      } else if (role == 'invigilator') {
+        // Navigate to Invigilator Dashboard
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(builder: (context) => const InvigilatorDashboard()),
+        );
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text("User role not found in database.", style: TextStyle(color: Colors.red),)),
+        );
+      }
+    }
+     // error reporting
+    catch (e) {
+      
+      print("Login error: $e"); // checking login error in console
+
+      String errorMessage = 'An error occurred. Please try again later.';
+
+      if (e is FirebaseAuthException) {
+        if (e.code == 'user-not-found') {
+          errorMessage = "No user found for that email.";
+        } else if (e.code == 'wrong-password') {
+          errorMessage = "Wrong password provided.";
+        } else if (e.code == 'network-request-failed') {
+          errorMessage = "Check your internet connection.";
+        }
+      }
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(errorMessage, style: const TextStyle(color: Colors.red),)),
+      );
+    } finally {
+      if (mounted) setState(() => _isLoading = false);
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -42,52 +124,46 @@ class LoginScreen extends StatelessWidget {
                     ),
                   ),
                   const SizedBox(height: 32),
+                  // Username/Email Field
                   TextField(
+                    controller: _emailController, // Assigned Controller
                     style: const TextStyle(color: Colors.black87),
                     decoration: InputDecoration(
                       prefixIcon: const Icon(Icons.email, color: appTeal),
-                      hintText: 'Username',
-                      hintStyle: const TextStyle(
-                        color: neutralGrey,
-                      ),
+                      hintText: 'Email',
+                      hintStyle: const TextStyle(color: neutralGrey),
                       filled: true,
                       fillColor: Colors.white,
-                      contentPadding: const EdgeInsets.symmetric(
-                          horizontal: 16, vertical: 16),
+                      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
                       enabledBorder: OutlineInputBorder(
-                        borderSide:
-                            const BorderSide(color: Color(0xFFE0E0E0), width: 1),
+                        borderSide: const BorderSide(color: Color(0xFFE0E0E0), width: 1),
                         borderRadius: BorderRadius.circular(8),
                       ),
                       focusedBorder: OutlineInputBorder(
-                        borderSide:
-                            const BorderSide(color: appTeal, width: 2),
+                        borderSide: const BorderSide(color: appTeal, width: 2),
                         borderRadius: BorderRadius.circular(8),
                       ),
                     ),
                   ),
                   const SizedBox(height: 16),
+                  // Password Field
                   TextField(
+                    controller: _passwordController, // Assigned Controller
                     obscureText: true,
                     style: const TextStyle(color: Colors.black87),
                     decoration: InputDecoration(
                       prefixIcon: const Icon(Icons.lock, color: appTeal),
                       hintText: 'Password',
-                      hintStyle: const TextStyle(
-                        color: neutralGrey,
-                      ),
+                      hintStyle: const TextStyle(color: neutralGrey),
                       filled: true,
                       fillColor: Colors.white,
-                      contentPadding: const EdgeInsets.symmetric(
-                          horizontal: 16, vertical: 16),
+                      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
                       enabledBorder: OutlineInputBorder(
-                        borderSide:
-                            const BorderSide(color: Color(0xFFE0E0E0), width: 1),
+                        borderSide: const BorderSide(color: Color(0xFFE0E0E0), width: 1),
                         borderRadius: BorderRadius.circular(8),
                       ),
                       focusedBorder: OutlineInputBorder(
-                        borderSide:
-                            const BorderSide(color: appTeal, width: 2),
+                        borderSide: const BorderSide(color: appTeal, width: 2),
                         borderRadius: BorderRadius.circular(8),
                       ),
                     ),
@@ -96,14 +172,7 @@ class LoginScreen extends StatelessWidget {
                   SizedBox(
                     width: double.infinity,
                     child: ElevatedButton(
-                      onPressed: () {
-                        Navigator.pushReplacement(
-                          context,
-                          MaterialPageRoute(
-                              builder: (context) =>
-                                  const InvigilatorDashboard()),
-                        );
-                      },
+                      onPressed: _isLoading ? null : _handleLogin, // Disable while loading
                       style: ElevatedButton.styleFrom(
                         backgroundColor: appTeal,
                         foregroundColor: Colors.white,
@@ -113,7 +182,13 @@ class LoginScreen extends StatelessWidget {
                         ),
                         padding: const EdgeInsets.symmetric(vertical: 16),
                       ),
-                      child: const Text(
+                      child: _isLoading
+                          ? const SizedBox(
+                        height: 20,
+                        width: 20,
+                        child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2),
+                      )
+                          : const Text(
                         'LOG IN',
                         style: TextStyle(
                           fontWeight: FontWeight.bold,

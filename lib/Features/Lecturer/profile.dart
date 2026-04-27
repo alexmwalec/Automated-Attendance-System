@@ -1,51 +1,53 @@
 import 'package:flutter/material.dart';
+import 'lecturer_dashboard.dart';
+import 'attendance_history.dart';
+import 'assign.dart';
 
 const Color tealPrimary = Color(0xFF2E9E8E);
 const Color tealDark = Color(0xFF227A6D);
 const Color tealLight = Color(0xFFE0F2F0);
 
-// ─── Profile View Page ────────────────────────────────────────────────────────
 class Profile extends StatefulWidget {
   const Profile({super.key});
-
-  static const Color appTeal = Colors.teal;
 
   @override
   State<Profile> createState() => _ProfileState();
 }
 
 class _ProfileState extends State<Profile> {
-  String fullName = 'Dr Sulphuric Moyo';
-  String role = 'Lecturer';
-  String staffId = '';
-  String department = '';
-  String email = '';
-  String phone = '';
+  int _currentIndex = 0;
 
-  Future<void> _openEditProfile() async {
-    final result = await Navigator.push<Map<String, dynamic>>(
-      context,
-      MaterialPageRoute(
-        builder: (_) => EditProfile(
-          initialName: fullName,
-          initialRole: role,
-          initialStaffId: staffId,
-          initialDepartment: department,
-          initialEmail: email,
-          initialPhone: phone,
-        ),
-      ),
-    );
+  // Profile Data
+  String fullName = ' Gabriel  Moyo';
+  String role = 'Senior Lecturer - Computer Science';
+  String staffId = 'LEC-CS-2024-001';
+  String department = 'Computing Department';
+  String email = 'harris@unima.ac.mw';
+  String phone = '+265 888 123 456';
 
-    if (result != null) {
-      setState(() {
-        fullName = result['fullName'] ?? fullName;
-        role = result['role'] ?? role;
-        staffId = result['staffId'] ?? staffId;
-        department = result['department'] ?? department;
-        email = result['email'] ?? email;
-        phone = result['phone'] ?? phone;
-      });
+  void _onNavTap(int index) {
+    if (index == 0) {
+      Navigator.pushAndRemoveUntil(
+        context,
+        MaterialPageRoute(builder: (_) => const LecturerDashboard(initialIndex: 0)),
+            (route) => false,
+      );
+    } else if (index == 1) {
+      Navigator.pushAndRemoveUntil(
+        context,
+        MaterialPageRoute(builder: (_) => const LecturerDashboard(initialIndex: 1)),
+            (route) => false,
+      );
+    } else if (index == 2) {
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(builder: (_) => const AttendanceHistory()),
+      );
+    } else if (index == 3) {
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(builder: (_) => const Assign()),
+      );
     }
   }
 
@@ -53,33 +55,36 @@ class _ProfileState extends State<Profile> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        backgroundColor: appTeal,
+        backgroundColor: tealPrimary,
         elevation: 0,
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: Colors.white),
-          onPressed: () => Navigator.pushReplacementNamed(context, '/dashboard'),
-        ),
+        automaticallyImplyLeading: false, // Removed back button to favor Nav Bar
         title: const Text(
-          'My Profile',
-          style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 18),
+          'AAS',
+          style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
         ),
         actions: [
           IconButton(
-            icon: const Icon(Icons.edit, color: Colors.white),
-            onPressed: () {
-              // Edit profile logic
-            },
+            icon: const Icon(Icons.notifications_none, color: Colors.white),
+            onPressed: () {},
+          ),
+          const Padding(
+            padding: EdgeInsets.only(right: 16.0),
+            child: CircleAvatar(
+              backgroundColor: tealDark,
+              radius: 15,
+              child: Icon(Icons.person, color: Colors.white, size: 18),
+            ),
           ),
         ],
       ),
       body: SingleChildScrollView(
         child: Column(
           children: [
-            // Profile Header / Avatar Section
+            // Profile Header
             Container(
               width: double.infinity,
               decoration: const BoxDecoration(
-                color: appTeal,
+                color: tealPrimary,
                 borderRadius: BorderRadius.only(
                   bottomLeft: Radius.circular(30),
                   bottomRight: Radius.circular(30),
@@ -96,7 +101,8 @@ class _ProfileState extends State<Profile> {
                         backgroundColor: Colors.white,
                         child: CircleAvatar(
                           radius: 46,
-                          backgroundImage: NetworkImage('https://via.placeholder.com/150'), // Placeholder
+                          backgroundColor: tealLight,
+                          child: Icon(Icons.person, size: 50, color: tealPrimary),
                         ),
                       ),
                       Container(
@@ -105,22 +111,22 @@ class _ProfileState extends State<Profile> {
                           color: Colors.white,
                           shape: BoxShape.circle,
                         ),
-                        child: const Icon(Icons.camera_alt, color: appTeal, size: 18),
+                        child: const Icon(Icons.camera_alt, color: tealPrimary, size: 18),
                       ),
                     ],
                   ),
                   const SizedBox(height: 12),
-                  const Text(
-                    'Mr Harris Zintambila',
-                    style: TextStyle(
+                  Text(
+                    fullName,
+                    style: const TextStyle(
                       color: Colors.white,
                       fontSize: 22,
                       fontWeight: FontWeight.bold,
                     ),
                   ),
-                  const Text(
-                    'Senior Lecturer - Computer Science',
-                    style: TextStyle(
+                  Text(
+                    role,
+                    style: const TextStyle(
                       color: Colors.white70,
                       fontSize: 14,
                     ),
@@ -136,47 +142,45 @@ class _ProfileState extends State<Profile> {
                 children: [
                   const _SectionTitle(title: 'Personal Information'),
                   const SizedBox(height: 10),
-                  const _ProfileInfoTile(
+                  _ProfileInfoTile(
                     icon: Icons.email_outlined,
                     label: 'Email Address',
-                    value: 'harris@unima.ac.mw',
+                    value: email,
                   ),
-                  const _ProfileInfoTile(
+                  _ProfileInfoTile(
                     icon: Icons.phone_outlined,
                     label: 'Phone Number',
-                    value: '+265 888 123 456',
+                    value: phone,
                   ),
-                  const _ProfileInfoTile(
+                  _ProfileInfoTile(
                     icon: Icons.badge_outlined,
                     label: 'Employee ID',
-                    value: 'LEC-CS-2024-001',
+                    value: staffId,
                   ),
-                  const _ProfileInfoTile(
+                  _ProfileInfoTile(
                     icon: Icons.location_on,
                     label: 'Department',
-                    value: 'Computing Department',
+                    value: department,
                   ),
 
                   const SizedBox(height: 24),
                   const _SectionTitle(title: 'Academic Duties'),
                   const SizedBox(height: 10),
-                  _buildDutyChip(context, 'Course Lecturer'),
-                  _buildDutyChip(context, 'Exam Invigilator'),
+                  Wrap(
+                    spacing: 8,
+                    children: [
+                      _buildDutyChip('Course Lecturer'),
+                      _buildDutyChip('Exam Invigilator'),
+                    ],
+                  ),
 
                   const SizedBox(height: 24),
                   const _SectionTitle(title: 'Account Settings'),
                   const SizedBox(height: 10),
                   ListTile(
                     contentPadding: EdgeInsets.zero,
-                    leading: const Icon(Icons.lock_outline, color: appTeal),
+                    leading: const Icon(Icons.lock_outline, color: tealPrimary),
                     title: const Text('Change Password'),
-                    trailing: const Icon(Icons.chevron_right),
-                    onTap: () {},
-                  ),
-                  ListTile(
-                    contentPadding: EdgeInsets.zero,
-                    leading: const Icon(Icons.notifications_none, color: appTeal),
-                    title: const Text('Notification Preferences'),
                     trailing: const Icon(Icons.chevron_right),
                     onTap: () {},
                   ),
@@ -194,26 +198,42 @@ class _ProfileState extends State<Profile> {
           ],
         ),
       ),
+      bottomNavigationBar: BottomNavigationBar(
+        currentIndex: _currentIndex,
+        onTap: _onNavTap,
+        type: BottomNavigationBarType.fixed,
+        backgroundColor: tealPrimary,
+        selectedItemColor: Colors.white,
+        unselectedItemColor: Colors.white54,
+        selectedLabelStyle: const TextStyle(fontWeight: FontWeight.bold, fontSize: 10),
+        unselectedLabelStyle: const TextStyle(fontSize: 10),
+        items: const [
+          BottomNavigationBarItem(icon: Icon(Icons.home_outlined), activeIcon: Icon(Icons.home), label: 'Home'),
+          BottomNavigationBarItem(icon: Icon(Icons.check_circle_outline), activeIcon: Icon(Icons.check_circle), label: 'Attendance'),
+          BottomNavigationBarItem(icon: Icon(Icons.history_outlined), activeIcon: Icon(Icons.history), label: 'Attendance History'),
+          BottomNavigationBarItem(icon: Icon(Icons.assignment_outlined), activeIcon: Icon(Icons.assignment), label: 'Assign Task'),
+        ],
+      ),
     );
   }
 
-  Widget _buildDutyChip(BuildContext context, String label) {
+  Widget _buildDutyChip(String label) {
     return Container(
       margin: const EdgeInsets.only(bottom: 8),
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
       decoration: BoxDecoration(
-        color: appTeal.withValues(alpha: 0.1),
+        color: tealPrimary.withOpacity(0.1),
         borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: appTeal.withValues(alpha: 0.3)),
+        border: Border.all(color: tealPrimary.withOpacity(0.3)),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          const Icon(Icons.check_circle_outline, color: appTeal, size: 16),
+          const Icon(Icons.check_circle_outline, color: tealPrimary, size: 16),
           const SizedBox(width: 8),
           Text(
             label,
-            style: const TextStyle(color: appTeal, fontWeight: FontWeight.w500),
+            style: const TextStyle(color: tealPrimary, fontWeight: FontWeight.w500),
           ),
         ],
       ),
@@ -262,7 +282,7 @@ class _ProfileInfoTile extends StatelessWidget {
               color: Colors.grey.shade100,
               borderRadius: BorderRadius.circular(8),
             ),
-            child: Icon(icon, color: Colors.teal, size: 20),
+            child: Icon(icon, color: tealPrimary, size: 20),
           ),
           const SizedBox(width: 16),
           Column(

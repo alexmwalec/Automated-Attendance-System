@@ -1,13 +1,12 @@
 import 'package:flutter/material.dart';
-import 'invigilator_dashboard.dart';
+import 'lecturer_dashboard.dart';
 import 'attendance_history.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 
-// ─── Constants ───────────────────────────────────────────────────────────────
 const Color tealPrimary = Color(0xFF2E9E8E);
 const Color tealDark = Color(0xFF227A6D);
 const Color tealLight = Color(0xFFDFF2EF);
 
-// ─── Assign Invigilator Page ──────────────────────────────────────────────────
 class Assign extends StatefulWidget {
   const Assign({super.key});
 
@@ -18,7 +17,6 @@ class Assign extends StatefulWidget {
 class _AssignState extends State<Assign> {
   final int _currentIndex = 3;
 
-  // ── Form ──────────────────────────────────────────────────────────────────
   final _formKey = GlobalKey<FormState>();
   final _courseController = TextEditingController();
   final _dateController = TextEditingController();
@@ -27,6 +25,7 @@ class _AssignState extends State<Assign> {
   final _invigilatorController = TextEditingController();
 
   Map<String, String>? _confirmedRow;
+  bool _isAssigning = false; // To show loading state
 
   @override
   void dispose() {
@@ -54,7 +53,7 @@ class _AssignState extends State<Assign> {
     );
     if (picked != null) {
       _dateController.text =
-          '${picked.day} ${_monthName(picked.month)}, ${picked.year}';
+      '${picked.day} ${_monthName(picked.month)}, ${picked.year}';
     }
   }
 
@@ -80,60 +79,82 @@ class _AssignState extends State<Assign> {
 
   String _monthName(int m) {
     const months = [
-      '',
-      'January',
-      'February',
-      'March',
-      'April',
-      'May',
-      'June',
-      'July',
-      'August',
-      'September',
-      'October',
-      'November',
-      'December',
+      '', 'January', 'February', 'March', 'April', 'May', 'June',
+      'July', 'August', 'September', 'October', 'November', 'December',
     ];
     return months[m];
   }
 
-  // ── Assign button handler ─────────────────────────────────────────────────
-  void _onAssign() {
+  // ── Assign button handler (Firestore Integration) ─────────────────────────
+  void _onAssign() async {
     if (_formKey.currentState!.validate()) {
-      setState(() {
-        _confirmedRow = {
+      setState(() => _isAssigning = true);
+
+      try {
+        // 1. Prepare data for Firestore
+        final assignmentData = {
           'course': _courseController.text.trim(),
           'date': _dateController.text.trim(),
           'time': _timeController.text.trim(),
           'room': _roomController.text.trim(),
-          'invigilator': _invigilatorController.text.trim(),
+          'invigilatorName': _invigilatorController.text.trim(),
+          'createdAt': FieldValue.serverTimestamp(),
+          'status': 'Assigned',
         };
-      });
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Invigilator assigned successfully!'),
-          backgroundColor: tealPrimary,
-          duration: Duration(seconds: 2),
-        ),
-      );
+
+        // 2. Add to Firestore collection 'exam_assignments'
+        await FirebaseFirestore.instance
+            .collection('exam_assignments')
+            .add(assignmentData);
+
+        // 3. Update local UI state
+        setState(() {
+          _confirmedRow = {
+            'course': _courseController.text.trim(),
+            'date': _dateController.text.trim(),
+            'time': _timeController.text.trim(),
+            'room': _roomController.text.trim(),
+            'invigilator': _invigilatorController.text.trim(),
+          };
+          _isAssigning = false;
+        });
+
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Assigned and synced to Invigilator Dashboard!'),
+            backgroundColor: tealPrimary,
+            duration: Duration(seconds: 2),
+          ),
+        );
+      } catch (e) {
+        setState(() => _isAssigning = false);
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
     }
   }
 
   // ── Bottom nav tap ────────────────────────────────────────────────────────
   void _onNavTap(int i) {
     if (i == _currentIndex) return;
-    
+
     if (i == 0) {
       Navigator.pushAndRemoveUntil(
         context,
-        MaterialPageRoute(builder: (_) => const InvigilatorDashboard(initialIndex: 0)),
-        (route) => false,
+        MaterialPageRoute(builder: (_) => const LecturerDashboard(initialIndex: 0)),
+            (route) => false,
       );
     } else if (i == 1) {
       Navigator.pushAndRemoveUntil(
         context,
-        MaterialPageRoute(builder: (_) => const InvigilatorDashboard(initialIndex: 1)),
-        (route) => false,
+        MaterialPageRoute(builder: (_) => const LecturerDashboard(initialIndex: 1)),
+            (route) => false,
       );
     } else if (i == 2) {
       Navigator.pushReplacement(
@@ -147,8 +168,6 @@ class _AssignState extends State<Assign> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: tealLight,
-
-      // ── AppBar ─────────────────────────────────────────────────────────────
       appBar: AppBar(
         backgroundColor: tealPrimary,
         automaticallyImplyLeading: false,
@@ -171,11 +190,7 @@ class _AssignState extends State<Assign> {
                 ),
                 const Spacer(),
                 IconButton(
-                  icon: const Icon(
-                    Icons.notifications_outlined,
-                    color: Colors.white,
-                    size: 24,
-                  ),
+                  icon: const Icon(Icons.notifications_outlined, color: Colors.white, size: 24),
                   onPressed: () {},
                   padding: EdgeInsets.zero,
                   constraints: const BoxConstraints(),
@@ -189,19 +204,13 @@ class _AssignState extends State<Assign> {
                     color: tealDark,
                     border: Border.all(color: Colors.white38, width: 1.5),
                   ),
-                  child: const Icon(
-                    Icons.person_outline,
-                    color: Colors.white,
-                    size: 18,
-                  ),
+                  child: const Icon(Icons.person_outline, color: Colors.white, size: 18),
                 ),
               ],
             ),
           ),
         ),
       ),
-
-      // ── Body ───────────────────────────────────────────────────────────────
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(20),
         child: Form(
@@ -209,18 +218,12 @@ class _AssignState extends State<Assign> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // Title
               const Text(
                 'Assign Invigilator',
-                style: TextStyle(
-                  fontSize: 22,
-                  fontWeight: FontWeight.bold,
-                  color: tealPrimary,
-                ),
+                style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: tealPrimary),
               ),
               const SizedBox(height: 24),
 
-              // Course Field
               _buildFormField(
                 label: 'COURSE',
                 controller: _courseController,
@@ -229,7 +232,6 @@ class _AssignState extends State<Assign> {
               ),
               const SizedBox(height: 16),
 
-              // Date Field
               _buildFormField(
                 label: 'DATE',
                 controller: _dateController,
@@ -237,15 +239,10 @@ class _AssignState extends State<Assign> {
                 readOnly: true,
                 onTap: _pickDate,
                 validator: (v) => v == null || v.isEmpty ? 'Required' : null,
-                suffixIcon: const Icon(
-                  Icons.calendar_today,
-                  size: 18,
-                  color: tealPrimary,
-                ),
+                suffixIcon: const Icon(Icons.calendar_today, size: 18, color: tealPrimary),
               ),
               const SizedBox(height: 16),
 
-              // Time Field
               _buildFormField(
                 label: 'TIME',
                 controller: _timeController,
@@ -253,15 +250,10 @@ class _AssignState extends State<Assign> {
                 readOnly: true,
                 onTap: _pickTime,
                 validator: (v) => v == null || v.isEmpty ? 'Required' : null,
-                suffixIcon: const Icon(
-                  Icons.access_time,
-                  size: 18,
-                  color: tealPrimary,
-                ),
+                suffixIcon: const Icon(Icons.access_time, size: 18, color: tealPrimary),
               ),
               const SizedBox(height: 16),
 
-              // Room Field
               _buildFormField(
                 label: 'ROOM',
                 controller: _roomController,
@@ -270,7 +262,6 @@ class _AssignState extends State<Assign> {
               ),
               const SizedBox(height: 16),
 
-              // Invigilator Field
               _buildFormField(
                 label: 'INVIGILATOR',
                 controller: _invigilatorController,
@@ -279,7 +270,6 @@ class _AssignState extends State<Assign> {
               ),
               const SizedBox(height: 24),
 
-              // Note Text
               Container(
                 padding: const EdgeInsets.all(14),
                 decoration: BoxDecoration(
@@ -289,26 +279,16 @@ class _AssignState extends State<Assign> {
                 ),
                 child: RichText(
                   text: TextSpan(
-                    style: const TextStyle(
-                      fontSize: 12,
-                      color: Colors.black54,
-                      height: 1.55,
-                    ),
+                    style: const TextStyle(fontSize: 12, color: Colors.black54, height: 1.55),
                     children: [
                       const TextSpan(
-                        text:
-                            'Before confirming, ensure that the exam details are correct, '
+                        text: 'Before confirming, ensure that the exam details are correct, '
                             'the invigilator is available at the selected time, the venue is '
-                            'correct, and no scheduling conflict exists. Submit the form only '
-                            'after verifying all information. ',
+                            'correct, and no scheduling conflict exists. ',
                       ),
                       TextSpan(
-                        text:
-                            'Assign the Invigilator only after verifying all information.',
-                        style: TextStyle(
-                          color: Colors.red.shade400,
-                          fontWeight: FontWeight.bold,
-                        ),
+                        text: 'Submit the form only after verifying all information.',
+                        style: TextStyle(color: Colors.red.shade400, fontWeight: FontWeight.bold),
                       ),
                     ],
                   ),
@@ -317,35 +297,31 @@ class _AssignState extends State<Assign> {
 
               const SizedBox(height: 24),
 
-              // Assign Button
               Align(
                 alignment: Alignment.centerRight,
                 child: SizedBox(
                   width: 120,
                   height: 42,
                   child: ElevatedButton(
-                    onPressed: _onAssign,
+                    onPressed: _isAssigning ? null : _onAssign,
                     style: ElevatedButton.styleFrom(
                       backgroundColor: tealPrimary,
                       foregroundColor: Colors.white,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(25),
-                      ),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(25)),
                       elevation: 2,
                     ),
-                    child: const Text(
-                      'Assign',
-                      style: TextStyle(
-                        fontSize: 14,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
+                    child: _isAssigning
+                        ? const SizedBox(
+                      width: 20,
+                      height: 20,
+                      child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2),
+                    )
+                        : const Text('Assign', style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold)),
                   ),
                 ),
               ),
               const SizedBox(height: 20),
 
-              // Confirmed assignment card (shows after assign)
               if (_confirmedRow != null)
                 Container(
                   margin: const EdgeInsets.only(top: 20),
@@ -358,22 +334,16 @@ class _AssignState extends State<Assign> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(
+                      const Text(
                         'Assigned Successfully!',
-                        style: TextStyle(
-                          fontSize: 14,
-                          fontWeight: FontWeight.bold,
-                          color: tealPrimary,
-                        ),
+                        style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: tealPrimary),
                       ),
                       const SizedBox(height: 8),
-                      _buildConfirmationRow(
-                          'Course:', _confirmedRow!['course']!),
+                      _buildConfirmationRow('Course:', _confirmedRow!['course']!),
                       _buildConfirmationRow('Date:', _confirmedRow!['date']!),
                       _buildConfirmationRow('Time:', _confirmedRow!['time']!),
                       _buildConfirmationRow('Room:', _confirmedRow!['room']!),
-                      _buildConfirmationRow(
-                          'Invigilator:', _confirmedRow!['invigilator']!),
+                      _buildConfirmationRow('Invigilator:', _confirmedRow!['invigilator']!),
                     ],
                   ),
                 ),
@@ -381,8 +351,6 @@ class _AssignState extends State<Assign> {
           ),
         ),
       ),
-
-      // ── Bottom Navigation ─────────────────────────────────────────────────
       bottomNavigationBar: BottomNavigationBar(
         currentIndex: _currentIndex,
         onTap: _onNavTap,
@@ -390,36 +358,18 @@ class _AssignState extends State<Assign> {
         backgroundColor: tealPrimary,
         selectedItemColor: Colors.white,
         unselectedItemColor: Colors.white54,
-        selectedLabelStyle:
-            const TextStyle(fontWeight: FontWeight.bold, fontSize: 10),
+        selectedLabelStyle: const TextStyle(fontWeight: FontWeight.bold, fontSize: 10),
         unselectedLabelStyle: const TextStyle(fontSize: 10),
         items: const [
-          BottomNavigationBarItem(
-            icon: Icon(Icons.home_outlined),
-            activeIcon: Icon(Icons.home),
-            label: 'Home',
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.check_circle_outline),
-            activeIcon: Icon(Icons.check_circle),
-            label: 'Attendance',
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.history_outlined),
-            activeIcon: Icon(Icons.history),
-            label: 'Attendance History',
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.assignment_outlined),
-            activeIcon: Icon(Icons.assignment),
-            label: 'Assign Task',
-          ),
+          BottomNavigationBarItem(icon: Icon(Icons.home_outlined), activeIcon: Icon(Icons.home), label: 'Home'),
+          BottomNavigationBarItem(icon: Icon(Icons.check_circle_outline), activeIcon: Icon(Icons.check_circle), label: 'Attendance'),
+          BottomNavigationBarItem(icon: Icon(Icons.history_outlined), activeIcon: Icon(Icons.history), label: 'History'),
+          BottomNavigationBarItem(icon: Icon(Icons.assignment_outlined), activeIcon: Icon(Icons.assignment), label: 'Assign Task'),
         ],
       ),
     );
   }
 
-  // Helper method to build form fields
   Widget _buildFormField({
     required String label,
     required TextEditingController controller,
@@ -432,14 +382,7 @@ class _AssignState extends State<Assign> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(
-          label,
-          style: const TextStyle(
-            fontSize: 13,
-            fontWeight: FontWeight.w600,
-            color: tealDark,
-          ),
-        ),
+        Text(label, style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: tealDark)),
         const SizedBox(height: 6),
         TextFormField(
           controller: controller,
@@ -453,28 +396,10 @@ class _AssignState extends State<Assign> {
             suffixIcon: suffixIcon,
             filled: true,
             fillColor: Colors.white,
-            contentPadding:
-                const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-            border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(8),
-              borderSide: BorderSide(color: tealPrimary.withOpacity(0.3)),
-            ),
-            enabledBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(8),
-              borderSide: BorderSide(color: tealPrimary.withOpacity(0.2)),
-            ),
-            focusedBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(8),
-              borderSide: const BorderSide(color: tealPrimary, width: 1.5),
-            ),
-            errorBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(8),
-              borderSide: const BorderSide(color: Colors.red, width: 1),
-            ),
-            focusedErrorBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(8),
-              borderSide: const BorderSide(color: Colors.red, width: 1.5),
-            ),
+            contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+            border: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: BorderSide(color: tealPrimary.withOpacity(0.3))),
+            enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: BorderSide(color: tealPrimary.withOpacity(0.2))),
+            focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: const BorderSide(color: tealPrimary, width: 1.5)),
             errorStyle: const TextStyle(fontSize: 10),
           ),
         ),
@@ -487,21 +412,9 @@ class _AssignState extends State<Assign> {
       padding: const EdgeInsets.symmetric(vertical: 4),
       child: Row(
         children: [
-          Text(
-            label,
-            style: const TextStyle(
-              fontSize: 12,
-              fontWeight: FontWeight.w600,
-              color: tealDark,
-            ),
-          ),
+          Text(label, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: tealDark)),
           const SizedBox(width: 8),
-          Expanded(
-            child: Text(
-              value,
-              style: const TextStyle(fontSize: 12, color: Colors.black87),
-            ),
-          ),
+          Expanded(child: Text(value, style: const TextStyle(fontSize: 12, color: Colors.black87))),
         ],
       ),
     );
