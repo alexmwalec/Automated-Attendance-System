@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
 import 'manual_search.dart';
 import 'submit_list.dart';
+import 'attendance_history.dart';
 
 const Color tealPrimary = Color(0xFF2E9E8E);
 const Color tealDark = Color(0xFF227A6D);
@@ -35,7 +36,7 @@ class _AttendancePageState extends State<AttendancePage> {
       _isProcessing = true;
 
       // TODO: replace with your real DB lookup
-      // Simulate DB lookup: expect QR value as "regNo|name|surname"
+      // Expects QR value formatted as "regNo|name|surname"
       final parts = code.split('|');
       if (parts.length < 3) {
         _failedAttempts++;
@@ -55,7 +56,7 @@ class _AttendancePageState extends State<AttendancePage> {
       final student = {
         'regNo': parts[0],
         'name': parts[1],
-        'surname': parts[2]
+        'surname': parts[2],
       };
       final alreadyAdded =
           _scannedStudents.any((s) => s['regNo'] == student['regNo']);
@@ -79,22 +80,24 @@ class _AttendancePageState extends State<AttendancePage> {
     ScaffoldMessenger.of(context).clearSnackBars();
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-          content: Text(msg),
-          backgroundColor: color,
-          duration: const Duration(seconds: 2)),
+        content: Text(msg),
+        backgroundColor: color,
+        duration: const Duration(seconds: 2),
+      ),
     );
   }
 
   void _goManual() {
     Navigator.push(
-        context,
-        MaterialPageRoute(
-          builder: (_) => ManualSearch(
-            existingStudents: _scannedStudents,
-            onStudentAdded: (student) =>
-                setState(() => _scannedStudents.add(student)),
-          ),
-        )).then((_) => setState(() => _isProcessing = false));
+      context,
+      MaterialPageRoute(
+        builder: (_) => ManualSearch(
+          existingStudents: _scannedStudents,
+          onStudentAdded: (student) =>
+              setState(() => _scannedStudents.add(student)),
+        ),
+      ),
+    ).then((_) => setState(() => _isProcessing = false));
   }
 
   @override
@@ -104,11 +107,12 @@ class _AttendancePageState extends State<AttendancePage> {
       appBar: AppBar(
         backgroundColor: tealPrimary,
         automaticallyImplyLeading: false,
-        title: const Text('AAS',
-            style: TextStyle(
-                color: Colors.white,
-                fontWeight: FontWeight.bold,
-                fontSize: 18)),
+        elevation: 0,
+        title: const Text(
+          'AAS',
+          style: TextStyle(
+              color: Colors.white, fontWeight: FontWeight.bold, fontSize: 18),
+        ),
         actions: [
           IconButton(
             icon: const Icon(Icons.notifications_none, color: Colors.white),
@@ -124,12 +128,60 @@ class _AttendancePageState extends State<AttendancePage> {
           ),
         ],
       ),
+      bottomNavigationBar: BottomNavigationBar(
+        currentIndex: 1,
+        onTap: (i) {
+          if (i == 0) {
+            Navigator.pop(context);
+          } else if (i == 2) {
+            Navigator.push(
+              context,
+              MaterialPageRoute(builder: (_) => const AttendanceHistory()),
+            );
+          } else if (i == 3) {
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (_) => SubmitList(students: _scannedStudents),
+              ),
+            );
+          }
+        },
+        type: BottomNavigationBarType.fixed,
+        backgroundColor: tealPrimary,
+        selectedItemColor: Colors.white,
+        unselectedItemColor: Colors.white54,
+        selectedLabelStyle:
+            const TextStyle(fontWeight: FontWeight.bold, fontSize: 10),
+        unselectedLabelStyle: const TextStyle(fontSize: 10),
+        items: const [
+          BottomNavigationBarItem(
+            icon: Icon(Icons.home_outlined),
+            activeIcon: Icon(Icons.home),
+            label: 'Home',
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.check_circle_outline),
+            activeIcon: Icon(Icons.check_circle),
+            label: 'Attendance',
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.history_outlined),
+            activeIcon: Icon(Icons.history),
+            label: 'Attendance History',
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.fact_check_outlined),
+            activeIcon: Icon(Icons.fact_check),
+            label: 'Submit List',
+          ),
+        ],
+      ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(16),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Camera box
             Container(
               height: 300,
               decoration: BoxDecoration(
@@ -155,19 +207,19 @@ class _AttendancePageState extends State<AttendancePage> {
               ),
             ),
             const SizedBox(height: 16),
-
-            // Manual add button
             SizedBox(
               width: double.infinity,
               child: OutlinedButton.icon(
                 onPressed: _goManual,
                 icon: const Icon(Icons.person_search,
                     color: tealPrimary, size: 16),
-                label: const Text('Add Manually',
-                    style: TextStyle(
-                        color: tealPrimary,
-                        fontSize: 13,
-                        fontWeight: FontWeight.w600)),
+                label: const Text(
+                  'Add Manually',
+                  style: TextStyle(
+                      color: tealPrimary,
+                      fontSize: 13,
+                      fontWeight: FontWeight.w600),
+                ),
                 style: OutlinedButton.styleFrom(
                   side: const BorderSide(color: tealPrimary, width: 1.2),
                   padding: const EdgeInsets.symmetric(vertical: 10),
@@ -177,8 +229,6 @@ class _AttendancePageState extends State<AttendancePage> {
               ),
             ),
             const SizedBox(height: 16),
-
-            // Instructions card
             Container(
               width: double.infinity,
               padding: const EdgeInsets.all(16),
@@ -189,11 +239,13 @@ class _AttendancePageState extends State<AttendancePage> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Text('Scanning Instructions',
-                      style: TextStyle(
-                          fontSize: 14,
-                          fontWeight: FontWeight.bold,
-                          color: tealPrimary)),
+                  const Text(
+                    'Scanning Instructions',
+                    style: TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.bold,
+                        color: tealPrimary),
+                  ),
                   const SizedBox(height: 8),
                   _instruction('1 Point camera at student ID QR code'),
                   _instruction('2 Wait until student data has been fetched'),
@@ -209,8 +261,10 @@ class _AttendancePageState extends State<AttendancePage> {
 
   Widget _instruction(String text) => Padding(
         padding: const EdgeInsets.symmetric(vertical: 2),
-        child: Text(text,
-            style: const TextStyle(
-                fontSize: 11, color: Colors.black54, height: 1.5)),
+        child: Text(
+          text,
+          style:
+              const TextStyle(fontSize: 11, color: Colors.black54, height: 1.5),
+        ),
       );
 }
