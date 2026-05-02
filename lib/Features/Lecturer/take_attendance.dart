@@ -25,7 +25,7 @@ class _AttendancePageState extends State<AttendancePage> {
   // New Fields for Firebase Structure
   String _selectedSessionType = 'Class';
   final List<String> _sessionTypes = ['Class', 'Lab', 'Exam'];
-  final String _courseCode = "COM 411"; // This can be passed via constructor
+  final String _courseCode = "COM 411";
 
   @override
   void dispose() {
@@ -36,7 +36,7 @@ class _AttendancePageState extends State<AttendancePage> {
   void _onDetect(BarcodeCapture capture) async {
     if (_isProcessing) return;
     for (final barcode in capture.barcodes) {
-      final code = barcode.rawValue; 
+      final code = barcode.rawValue;
       if (code == null || code.isEmpty) continue;
 
       setState(() => _isProcessing = true);
@@ -58,10 +58,10 @@ class _AttendancePageState extends State<AttendancePage> {
             _showSnack('${student['regNo']} already marked!', Colors.orange);
           } else {
             setState(() => _scannedStudents.add(student));
-            _showSnack('Captured: ${student['name']}', tealDark);
+            _showSnack('Captured: ${student['name' 'surname']}', tealDark);
           }
         } else {
-          _showSnack('Student $code not in database', Colors.red);
+          _showSnack('Student $code not  found', Colors.red);
         }
       } catch (e) {
         _showSnack('Database Error: $e', Colors.red);

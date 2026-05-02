@@ -1,4 +1,6 @@
+import 'dart:ui';
 import 'package:flutter/material.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'invigilator_dashboard.dart';
 import 'assign.dart';
 import 'viewlist.dart';
@@ -18,27 +20,23 @@ class _AttendanceHistoryState extends State<AttendanceHistory> {
   final int _currentIndex = 2;
   String? selectedCourse;
   String? selectedType;
-  String? selectedYear;
 
-  final List<String> courses = ["COM411", "COM412", "COM413"];
+  final List<String> courses = ["COM 411", "COM 412", "COM 413"];
   final List<String> types = ["Class", "Lab", "Exam"];
-  final List<String> years = ["1", "2", "3", "4"];
 
   void _onNavTap(int index) {
     if (index == _currentIndex) return;
     if (index == 0) {
       Navigator.pushAndRemoveUntil(
         context,
-        MaterialPageRoute(
-            builder: (_) => const InvigilatorDashboard(initialIndex: 0)),
-        (route) => false,
+        MaterialPageRoute(builder: (_) => const InvigilatorDashboard(initialIndex: 0)),
+            (route) => false,
       );
     } else if (index == 1) {
       Navigator.pushAndRemoveUntil(
         context,
-        MaterialPageRoute(
-            builder: (_) => const InvigilatorDashboard(initialIndex: 1)),
-        (route) => false,
+        MaterialPageRoute(builder: (_) => const InvigilatorDashboard(initialIndex: 1)),
+            (route) => false,
       );
     } else if (index == 3) {
       Navigator.pushReplacement(
@@ -48,190 +46,18 @@ class _AttendanceHistoryState extends State<AttendanceHistory> {
     }
   }
 
-  final List<Map<String, dynamic>> attendanceData = [
-    {
-      "date": "14 may",
-      "course": "com411",
-      "type": "Class",
-      "year": "4",
-      "present": "70",
-      "absent": "0"
-    },
-    {
-      "date": "14 may",
-      "course": "com411",
-      "type": "Class",
-      "year": "4",
-      "present": "34",
-      "absent": "0"
-    },
-    {
-      "date": "14 may",
-      "course": "com411",
-      "type": "Class",
-      "year": "3",
-      "present": "89",
-      "absent": "7"
-    },
-    {
-      "date": "14 may",
-      "course": "com411",
-      "type": "Class",
-      "year": "4",
-      "present": "76",
-      "absent": "1"
-    },
-    {
-      "date": "14 may",
-      "course": "com411",
-      "type": "Class",
-      "year": "4",
-      "present": "98",
-      "absent": "7"
-    },
-    {
-      "date": "14 may",
-      "course": "com411",
-      "type": "Lab",
-      "year": "5",
-      "present": "64",
-      "absent": "4"
-    },
-    {
-      "date": "14 may",
-      "course": "com411",
-      "type": "Lab",
-      "year": "3",
-      "present": "70",
-      "absent": "2"
-    },
-    {
-      "date": "14 may",
-      "course": "com411",
-      "type": "Lab",
-      "year": "3",
-      "present": "24",
-      "absent": "1"
-    },
-    {
-      "date": "14 may",
-      "course": "com411",
-      "type": "Lab",
-      "year": "3",
-      "present": "75",
-      "absent": "0"
-    },
-    {
-      "date": "14 may",
-      "course": "com411",
-      "type": "Lab",
-      "year": "3",
-      "present": "54",
-      "absent": "0"
-    },
-    {
-      "date": "14 may",
-      "course": "com411",
-      "type": "Lab",
-      "year": "3",
-      "present": "76",
-      "absent": "0"
-    },
-    {
-      "date": "14 may",
-      "course": "com411",
-      "type": "Lab",
-      "year": "1",
-      "present": "38",
-      "absent": "0"
-    },
-    {
-      "date": "14 may",
-      "course": "com411",
-      "type": "Lab",
-      "year": "1",
-      "present": "76",
-      "absent": "0"
-    },
-    {
-      "date": "14 may",
-      "course": "com411",
-      "type": "Lab",
-      "year": "2",
-      "present": "70",
-      "absent": "0"
-    },
-    {
-      "date": "14 may",
-      "course": "com411",
-      "type": "Exam",
-      "year": "2",
-      "present": "76",
-      "absent": "8"
-    },
-    {
-      "date": "14 may",
-      "course": "com411",
-      "type": "Exam",
-      "year": "3",
-      "present": "70",
-      "absent": "0"
-    },
-    {
-      "date": "14 may",
-      "course": "com411",
-      "type": "Exam",
-      "year": "3",
-      "present": "70",
-      "absent": "0"
-    },
-    {
-      "date": "14 may",
-      "course": "com411",
-      "type": "Exam",
-      "year": "3",
-      "present": "97",
-      "absent": "0"
-    },
-    {
-      "date": "14 may",
-      "course": "com411",
-      "type": "Exam",
-      "year": "2",
-      "present": "45",
-      "absent": "0"
-    },
-    {
-      "date": "14 may",
-      "course": "com411",
-      "type": "Exam",
-      "year": "1",
-      "present": "100",
-      "absent": "0"
-    },
-    {
-      "date": "14 may",
-      "course": "com411",
-      "type": "Exam",
-      "year": "1",
-      "present": "60",
-      "absent": "0"
-    },
-  ];
-
-  List<Map<String, dynamic>> get filteredData {
-    return attendanceData.where((item) {
-      final courseMatch = selectedCourse == null ||
-          item['course'].toString().toUpperCase() == selectedCourse;
-      final typeMatch = selectedType == null || item['type'] == selectedType;
-      final yearMatch = selectedYear == null || item['year'] == selectedYear;
-      return courseMatch && typeMatch && yearMatch;
-    }).toList();
-  }
-
   @override
   Widget build(BuildContext context) {
-    final data = filteredData;
+    // Build the Query for Firestore
+    Query query = FirebaseFirestore.instance.collection('attendance');
+
+    // Apply Filters if selected
+    if (selectedCourse != null) {
+      query = query.where('courseCode', isEqualTo: selectedCourse);
+    }
+    if (selectedType != null) {
+      query = query.where('sessionType', isEqualTo: selectedType);
+    }
 
     return Scaffold(
       backgroundColor: tealLight,
@@ -239,228 +65,86 @@ class _AttendanceHistoryState extends State<AttendanceHistory> {
         backgroundColor: tealPrimary,
         automaticallyImplyLeading: false,
         elevation: 0,
-        title: const Text(
-          'AAS',
-          style: TextStyle(
-            color: Colors.white,
-            fontWeight: FontWeight.bold,
-            fontSize: 18,
-          ),
-        ),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.notifications_none, color: Colors.white),
-            onPressed: () {},
-          ),
-          const Padding(
-            padding: EdgeInsets.only(right: 14.0),
-            child: CircleAvatar(
-              backgroundColor: tealDark,
-              radius: 15,
-              child: Icon(Icons.person_outline, color: Colors.white, size: 18),
-            ),
-          ),
-        ],
+        title: const Text('AAS History', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 18)),
       ),
       body: Column(
         children: [
+          Padding(
+            padding: const EdgeInsets.all(14),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text('Attendance Records', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: tealPrimary)),
+                const SizedBox(height: 12),
+
+                // Filters Row
+                Row(
+                  children: [
+                    Expanded(child: _buildDropdown("Course", selectedCourse, courses, (v) => setState(() => selectedCourse = v))),
+                    const SizedBox(width: 8),
+                    Expanded(child: _buildDropdown("Type", selectedType, types, (v) => setState(() => selectedType = v))),
+                    IconButton(
+                      icon: const Icon(Icons.refresh, color: tealPrimary),
+                      onPressed: () => setState(() { selectedCourse = null; selectedType = null; }),
+                    )
+                  ],
+                ),
+              ],
+            ),
+          ),
+          const Divider(color: tealPrimary, thickness: 2),
+
+          // Real-time Firestore Stream
           Expanded(
-            child: SingleChildScrollView(
-              // vertical scroll
-              scrollDirection: Axis.vertical,
-              padding: const EdgeInsets.all(14),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  // Page title
-                  const Text(
-                    'Attendance History',
-                    style: TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.bold,
-                      color: tealPrimary,
-                    ),
-                  ),
-                  const SizedBox(height: 12),
+            child: StreamBuilder<QuerySnapshot>(
+              stream: query.orderBy('timestamp', descending: true).snapshots(),
+              builder: (context, snapshot) {
+                if (snapshot.hasError) return Center(child: Text("Error: ${snapshot.error}"));
+                if (snapshot.connectionState == ConnectionState.waiting) return const Center(child: CircularProgressIndicator());
 
-                  // Stat boxes row
-                  Row(
-                    children: [
-                      _buildStatBox("Total Sessions\n128"),
-                      const SizedBox(width: 5),
-                      _buildStatBox("Class Sessions\n79"),
-                      const SizedBox(width: 5),
-                      _buildStatBox("Lab Sessions\n80"),
-                      const SizedBox(width: 5),
-                      _buildStatBox("Exam Sessions\n40"),
-                    ],
-                  ),
-                  const SizedBox(height: 14),
+                final docs = snapshot.data!.docs;
 
-                  // Filter dropdowns
-                  Row(
-                    children: [
-                      _buildDropdown<String>(
-                        hint: "Select Course",
-                        value: selectedCourse,
-                        items: courses,
-                        onChanged: (v) => setState(() => selectedCourse = v),
-                      ),
-                      const SizedBox(width: 8),
-                      _buildDropdown<String>(
-                        hint: "Select Type",
-                        value: selectedType,
-                        items: types,
-                        onChanged: (v) => setState(() => selectedType = v),
-                      ),
-                      const SizedBox(width: 8),
-                      _buildDropdown<String>(
-                        hint: "Select Year",
-                        value: selectedYear,
-                        items: years,
-                        onChanged: (v) => setState(() => selectedYear = v),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 14),
+                if (docs.isEmpty) return const Center(child: Text("No records found."));
 
-                  // Divider
-                  const Divider(color: tealPrimary, thickness: 2),
-                  const SizedBox(height: 4),
-
-                  // Horizontally scrollable table
-                  SingleChildScrollView(
+                return SingleChildScrollView(
+                  scrollDirection: Axis.vertical,
+                  child: SingleChildScrollView(
                     scrollDirection: Axis.horizontal,
                     child: DataTable(
-                      headingRowHeight: 32,
-                      dataRowMinHeight: 28,
-                      dataRowMaxHeight: 32,
-                      columnSpacing: 16,
-                      horizontalMargin: 8,
-                      dividerThickness: 0,
-                      headingTextStyle: const TextStyle(
-                        fontWeight: FontWeight.bold,
-                        fontSize: 10,
-                        color: Colors.black87,
-                        letterSpacing: 0.3,
-                      ),
-                      dataTextStyle: const TextStyle(
-                        fontSize: 10,
-                        color: Colors.black87,
-                        fontFeatures: [FontFeature.tabularFigures()],
-                      ),
+                      headingRowHeight: 40,
+                      columnSpacing: 20,
                       columns: const [
                         DataColumn(label: Text("DATE")),
                         DataColumn(label: Text("COURSE")),
                         DataColumn(label: Text("TYPE")),
-                        DataColumn(label: Text("YEAR")),
                         DataColumn(label: Text("PRESENT")),
-                        DataColumn(label: Text("ABSENT")),
                         DataColumn(label: Text("ACTION")),
                       ],
-                      rows: List.generate(data.length, (index) {
-                        final item = data[index];
-                        final isEven = index % 2 == 0;
-                        return DataRow(
-                          color: WidgetStateProperty.all(
-                            isEven
-                                ? Colors.transparent
-                                : tealPrimary.withOpacity(0.06),
-                          ),
-                          cells: [
-                            DataCell(Text(item['date']!)),
-                            DataCell(Text(item['course']!)),
-                            DataCell(Text(item['type']!)),
-                            DataCell(Text(item['year']!)),
-                            DataCell(Text(item['present']!)),
-                            DataCell(Text(item['absent']!)),
-                            DataCell(
-                              GestureDetector(
-                                onTap: () {
-                                  Navigator.push(
-                                    context,
-                                    MaterialPageRoute(
-                                        builder: (_) => const ViewList()),
-                                  );
-                                },
-                                child: Container(
-                                  padding: const EdgeInsets.symmetric(
-                                      horizontal: 10, vertical: 3),
-                                  decoration: BoxDecoration(
-                                    color: tealPrimary,
-                                    borderRadius: BorderRadius.circular(3),
-                                  ),
-                                  child: const Text(
-                                    "VIEW",
-                                    style: TextStyle(
-                                      color: Colors.white,
-                                      fontSize: 9,
-                                      fontWeight: FontWeight.bold,
-                                      letterSpacing: 0.3,
-                                    ),
-                                  ),
-                                ),
-                              ),
+                      rows: docs.map((doc) {
+                        final data = doc.data() as Map<String, dynamic>;
+                        return DataRow(cells: [
+                          DataCell(Text(data['date'] ?? '')),
+                          DataCell(Text(data['courseCode'] ?? '')),
+                          DataCell(Text(data['sessionType'] ?? '')),
+                          DataCell(Text("${data['totalPresent'] ?? 0}")),
+                          DataCell(
+                            ElevatedButton(
+                              style: ElevatedButton.styleFrom(backgroundColor: tealPrimary, padding: EdgeInsets.zero),
+                              onPressed: () {
+                                Navigator.push(
+                                  context,
+                                  MaterialPageRoute(builder: (_) => ViewList(attendanceData: data)),
+                                );
+                              },
+                              child: const Text("VIEW", style: TextStyle(color: Colors.white, fontSize: 10)),
                             ),
-                          ],
-                        );
-                      }),
+                          ),
+                        ]);
+                      }).toList(),
                     ),
                   ),
-
-                  const SizedBox(height: 24),
-
-                  // Generate report & Download buttons
-                  Row(
-                    children: [
-                      Expanded(
-                        child: OutlinedButton(
-                          onPressed: () {},
-                          style: OutlinedButton.styleFrom(
-                            side: const BorderSide(
-                                color: tealPrimary, width: 1.5),
-                            foregroundColor: tealPrimary,
-                            padding: const EdgeInsets.symmetric(vertical: 10),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(6),
-                            ),
-                          ),
-                          child: const Text(
-                            "Generate report",
-                            style: TextStyle(
-                              fontSize: 12,
-                              fontWeight: FontWeight.w600,
-                            ),
-                          ),
-                        ),
-                      ),
-                      const SizedBox(width: 10),
-                      Expanded(
-                        child: ElevatedButton(
-                          onPressed: () {},
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: tealPrimary,
-                            foregroundColor: Colors.white,
-                            padding: const EdgeInsets.symmetric(vertical: 10),
-                            elevation: 0,
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(6),
-                            ),
-                          ),
-                          child: const Text(
-                            "Download",
-                            style: TextStyle(
-                              fontSize: 12,
-                              fontWeight: FontWeight.w600,
-                            ),
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 20),
-                ],
-              ),
+                );
+              },
             ),
           ),
         ],
@@ -471,95 +155,28 @@ class _AttendanceHistoryState extends State<AttendanceHistory> {
         type: BottomNavigationBarType.fixed,
         backgroundColor: tealPrimary,
         selectedItemColor: Colors.white,
-        unselectedItemColor: Colors.white54,
-        selectedLabelStyle: const TextStyle(
-          fontWeight: FontWeight.bold,
-          fontSize: 9,
-        ),
-        unselectedLabelStyle: const TextStyle(fontSize: 9),
+        unselectedItemColor: Colors.white70,
         items: const [
-          BottomNavigationBarItem(
-            icon: Icon(Icons.home_outlined),
-            activeIcon: Icon(Icons.home),
-            label: 'Home',
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.check_circle_outline),
-            activeIcon: Icon(Icons.check_circle),
-            label: 'Attendance',
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.history_outlined),
-            activeIcon: Icon(Icons.history),
-            label: 'Attendance History',
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.assignment_outlined),
-            activeIcon: Icon(Icons.assignment),
-            label: 'Assign Task',
-          ),
+          BottomNavigationBarItem(icon: Icon(Icons.home), label: 'Home'),
+          BottomNavigationBarItem(icon: Icon(Icons.qr_code_scanner), label: 'Scanner'),
+          BottomNavigationBarItem(icon: Icon(Icons.history), label: 'History'),
+          BottomNavigationBarItem(icon: Icon(Icons.assignment), label: 'Assign'),
         ],
       ),
     );
   }
 
-  Widget _buildStatBox(String text) {
-    return Expanded(
-      child: Container(
-        padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 4),
-        decoration: BoxDecoration(
-          color: const Color(0xFFD9F2FF),
-          borderRadius: BorderRadius.circular(3),
-        ),
-        child: Text(
-          text,
-          textAlign: TextAlign.center,
-          style: const TextStyle(
-            fontSize: 8.5,
-            fontWeight: FontWeight.w500,
-            color: Color(0xFF1a4a6e),
-            height: 1.4,
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildDropdown<T>({
-    required String hint,
-    required T? value,
-    required List<T> items,
-    required ValueChanged<T?> onChanged,
-  }) {
-    return Expanded(
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-        decoration: BoxDecoration(
-          color: Colors.white,
-          border: Border.all(color: Colors.black87, width: 0.8),
-          borderRadius: BorderRadius.circular(3),
-        ),
-        child: DropdownButtonHideUnderline(
-          child: DropdownButton<T>(
-            value: value,
-            isExpanded: true,
-            hint: Text(
-              hint,
-              style: const TextStyle(fontSize: 9, color: Colors.black54),
-              overflow: TextOverflow.ellipsis,
-            ),
-            icon: const Icon(Icons.keyboard_arrow_down,
-                size: 14, color: Colors.black54),
-            style: const TextStyle(fontSize: 9, color: Colors.black87),
-            isDense: true,
-            onChanged: onChanged,
-            items: items.map<DropdownMenuItem<T>>((T val) {
-              return DropdownMenuItem<T>(
-                value: val,
-                child: Text(val.toString()),
-              );
-            }).toList(),
-          ),
+  Widget _buildDropdown(String hint, String? value, List<String> items, Function(String?) onChanged) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8),
+      decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(5)),
+      child: DropdownButtonHideUnderline(
+        child: DropdownButton<String>(
+          isExpanded: true,
+          hint: Text(hint, style: const TextStyle(fontSize: 12)),
+          value: value,
+          items: items.map((e) => DropdownMenuItem(value: e, child: Text(e, style: const TextStyle(fontSize: 12)))).toList(),
+          onChanged: onChanged,
         ),
       ),
     );
