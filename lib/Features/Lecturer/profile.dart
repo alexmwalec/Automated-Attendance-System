@@ -62,12 +62,17 @@ class _ProfileState extends State<Profile> {
           style: TextStyle(
             color: Colors.white,
             fontWeight: FontWeight.bold,
-            fontSize: 18,
+            fontSize:20,
+            letterSpacing: 1.2
           ),
         ),
         actions: [
           IconButton(
-            icon: const Icon(Icons.notifications_none, color: Colors.white),
+            icon: const Icon(
+                Icons.notifications_none,
+                color: Colors.white,
+                 size:24
+            ),
             onPressed: () {},
           ),
           const Padding(
@@ -83,7 +88,6 @@ class _ProfileState extends State<Profile> {
       body: SingleChildScrollView(
         child: Column(
           children: [
-            // Profile Header Section
             Container(
               width: double.infinity,
               decoration: const BoxDecoration(
@@ -93,7 +97,7 @@ class _ProfileState extends State<Profile> {
                   bottomRight: Radius.circular(30),
                 ),
               ),
-              padding: const EdgeInsets.only(bottom: 40, top: 10),
+              padding: const EdgeInsets.only(bottom: 20, top: 10),
               child: Column(
                 children: [
                   Stack(
@@ -104,9 +108,7 @@ class _ProfileState extends State<Profile> {
                         backgroundColor: Colors.white,
                         child: CircleAvatar(
                           radius: 51,
-                          backgroundColor: tealLight,
-                          child: Icon(Icons.person, size: 60, color: tealPrimary),
-                        ),
+                          backgroundColor: tealLight),
                       ),
                       Container(
                         padding: const EdgeInsets.all(6),

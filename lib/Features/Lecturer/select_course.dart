@@ -29,18 +29,12 @@ class _CourseSelectionScreenState extends State<CourseSelectionScreen> {
   final List<String> sessionTypes = ['Class', 'Lab', 'Exam'];
 
   final List<Map<String, String>> courses = [
-    {'code': 'COM 323', 'year': '3 Year'},
-    {'code': 'COM 321', 'year': '3 Year'},
-    {'code': 'COM 325', 'year': '3 Year'},
-    {'code': 'COM 330', 'year': '4 Year'},
-    {'code': 'COM J23', 'year': '3 Year'},
-    {'code': 'COM S21', 'year': '3 Year'},
-    {'code': 'COM 401', 'year': '4 Year'},
-    {'code': 'COM 402', 'year': '4 Year'},
-    {'code': 'COM 403', 'year': '4 Year'},
-    {'code': 'COM 404', 'year': '4 Year'},
-    {'code': 'COM 405', 'year': '4 Year'},
-    {'code': 'COM 406', 'year': '4 Year'},
+    {'code': 'COM 421', 'year': '4 Year'},
+    {'code': 'COM 424', 'year': '4 Year'},
+    {'code': 'INF 423', 'year': '4 Year'},
+    {'code': 'COM 423', 'year': '4 Year'},
+
+
   ];
 
   @override
