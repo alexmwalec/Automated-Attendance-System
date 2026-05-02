@@ -111,23 +111,6 @@ class _AttendancePageState extends State<AttendancePage> {
                 fontSize: 18)),
         actions: [
           IconButton(
-            icon: const Icon(Icons.list_alt, color: Colors.white),
-            onPressed: () => Navigator.push(
-                context,
-                MaterialPageRoute(
-                    builder: (_) => SubmitList(students: _scannedStudents))),
-          ),
-          Padding(
-            padding: const EdgeInsets.only(right: 6),
-            child: Center(
-              child: Text('Total: ${_scannedStudents.length}',
-                  style: const TextStyle(
-                      color: Colors.white,
-                      fontWeight: FontWeight.bold,
-                      fontSize: 13)),
-            ),
-          ),
-          IconButton(
             icon: const Icon(Icons.notifications_none, color: Colors.white),
             onPressed: () {},
           ),
