@@ -15,13 +15,13 @@ class Profile extends StatefulWidget {
 }
 
 class _ProfileState extends State<Profile> {
-  int _currentIndex = 0;
+  final int _currentIndex = 0;
 
-  // Profile Data
-  String fullName = ' Gabriel  Moyo';
-  String department = 'Computing Department';
-  String email = 'harris@unima.ac.mw';
-  String phone = '+265 888 123 456';
+  final String fullName = 'Gabriel Moyo';
+  final String department = 'Computing Department';
+  final String email = 'harris@unima.ac.mw';
+  final String phone = '+265 888 123 456';
+  final String role = 'Lecturer';
 
   void _onNavTap(int index) {
     if (index == 0) {
@@ -52,13 +52,18 @@ class _ProfileState extends State<Profile> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: Colors.white,
       appBar: AppBar(
         backgroundColor: tealPrimary,
-        elevation: 0,
         automaticallyImplyLeading: false,
+        elevation: 0,
         title: const Text(
           'AAS',
-          style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+          style: TextStyle(
+            color: Colors.white,
+            fontWeight: FontWeight.bold,
+            fontSize: 18,
+          ),
         ),
         actions: [
           IconButton(
@@ -66,11 +71,11 @@ class _ProfileState extends State<Profile> {
             onPressed: () {},
           ),
           const Padding(
-            padding: EdgeInsets.only(right: 16.0),
+            padding: EdgeInsets.only(right: 14),
             child: CircleAvatar(
               backgroundColor: tealDark,
               radius: 15,
-              child: Icon(Icons.person, color: Colors.white, size: 18),
+              child: Icon(Icons.person_outline, color: Colors.white, size: 18),
             ),
           ),
         ],
@@ -78,7 +83,7 @@ class _ProfileState extends State<Profile> {
       body: SingleChildScrollView(
         child: Column(
           children: [
-            // Profile Header
+            // Profile Header Section
             Container(
               width: double.infinity,
               decoration: const BoxDecoration(
@@ -88,38 +93,48 @@ class _ProfileState extends State<Profile> {
                   bottomRight: Radius.circular(30),
                 ),
               ),
-              padding: const EdgeInsets.only(bottom: 30, top: 10),
+              padding: const EdgeInsets.only(bottom: 40, top: 10),
               child: Column(
                 children: [
                   Stack(
                     alignment: Alignment.bottomRight,
                     children: [
                       const CircleAvatar(
-                        radius: 50,
+                        radius: 55,
                         backgroundColor: Colors.white,
                         child: CircleAvatar(
-                          radius: 46,
+                          radius: 51,
                           backgroundColor: tealLight,
-                          child: Icon(Icons.person, size: 50, color: tealPrimary),
+                          child: Icon(Icons.person, size: 60, color: tealPrimary),
                         ),
                       ),
                       Container(
-                        padding: const EdgeInsets.all(4),
+                        padding: const EdgeInsets.all(6),
                         decoration: const BoxDecoration(
                           color: Colors.white,
                           shape: BoxShape.circle,
+                          boxShadow: [BoxShadow(blurRadius: 5, color: Colors.black26)],
                         ),
-                        child: const Icon(Icons.camera_alt, color: tealPrimary, size: 18),
+                        child: const Icon(Icons.camera_alt, color: tealPrimary, size: 20),
                       ),
                     ],
                   ),
-                  const SizedBox(height: 12),
+                  const SizedBox(height: 16),
                   Text(
                     fullName,
                     style: const TextStyle(
                       color: Colors.white,
-                      fontSize: 22,
+                      fontSize: 24,
                       fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    role,
+                    style: TextStyle(
+                      color: Colors.white.withOpacity(0.9),
+                      fontSize: 16,
+                      letterSpacing: 1.1,
                     ),
                   ),
                 ],
@@ -127,56 +142,65 @@ class _ProfileState extends State<Profile> {
             ),
 
             Padding(
-              padding: const EdgeInsets.all(20.0),
+              padding: const EdgeInsets.all(24.0),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const _SectionTitle(title: 'Personal Information'),
-                  const SizedBox(height: 10),
+                  const _SectionTitle(title: 'PROFESSIONAL INFORMATION'),
+                  const SizedBox(height: 16),
+                  _ProfileInfoTile(
+                    icon: Icons.person_outline,
+                    label: 'Full Name',
+                    value: fullName,
+                  ),
                   _ProfileInfoTile(
                     icon: Icons.email_outlined,
                     label: 'Email Address',
                     value: email,
                   ),
                   _ProfileInfoTile(
-                    icon: Icons.phone_outlined,
-                    label: 'Phone Number',
-                    value: phone,
-                  ),
-                  _ProfileInfoTile(
-                    icon: Icons.location_on,
+                    icon: Icons.business_outlined,
                     label: 'Department',
                     value: department,
                   ),
-
-                  const SizedBox(height: 24),
-                  const _SectionTitle(title: 'Academic Duties'),
-                  const SizedBox(height: 10),
-                  Wrap(
-                    spacing: 8,
-                    children: [
-                      _buildDutyChip('Course Lecturer'),
-
-                    ],
+                  _ProfileInfoTile(
+                    icon: Icons.badge_outlined,
+                    label: 'Primary Role',
+                    value: role,
+                  ),
+                  _ProfileInfoTile(
+                    icon: Icons.phone_android_outlined,
+                    label: 'Phone Number',
+                    value: phone,
                   ),
 
-                  const SizedBox(height: 24),
-                  const _SectionTitle(title: 'Account Settings'),
-                  const SizedBox(height: 10),
-                  ListTile(
-                    contentPadding: EdgeInsets.zero,
-                    leading: const Icon(Icons.lock_outline, color: tealPrimary),
-                    title: const Text('Change Password'),
-                    trailing: const Icon(Icons.chevron_right),
-                    onTap: () {},
-                  ),
-                  ListTile(
-                    contentPadding: EdgeInsets.zero,
-                    leading: const Icon(Icons.logout, color: Colors.redAccent),
-                    title: const Text('Logout', style: TextStyle(color: Colors.redAccent)),
-                    onTap: () {
-                      Navigator.pushReplacementNamed(context, '/');
-                    },
+                  const SizedBox(height: 32),
+                  const _SectionTitle(title: 'ACCOUNT SETTINGS'),
+                  const SizedBox(height: 8),
+                  Card(
+                    elevation: 0,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      side: BorderSide(color: Colors.grey.shade200),
+                    ),
+                    child: Column(
+                      children: [
+                        ListTile(
+                          leading: const Icon(Icons.lock_reset_outlined, color: tealPrimary),
+                          title: const Text('Security & Password'),
+                          trailing: const Icon(Icons.chevron_right, size: 20),
+                          onTap: () {},
+                        ),
+                        Divider(height: 1, indent: 50, color: Colors.grey.shade100),
+                        ListTile(
+                          leading: const Icon(Icons.logout_rounded, color: Colors.redAccent),
+                          title: const Text('Logout', style: TextStyle(color: Colors.redAccent, fontWeight: FontWeight.w600)),
+                          onTap: () {
+                            Navigator.pushReplacementNamed(context, '/');
+                          },
+                        ),
+                      ],
+                    ),
                   ),
                 ],
               ),
@@ -196,36 +220,14 @@ class _ProfileState extends State<Profile> {
         items: const [
           BottomNavigationBarItem(icon: Icon(Icons.home_outlined), activeIcon: Icon(Icons.home), label: 'Home'),
           BottomNavigationBarItem(icon: Icon(Icons.check_circle_outline), activeIcon: Icon(Icons.check_circle), label: 'Attendance'),
-          BottomNavigationBarItem(icon: Icon(Icons.history_outlined), activeIcon: Icon(Icons.history), label: 'Attendance History'),
-          BottomNavigationBarItem(icon: Icon(Icons.assignment_outlined), activeIcon: Icon(Icons.assignment), label: 'Assign Task'),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildDutyChip(String label) {
-    return Container(
-      margin: const EdgeInsets.only(bottom: 8),
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-      decoration: BoxDecoration(
-        color: tealPrimary.withOpacity(0.1),
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: tealPrimary.withOpacity(0.3)),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          const Icon(Icons.check_circle_outline, color: tealPrimary, size: 16),
-          const SizedBox(width: 8),
-          Text(
-            label,
-            style: const TextStyle(color: tealPrimary, fontWeight: FontWeight.w500),
-          ),
+          BottomNavigationBarItem(icon: Icon(Icons.history_outlined), activeIcon: Icon(Icons.history), label: 'History'),
+          BottomNavigationBarItem(icon: Icon(Icons.assignment_outlined), activeIcon: Icon(Icons.assignment), label: 'Assign'),
         ],
       ),
     );
   }
 }
+// ... (rest of the helper classes _SectionTitle and _ProfileInfoTile remain the same)
 
 class _SectionTitle extends StatelessWidget {
   final String title;
@@ -236,10 +238,10 @@ class _SectionTitle extends StatelessWidget {
     return Text(
       title,
       style: TextStyle(
-        fontSize: 14,
-        fontWeight: FontWeight.bold,
-        color: Colors.grey.shade600,
-        letterSpacing: 1.1,
+        fontSize: 12,
+        fontWeight: FontWeight.w800,
+        color: Colors.grey.shade500,
+        letterSpacing: 1.2,
       ),
     );
   }
@@ -259,34 +261,37 @@ class _ProfileInfoTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 8.0),
+      padding: const EdgeInsets.only(bottom: 20.0),
       child: Row(
         children: [
           Container(
-            padding: const EdgeInsets.all(8),
+            padding: const EdgeInsets.all(10),
             decoration: BoxDecoration(
-              color: Colors.grey.shade100,
-              borderRadius: BorderRadius.circular(8),
+              color: tealLight.withOpacity(0.5),
+              borderRadius: BorderRadius.circular(10),
             ),
-            child: Icon(icon, color: tealPrimary, size: 20),
+            child: Icon(icon, color: tealPrimary, size: 22),
           ),
-          const SizedBox(width: 16),
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                label,
-                style: TextStyle(fontSize: 12, color: Colors.grey.shade500),
-              ),
-              Text(
-                value,
-                style: const TextStyle(
-                  fontSize: 15,
-                  fontWeight: FontWeight.w600,
-                  color: Colors.black87,
+          const SizedBox(width: 20),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  label,
+                  style: TextStyle(fontSize: 12, color: Colors.grey.shade600),
                 ),
-              ),
-            ],
+                const SizedBox(height: 2),
+                Text(
+                  value,
+                  style: const TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w600,
+                    color: Colors.black87,
+                  ),
+                ),
+              ],
+            ),
           ),
         ],
       ),
