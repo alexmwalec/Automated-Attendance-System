@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'lecturer_dashboard.dart';
+import 'invigilator_dashboard.dart';
 import 'select_course.dart';
 import 'assign.dart';
 import 'viewlist.dart';
@@ -16,7 +16,7 @@ class AttendanceHistory extends StatefulWidget {
 }
 
 class _AttendanceHistoryState extends State<AttendanceHistory> {
-  int _currentIndex = 2; // Attendance History tab active
+  final int _currentIndex = 2; // Attendance History tab active
   String? selectedCourse;
   String? selectedType;
 
@@ -29,14 +29,16 @@ class _AttendanceHistoryState extends State<AttendanceHistory> {
     if (index == 0) {
       Navigator.pushAndRemoveUntil(
         context,
-        MaterialPageRoute(builder: (_) => const LecturerDashboard(initialIndex: 0)),
-            (route) => false,
+        MaterialPageRoute(
+            builder: (_) => const InvigilatorDashboard(initialIndex: 0)),
+        (route) => false,
       );
     } else if (index == 1) {
       Navigator.pushAndRemoveUntil(
         context,
-        MaterialPageRoute(builder: (_) => const LecturerDashboard(initialIndex: 1)),
-            (route) => false,
+        MaterialPageRoute(
+            builder: (_) => const InvigilatorDashboard(initialIndex: 1)),
+        (route) => false,
       );
     } else if (index == 3) {
       Navigator.pushReplacement(
@@ -49,7 +51,7 @@ class _AttendanceHistoryState extends State<AttendanceHistory> {
   // Dummy data to show table representation
   final List<Map<String, String>> attendanceData = List.generate(
     20,
-        (index) => {
+    (index) => {
       "date": "${index + 1} March",
       "course": "COM411",
       "type": index % 2 == 0 ? "Class" : "Lab",
@@ -79,13 +81,14 @@ class _AttendanceHistoryState extends State<AttendanceHistory> {
           const Padding(
             padding: EdgeInsets.only(right: 16.0),
             child: CircleAvatar(
-              backgroundColor: Colors.teal,
-              radius: 15,
-              child: Icon(Icons.person_outline, color: Colors.white, size: 18),
-            ),
+                backgroundColor: Colors.teal,
+                radius: 15,
+                child:
+                    Icon(Icons.person_outline, color: Colors.white, size: 18)),
           ),
         ],
       ),
+
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(14),
         child: Column(
@@ -125,7 +128,8 @@ class _AttendanceHistoryState extends State<AttendanceHistory> {
               ),
             ),
             const SizedBox(height: 40),
-            const Divider(color: tealPrimary, thickness: 2, indent: 10, endIndent: 10),
+            const Divider(
+                color: tealPrimary, thickness: 2, indent: 10, endIndent: 10),
             const Padding(
               padding: EdgeInsets.symmetric(horizontal: 10.0, vertical: 8.0),
               child: Row(
@@ -148,7 +152,8 @@ class _AttendanceHistoryState extends State<AttendanceHistory> {
               itemBuilder: (context, index) {
                 final item = attendanceData[index];
                 return Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 10.0, vertical: 4.0),
+                  padding: const EdgeInsets.symmetric(
+                      horizontal: 10.0, vertical: 4.0),
                   child: Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
@@ -165,11 +170,13 @@ class _AttendanceHistoryState extends State<AttendanceHistory> {
                             onTap: () {
                               Navigator.push(
                                 context,
-                                MaterialPageRoute(builder: (_) => const ViewList()),
+                                MaterialPageRoute(
+                                    builder: (_) => const ViewList()),
                               );
                             },
                             child: Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                              padding: const EdgeInsets.symmetric(
+                                  horizontal: 12, vertical: 4),
                               decoration: BoxDecoration(
                                 color: tealPrimary,
                                 borderRadius: BorderRadius.circular(4),
@@ -195,6 +202,8 @@ class _AttendanceHistoryState extends State<AttendanceHistory> {
           ],
         ),
       ),
+
+      //NAVIGATION ONLY
       bottomNavigationBar: BottomNavigationBar(
         currentIndex: _currentIndex,
         onTap: _onNavTap,
@@ -304,6 +313,21 @@ class _AttendanceHistoryState extends State<AttendanceHistory> {
       ),
     );
   }
+
+  Widget _buildActionButton(String text) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      decoration: BoxDecoration(
+        color: tealPrimary,
+        border: Border.all(color: Colors.black),
+      ),
+      child: Text(
+        text,
+        style: const TextStyle(
+            color: Colors.white, fontWeight: FontWeight.bold, fontSize: 12),
+      ),
+    );
+  }
 }
 
 class _TableHeaderText extends StatelessWidget {
@@ -316,7 +340,8 @@ class _TableHeaderText extends StatelessWidget {
       child: Text(
         text,
         textAlign: TextAlign.center,
-        style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 10, color: Colors.black),
+        style: const TextStyle(
+            fontWeight: FontWeight.bold, fontSize: 10, color: Colors.black),
       ),
     );
   }

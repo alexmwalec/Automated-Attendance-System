@@ -37,7 +37,7 @@ class _AssignState extends State<Assign> {
     super.dispose();
   }
 
-  // ── Date picker ───────────────────────────────────────────────────────────
+
   Future<void> _pickDate() async {
     final picked = await showDatePicker(
       context: context,
@@ -57,7 +57,7 @@ class _AssignState extends State<Assign> {
     }
   }
 
-  // ── Time picker ───────────────────────────────────────────────────────────
+
   Future<void> _pickTime() async {
     final picked = await showTimePicker(
       context: context,
@@ -85,13 +85,11 @@ class _AssignState extends State<Assign> {
     return months[m];
   }
 
-  // ── Assign button handler (Firestore Integration) ─────────────────────────
   void _onAssign() async {
     if (_formKey.currentState!.validate()) {
       setState(() => _isAssigning = true);
 
       try {
-        // 1. Prepare data for Firestore
         final assignmentData = {
           'course': _courseController.text.trim(),
           'date': _dateController.text.trim(),

@@ -50,6 +50,7 @@ class InvigilatorHome extends StatelessWidget {
           String date = "No Date Set";
           String course = "N/A";
           String time = "N/A";
+          String invigilator = "Invigilator";
 
           if (snapshot.hasData && snapshot.data!.docs.isNotEmpty) {
             final data = snapshot.data!.docs.first.data() as Map<String, dynamic>;
@@ -57,6 +58,7 @@ class InvigilatorHome extends StatelessWidget {
             date = data['date'] ?? "No Date Set";
             course = data['course'] ?? "N/A";
             time = data['time'] ?? "N/A";
+            invigilator = data['invigilatorName'] ?? "Invigilator";
           }
 
           return SingleChildScrollView(

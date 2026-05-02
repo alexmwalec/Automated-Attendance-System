@@ -19,8 +19,6 @@ class _ProfileState extends State<Profile> {
 
   // Profile Data
   String fullName = ' Gabriel  Moyo';
-  String role = 'Senior Lecturer - Computer Science';
-  String staffId = 'LEC-CS-2024-001';
   String department = 'Computing Department';
   String email = 'harris@unima.ac.mw';
   String phone = '+265 888 123 456';
@@ -57,7 +55,7 @@ class _ProfileState extends State<Profile> {
       appBar: AppBar(
         backgroundColor: tealPrimary,
         elevation: 0,
-        automaticallyImplyLeading: false, // Removed back button to favor Nav Bar
+        automaticallyImplyLeading: false,
         title: const Text(
           'AAS',
           style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
@@ -124,13 +122,6 @@ class _ProfileState extends State<Profile> {
                       fontWeight: FontWeight.bold,
                     ),
                   ),
-                  Text(
-                    role,
-                    style: const TextStyle(
-                      color: Colors.white70,
-                      fontSize: 14,
-                    ),
-                  ),
                 ],
               ),
             ),
@@ -153,11 +144,6 @@ class _ProfileState extends State<Profile> {
                     value: phone,
                   ),
                   _ProfileInfoTile(
-                    icon: Icons.badge_outlined,
-                    label: 'Employee ID',
-                    value: staffId,
-                  ),
-                  _ProfileInfoTile(
                     icon: Icons.location_on,
                     label: 'Department',
                     value: department,
@@ -170,7 +156,7 @@ class _ProfileState extends State<Profile> {
                     spacing: 8,
                     children: [
                       _buildDutyChip('Course Lecturer'),
-                      _buildDutyChip('Exam Invigilator'),
+
                     ],
                   ),
 
