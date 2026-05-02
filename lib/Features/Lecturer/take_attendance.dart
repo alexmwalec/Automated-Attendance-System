@@ -1,6 +1,8 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
+import 'manual_search.dart';
+import 'submit_list.dart';
 
 const Color tealPrimary = Color(0xFF2E9E8E);
 const Color tealDark = Color(0xFF227A6D);
@@ -14,81 +16,85 @@ class AttendancePage extends StatefulWidget {
 }
 
 class _AttendancePageState extends State<AttendancePage> {
-  static const Color scanAccent = Color(0xFF2D9B8C);
-
-  final MobileScannerController cameraController = MobileScannerController();
-  final Set<String> _scannedStudentIds = {};
-
+  final MobileScannerController _cameraCtrl = MobileScannerController();
+  final List<Map<String, String>> _scannedStudents = [];
   bool _isProcessing = false;
-  Timer? _noDetectionTimer;
-
-  @override
-  void initState() {
-    super.initState();
-    _resetTimeoutTimer();
-  }
-
-  void _resetTimeoutTimer() {
-    _noDetectionTimer?.cancel();
-    _noDetectionTimer = Timer(const Duration(seconds: 4), () {
-      if (mounted && !_isProcessing) {
-        debugPrint(
-            "4 seconds passed: No QR code found. Ready for next attempt.");
-        cameraController.stop().then((_) => cameraController.start());
-        _resetTimeoutTimer();
-      }
-    });
-  }
+  int _failedAttempts = 0;
 
   @override
   void dispose() {
-    _noDetectionTimer?.cancel();
-    cameraController.dispose();
+    _cameraCtrl.dispose();
     super.dispose();
   }
 
-  void _handleCapture(BarcodeCapture capture) {
+  void _onDetect(BarcodeCapture capture) {
     if (_isProcessing) return;
+    for (final barcode in capture.barcodes) {
+      final code = barcode.rawValue;
+      if (code == null || code.isEmpty) continue;
+      _isProcessing = true;
 
-    final List<Barcode> barcodes = capture.barcodes;
-    for (final barcode in barcodes) {
-      final String? code = barcode.rawValue;
-
-      if (code != null && code.isNotEmpty) {
-        _isProcessing = true;
-        _noDetectionTimer?.cancel();
-
-        if (_scannedStudentIds.contains(code)) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text('Student $code already marked present!'),
-              backgroundColor: Colors.orange,
-              duration: const Duration(seconds: 1),
-            ),
-          );
+      // TODO: replace with your real DB lookup
+      // Simulate DB lookup: expect QR value as "regNo|name|surname"
+      final parts = code.split('|');
+      if (parts.length < 3) {
+        _failedAttempts++;
+        _showSnack(
+            'Student not found (attempt $_failedAttempts/3)', Colors.orange);
+        if (_failedAttempts >= 3) {
+          _failedAttempts = 0;
+          Future.delayed(const Duration(milliseconds: 400), () => _goManual());
         } else {
-          setState(() {
-            _scannedStudentIds.add(code);
+          Future.delayed(const Duration(seconds: 2), () {
+            if (mounted) setState(() => _isProcessing = false);
           });
-
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text('Attendance Captured: $code'),
-              backgroundColor: tealDark,
-              duration: const Duration(seconds: 1),
-            ),
-          );
         }
-
-        Future.delayed(const Duration(seconds: 2), () {
-          if (mounted) {
-            setState(() => _isProcessing = false);
-            _resetTimeoutTimer();
-          }
-        });
         break;
       }
+
+      final student = {
+        'regNo': parts[0],
+        'name': parts[1],
+        'surname': parts[2]
+      };
+      final alreadyAdded =
+          _scannedStudents.any((s) => s['regNo'] == student['regNo']);
+
+      if (alreadyAdded) {
+        _showSnack(
+            '${student['regNo']} already marked present!', Colors.orange);
+      } else {
+        setState(() => _scannedStudents.add(student));
+        _showSnack('Captured: ${student['regNo']}', tealDark);
+      }
+
+      Future.delayed(const Duration(seconds: 2), () {
+        if (mounted) setState(() => _isProcessing = false);
+      });
+      break;
     }
+  }
+
+  void _showSnack(String msg, Color color) {
+    ScaffoldMessenger.of(context).clearSnackBars();
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+          content: Text(msg),
+          backgroundColor: color,
+          duration: const Duration(seconds: 2)),
+    );
+  }
+
+  void _goManual() {
+    Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (_) => ManualSearch(
+            existingStudents: _scannedStudents,
+            onStudentAdded: (student) =>
+                setState(() => _scannedStudents.add(student)),
+          ),
+        )).then((_) => setState(() => _isProcessing = false));
   }
 
   @override
@@ -96,135 +102,132 @@ class _AttendancePageState extends State<AttendancePage> {
     return Scaffold(
       backgroundColor: tealLight,
       appBar: AppBar(
-        title: const Text('Live Attendance',
-            style: TextStyle(color: Colors.white)),
         backgroundColor: tealPrimary,
+        automaticallyImplyLeading: false,
+        title: const Text('AAS',
+            style: TextStyle(
+                color: Colors.white,
+                fontWeight: FontWeight.bold,
+                fontSize: 18)),
         actions: [
           IconButton(
             icon: const Icon(Icons.list_alt, color: Colors.white),
-            onPressed: () {
-              Navigator.push(
+            onPressed: () => Navigator.push(
                 context,
                 MaterialPageRoute(
-                  builder: (context) =>
-                      ScannedStudentsPage(scannedIds: _scannedStudentIds),
-                ),
-              );
-            },
+                    builder: (_) => SubmitList(students: _scannedStudents))),
           ),
           Padding(
-            padding: const EdgeInsets.all(16.0),
+            padding: const EdgeInsets.only(right: 6),
             child: Center(
-              child: Text(
-                "Total: ${_scannedStudentIds.length}",
-                style: const TextStyle(
-                    fontWeight: FontWeight.bold, color: Colors.white),
-              ),
+              child: Text('Total: ${_scannedStudents.length}',
+                  style: const TextStyle(
+                      color: Colors.white,
+                      fontWeight: FontWeight.bold,
+                      fontSize: 13)),
             ),
-          )
+          ),
+          IconButton(
+            icon: const Icon(Icons.notifications_none, color: Colors.white),
+            onPressed: () {},
+          ),
+          const Padding(
+            padding: EdgeInsets.only(right: 14),
+            child: CircleAvatar(
+              backgroundColor: tealDark,
+              radius: 15,
+              child: Icon(Icons.person_outline, color: Colors.white, size: 18),
+            ),
+          ),
         ],
       ),
-      body: Column(
-        children: [
-          Expanded(
-            flex: 2,
-            child: Container(
-              margin: const EdgeInsets.all(16),
+      body: SingleChildScrollView(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Camera box
+            Container(
+              height: 300,
               decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(20),
-                border: Border.all(color: tealPrimary, width: 4),
+                color: Colors.black,
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: tealPrimary, width: 3),
               ),
               child: ClipRRect(
-                borderRadius: BorderRadius.circular(16),
-                child: MobileScanner(
-                  controller: cameraController,
-                  onDetect: _handleCapture,
+                borderRadius: BorderRadius.circular(9),
+                child: Stack(
+                  children: [
+                    MobileScanner(controller: _cameraCtrl, onDetect: _onDetect),
+                    if (_isProcessing)
+                      Container(
+                        color: Colors.black45,
+                        child: const Center(
+                          child: CircularProgressIndicator(
+                              color: tealPrimary, strokeWidth: 2),
+                        ),
+                      ),
+                  ],
                 ),
               ),
             ),
-          ),
-          const Padding(
-            padding: EdgeInsets.symmetric(vertical: 8.0),
-            child: Text("Verified Attendance List",
-                style: TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
-                    color: tealDark)),
-          ),
-          Expanded(
-            flex: 3,
-            child: Container(
-              margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+            const SizedBox(height: 16),
+
+            // Manual add button
+            SizedBox(
+              width: double.infinity,
+              child: OutlinedButton.icon(
+                onPressed: _goManual,
+                icon: const Icon(Icons.person_search,
+                    color: tealPrimary, size: 16),
+                label: const Text('Add Manually',
+                    style: TextStyle(
+                        color: tealPrimary,
+                        fontSize: 13,
+                        fontWeight: FontWeight.w600)),
+                style: OutlinedButton.styleFrom(
+                  side: const BorderSide(color: tealPrimary, width: 1.2),
+                  padding: const EdgeInsets.symmetric(vertical: 10),
+                  shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(8)),
+                ),
+              ),
+            ),
+            const SizedBox(height: 16),
+
+            // Instructions card
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
                 color: Colors.white,
-                borderRadius: BorderRadius.circular(20),
+                borderRadius: BorderRadius.circular(10),
               ),
-              child: _scannedStudentIds.isEmpty
-                  ? const Center(
-                      child: Text("No scans yet. Start scanning IDs!"))
-                  : ListView.builder(
-                      itemCount: _scannedStudentIds.length,
-                      itemBuilder: (context, index) {
-                        String id = _scannedStudentIds
-                            .elementAt(_scannedStudentIds.length - 1 - index);
-                        return ListTile(
-                          leading: const Icon(Icons.check_circle,
-                              color: Colors.green),
-                          title: Text("Student ID: $id"),
-                          subtitle: Text(
-                              "Time: ${DateTime.now().hour}:${DateTime.now().minute}"),
-                        );
-                      },
-                    ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text('Scanning Instructions',
+                      style: TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.bold,
+                          color: tealPrimary)),
+                  const SizedBox(height: 8),
+                  _instruction('1 Point camera at student ID QR code'),
+                  _instruction('2 Wait until student data has been fetched'),
+                  _instruction('3 Hold steady until scanned'),
+                ],
+              ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
-}
 
-class ScannedStudentsPage extends StatelessWidget {
-  final Set<String> scannedIds;
-
-  const ScannedStudentsPage({super.key, required this.scannedIds});
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: Colors.black,
-      appBar: AppBar(
-        backgroundColor: Colors.grey[900],
-        title: const Text("Attendance List",
-            style: TextStyle(color: Colors.white)),
-        iconTheme: const IconThemeData(color: Colors.white),
-      ),
-      body: scannedIds.isEmpty
-          ? const Center(
-              child: Text(
-                "No students scanned yet.",
-                style: TextStyle(color: Colors.white, fontSize: 16),
-              ),
-            )
-          : ListView.builder(
-              itemCount: scannedIds.length,
-              itemBuilder: (context, index) {
-                String id = scannedIds.elementAt(index);
-                return ListTile(
-                  leading: const Icon(Icons.person, color: tealPrimary),
-                  title: Text(
-                    "Student ID / Name: $id",
-                    style: const TextStyle(
-                        color: Colors.white, fontWeight: FontWeight.bold),
-                  ),
-                  subtitle: Text(
-                    "Status: Present",
-                    style: TextStyle(color: Colors.grey[400]),
-                  ),
-                  trailing: const Icon(Icons.verified, color: Colors.green),
-                );
-              },
-            ),
-    );
-  }
+  Widget _instruction(String text) => Padding(
+        padding: const EdgeInsets.symmetric(vertical: 2),
+        child: Text(text,
+            style: const TextStyle(
+                fontSize: 11, color: Colors.black54, height: 1.5)),
+      );
 }
