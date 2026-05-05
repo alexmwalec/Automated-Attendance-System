@@ -105,7 +105,7 @@ class _AssignState extends State<Assign> {
             .collection('exam_assignments')
             .add(assignmentData);
 
-        // 3. Update local UI state
+
         setState(() {
           _confirmedRow = {
             'course': _courseController.text.trim(),

@@ -158,9 +158,9 @@ class _AttendanceHistoryState extends State<AttendanceHistory> {
         unselectedItemColor: Colors.white70,
         items: const [
           BottomNavigationBarItem(icon: Icon(Icons.home), label: 'Home'),
-          BottomNavigationBarItem(icon: Icon(Icons.qr_code_scanner), label: 'Scanner'),
+          BottomNavigationBarItem(icon: Icon(Icons.qr_code_scanner), label: 'Attendance'),
           BottomNavigationBarItem(icon: Icon(Icons.history), label: 'History'),
-          BottomNavigationBarItem(icon: Icon(Icons.assignment), label: 'Assign'),
+          BottomNavigationBarItem(icon: Icon(Icons.assignment), label: 'Assign Task'),
         ],
       ),
     );
