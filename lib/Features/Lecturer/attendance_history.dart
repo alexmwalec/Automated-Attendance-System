@@ -1,7 +1,7 @@
 import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'invigilator_dashboard.dart';
+import 'lecturer_dashboard.dart';
 import 'assign.dart';
 import 'viewlist.dart';
 
@@ -29,13 +29,13 @@ class _AttendanceHistoryState extends State<AttendanceHistory> {
     if (index == 0) {
       Navigator.pushAndRemoveUntil(
         context,
-        MaterialPageRoute(builder: (_) => const InvigilatorDashboard(initialIndex: 0)),
+        MaterialPageRoute(builder: (_) => const LecturerDashboard(initialIndex: 0)),
             (route) => false,
       );
     } else if (index == 1) {
       Navigator.pushAndRemoveUntil(
         context,
-        MaterialPageRoute(builder: (_) => const InvigilatorDashboard(initialIndex: 1)),
+        MaterialPageRoute(builder: (_) => const LecturerDashboard(initialIndex: 1)),
             (route) => false,
       );
     } else if (index == 3) {
