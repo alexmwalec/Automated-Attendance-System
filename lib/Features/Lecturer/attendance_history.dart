@@ -76,7 +76,7 @@ class _AttendanceHistoryState extends State<AttendanceHistory> {
               children: [
                 const Text('Attendance Records', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: tealPrimary)),
                 const SizedBox(height: 12),
-                
+
                 Row(
                   children: [
                     Expanded(child: _buildDropdown("Course", selectedCourse, courses, (v) => setState(() => selectedCourse = v))),

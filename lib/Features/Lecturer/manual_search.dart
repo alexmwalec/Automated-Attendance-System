@@ -1,3 +1,5 @@
+import 'dart:nativewrappers/_internal/vm/lib/async_patch.dart';
+
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 
@@ -20,6 +22,24 @@ class _ManualSearchState extends State<ManualSearch> {
   List<Map<String, String>> _results = [];
   bool _isLoading = false;
 
+
+  Timer? _debounce;  // debouncing timer
+  @override
+  void dispose() {
+    _ctrl.dispose();
+    _debounce? cancel();
+    super.dispose();
+  }
+
+  // Debounced Search Function
+  void _onSearchChanged(String query){
+    if (_debounce?.isActive ?? false) _debounce?. cancel();
+    _debounce = Timer(const Duration(milliseconds: 500), (){
+       _performanceSearch(query);
+    })
+  }
+
+
   void _search(String query) async {
     final q = query.trim();
     if (q.isEmpty) {
@@ -29,7 +49,6 @@ class _ManualSearchState extends State<ManualSearch> {
 
     setState(() => _isLoading = true);
 
-    // Firestore prefix search (Case-sensitive based on your data)
     final snapshot = await FirebaseFirestore.instance
         .collection('students')
         .where('regNo', isGreaterThanOrEqualTo: q)
@@ -61,7 +80,7 @@ class _ManualSearchState extends State<ManualSearch> {
               decoration: InputDecoration(
                 filled: true,
                 fillColor: Colors.white,
-                hintText: "Enter Registration Number",
+                hintText: "Enter Registration Number or Student Name ",
                 prefixIcon: const Icon(Icons.search),
                 border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
               ),
