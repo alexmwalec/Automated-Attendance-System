@@ -65,7 +65,7 @@ class _AttendanceHistoryState extends State<AttendanceHistory> {
         backgroundColor: tealPrimary,
         automaticallyImplyLeading: false,
         elevation: 0,
-        title: const Text('AAS History', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 18)),
+        title: const Text('AAS', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 18)),
       ),
       body: Column(
         children: [
@@ -76,8 +76,7 @@ class _AttendanceHistoryState extends State<AttendanceHistory> {
               children: [
                 const Text('Attendance Records', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: tealPrimary)),
                 const SizedBox(height: 12),
-
-                // Filters Row
+                
                 Row(
                   children: [
                     Expanded(child: _buildDropdown("Course", selectedCourse, courses, (v) => setState(() => selectedCourse = v))),
