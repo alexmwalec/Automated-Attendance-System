@@ -4,7 +4,6 @@ import 'package:mobile_scanner/mobile_scanner.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'manual_search.dart';
 import 'submit_list.dart';
-import 'attendance_history.dart';
 
 const Color tealPrimary = Color(0xFF2E9E8E);
 const Color tealDark = Color(0xFF227A6D);
@@ -14,10 +13,10 @@ class AttendancePage extends StatefulWidget {
   final String courseCode;
   final String sessionType;
 
-  const AttendancePage({super.key,
-
+  const AttendancePage({
+    super.key,
     required this.courseCode,
-    required this.sessionType
+    required this.sessionType,
   });
 
   @override
@@ -29,10 +28,16 @@ class _AttendancePageState extends State<AttendancePage> {
   final List<Map<String, String>> _scannedStudents = [];
   bool _isProcessing = false;
 
-  // New Fields for Firebase Structure
-  String _selectedSessionType = 'Class';
+
+  late String _selectedSessionType;
   final List<String> _sessionTypes = ['Class', 'Lab', 'Exam'];
-  final String _courseCode = "COM 411";
+
+  @override
+  void initState() {
+    super.initState();
+
+    _selectedSessionType = widget.sessionType;
+  }
 
   @override
   void dispose() {
@@ -49,6 +54,7 @@ class _AttendancePageState extends State<AttendancePage> {
       setState(() => _isProcessing = true);
 
       try {
+        // Fetching student from the global 'students' collection
         var doc = await FirebaseFirestore.instance.collection('students').doc(code).get();
 
         if (doc.exists) {
@@ -65,14 +71,15 @@ class _AttendancePageState extends State<AttendancePage> {
             _showSnack('${student['regNo']} already marked!', Colors.orange);
           } else {
             setState(() => _scannedStudents.add(student));
-            _showSnack('Captured: ${student['name' 'surname']}', tealDark);
+            _showSnack('Captured: ${student['name']} ${student['surname']}', tealDark);
           }
         } else {
-          _showSnack('Student $code not  found', Colors.red);
+          _showSnack('Student $code not found', Colors.red);
         }
       } catch (e) {
         _showSnack('Database Error: $e', Colors.red);
       }
+
 
       await Future.delayed(const Duration(seconds: 1));
       if (mounted) setState(() => _isProcessing = false);
@@ -81,6 +88,7 @@ class _AttendancePageState extends State<AttendancePage> {
   }
 
   void _showSnack(String msg, Color color) {
+    if (!mounted) return;
     ScaffoldMessenger.of(context).clearSnackBars();
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(content: Text(msg), backgroundColor: color, duration: const Duration(seconds: 2)),
@@ -106,14 +114,42 @@ class _AttendancePageState extends State<AttendancePage> {
       appBar: AppBar(
         backgroundColor: tealPrimary,
         elevation: 0,
-        title: const Text('AAS Attendance', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+        title: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text('AAS Attendance', style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold)),
+            Text(widget.courseCode, style: const TextStyle(color: Colors.white70, fontSize: 12)),
+          ],
+        ),
       ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(16),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Session Type Selector
+            // Displaying the specific course being scanned for
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: tealPrimary.withOpacity(0.1),
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: tealPrimary.withOpacity(0.3)),
+              ),
+              child: Row(
+                children: [
+                  const Icon(Icons.book, color: tealPrimary),
+                  const SizedBox(width: 10),
+                  Text(
+                    "Recording for: ${widget.courseCode}",
+                    style: const TextStyle(fontWeight: FontWeight.bold, color: tealDark),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 16),
+
+            // Session Type Selector (Class/Lab/Exam)
             const Text("Session Type", style: TextStyle(fontWeight: FontWeight.bold, color: tealDark)),
             const SizedBox(height: 8),
             Row(
@@ -125,7 +161,9 @@ class _AttendancePageState extends State<AttendancePage> {
                   selected: isSelected,
                   selectedColor: tealPrimary,
                   labelStyle: TextStyle(color: isSelected ? Colors.white : Colors.black),
-                  onSelected: (val) { if(val) setState(() => _selectedSessionType = type); },
+                  onSelected: (val) {
+                    if (val) setState(() => _selectedSessionType = type);
+                  },
                 );
               }).toList(),
             ),
@@ -145,7 +183,10 @@ class _AttendancePageState extends State<AttendancePage> {
                   children: [
                     MobileScanner(controller: _cameraCtrl, onDetect: _onDetect),
                     if (_isProcessing)
-                      Container(color: Colors.black45, child: const Center(child: CircularProgressIndicator(color: tealPrimary))),
+                      Container(
+                        color: Colors.black45,
+                        child: const Center(child: CircularProgressIndicator(color: tealPrimary)),
+                      ),
                   ],
                 ),
               ),
@@ -161,12 +202,16 @@ class _AttendancePageState extends State<AttendancePage> {
             ),
             const SizedBox(height: 16),
 
-            // Scanned Count Card
+            // Dynamic Session Count Card
             Card(
+              elevation: 2,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
               child: ListTile(
-                title: Text("Course: $_courseCode"),
-                subtitle: Text("Total Scanned: ${_scannedStudents.length}"),
-                trailing: const Icon(Icons.people, color: tealPrimary),
+                tileColor: Colors.white,
+                leading: const Icon(Icons.group, color: tealPrimary),
+                title: Text("${_scannedStudents.length} Students Scanned", style: const TextStyle(fontWeight: FontWeight.bold)),
+                subtitle: Text("Selected Course: ${widget.courseCode}"),
+                trailing: Text(_selectedSessionType, style: const TextStyle(color: tealPrimary, fontWeight: FontWeight.bold)),
               ),
             )
           ],
@@ -177,22 +222,29 @@ class _AttendancePageState extends State<AttendancePage> {
         onTap: (i) {
           if (i == 0) Navigator.pop(context);
           if (i == 3) {
-            Navigator.push(context, MaterialPageRoute(builder: (_) => SubmitList(
-              students: _scannedStudents,
-              sessionType: _selectedSessionType,
-              courseCode: _courseCode,
-            )));
+
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (_) => SubmitList(
+                  students: _scannedStudents,
+                  sessionType: _selectedSessionType,
+                  courseCode: widget.courseCode,
+                ),
+              ),
+            );
           }
         },
         items: const [
           BottomNavigationBarItem(icon: Icon(Icons.home), label: 'Home'),
           BottomNavigationBarItem(icon: Icon(Icons.qr_code_scanner), label: 'Scanner'),
           BottomNavigationBarItem(icon: Icon(Icons.history), label: 'History'),
-          BottomNavigationBarItem(icon: Icon(Icons.send), label: 'Submit'),
+          BottomNavigationBarItem(icon: Icon(Icons.check_circle), label: 'Submit'),
         ],
         type: BottomNavigationBarType.fixed,
         backgroundColor: tealPrimary,
         selectedItemColor: Colors.white,
+        unselectedItemColor: Colors.white70,
       ),
     );
   }
