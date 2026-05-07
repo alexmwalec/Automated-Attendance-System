@@ -238,8 +238,7 @@ class _AttendancePageState extends State<AttendancePage> {
         items: const [
           BottomNavigationBarItem(icon: Icon(Icons.home), label: 'Home'),
           BottomNavigationBarItem(icon: Icon(Icons.qr_code_scanner), label: 'Scanner'),
-          BottomNavigationBarItem(icon: Icon(Icons.history), label: 'History'),
-          BottomNavigationBarItem(icon: Icon(Icons.check_circle), label: 'Submit'),
+          BottomNavigationBarItem(icon: Icon(Icons.check_circle), label: 'Confirm'),
         ],
         type: BottomNavigationBarType.fixed,
         backgroundColor: tealPrimary,

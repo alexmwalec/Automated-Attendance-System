@@ -19,18 +19,18 @@ class SubmitList extends StatelessWidget {
 
   Future<void> _submitToFirebase(BuildContext context) async {
     try {
-      // 1. Prepare the record
+
       final attendanceRecord = {
         'courseCode': courseCode,
         'sessionType': sessionType,
         'date': DateTime.now().toIso8601String().split('T')[0], // e.g. 2024-05-02
         'timestamp': FieldValue.serverTimestamp(),
-        'lecturerId': 'lecturer_001', // Ideally from your Auth state
+        'lecturerId': 'lecturer_001',
         'presentStudents': students,
         'totalPresent': students.length,
       };
 
-      // 2. Add to Firestore
+
       await FirebaseFirestore.instance
           .collection('attendance')
           .add(attendanceRecord);
@@ -38,11 +38,11 @@ class SubmitList extends StatelessWidget {
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
-            content: Text('Attendance submitted to Firebase!'),
+            content: Text('Attendance Confirmed!'),
             backgroundColor: tealDark,
           ),
         );
-        // Return to the first screen (Dashboard)
+
         Navigator.of(context).popUntil((r) => r.isFirst);
       }
     } catch (e) {
@@ -59,7 +59,7 @@ class SubmitList extends StatelessWidget {
       context: context,
       builder: (_) => AlertDialog(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-        title: const Text('Submit Attendance',
+        title: const Text('Confirm Attendance',
             style: TextStyle(
                 color: tealPrimary, fontWeight: FontWeight.bold, fontSize: 15)),
         content: Text(
@@ -128,10 +128,10 @@ class SubmitList extends StatelessWidget {
             padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
             child: const Row(
               children: [
-                _HeaderCell('REG NO', flex: 3),
-                _HeaderCell('NAME', flex: 2),
-                _HeaderCell('SURNAME', flex: 2),
-                _HeaderCell('STATUS', flex: 2),
+                _HeaderCell('Reg No', flex: 3),
+                _HeaderCell('Fist Name', flex: 2),
+                _HeaderCell('Surname', flex: 2),
+                _HeaderCell('Status', flex: 2),
               ],
             ),
           ),
