@@ -1,7 +1,7 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
-import 'package:cloud_firestore/cloud_firestore.dart'; // Added Firebase
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'manual_search.dart';
 import 'submit_list.dart';
 import 'attendance_history.dart';
@@ -11,7 +11,14 @@ const Color tealDark = Color(0xFF227A6D);
 const Color tealLight = Color(0xFFE0F2F0);
 
 class AttendancePage extends StatefulWidget {
-  const AttendancePage({super.key});
+  final String courseCode;
+  final String sessionType;
+
+  const AttendancePage({super.key,
+
+    required this.courseCode,
+    required this.sessionType
+  });
 
   @override
   State<AttendancePage> createState() => _AttendancePageState();
