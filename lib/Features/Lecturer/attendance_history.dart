@@ -21,7 +21,8 @@ class _AttendanceHistoryState extends State<AttendanceHistory> {
   String? selectedCourse;
   String? selectedType;
 
-  final List<String> courses = ["COM 411", "COM 412", "COM 413"];
+  // Synced EXACTLY with select_course.dart data
+  final List<String> courses = ["COM 421", "COM 424", "INF 423", "COM 423"];
   final List<String> types = ["Class", "Lab", "Exam"];
 
   void _onNavTap(int index) {
@@ -48,10 +49,10 @@ class _AttendanceHistoryState extends State<AttendanceHistory> {
 
   @override
   Widget build(BuildContext context) {
-    // Build the Query for Firestore
+    // 1. Initialize the Base Query for Firestore
     Query query = FirebaseFirestore.instance.collection('attendance');
 
-    // Apply Filters if selected
+    // 2. Apply Dynamic Filtering logic based on dropdown selections
     if (selectedCourse != null) {
       query = query.where('courseCode', isEqualTo: selectedCourse);
     }
@@ -93,7 +94,7 @@ class _AttendanceHistoryState extends State<AttendanceHistory> {
           ),
           const Divider(color: tealPrimary, thickness: 2),
 
-          // Real-time Firestore Stream
+          // 3. Real-time Firestore Stream utilizing the filtered query
           Expanded(
             child: StreamBuilder<QuerySnapshot>(
               stream: query.orderBy('timestamp', descending: true).snapshots(),
@@ -113,11 +114,11 @@ class _AttendanceHistoryState extends State<AttendanceHistory> {
                       headingRowHeight: 40,
                       columnSpacing: 20,
                       columns: const [
-                        DataColumn(label: Text("DATE")),
-                        DataColumn(label: Text("COURSE")),
-                        DataColumn(label: Text("TYPE")),
-                        DataColumn(label: Text("PRESENT")),
-                        DataColumn(label: Text("ACTION")),
+                        DataColumn(label: Text("Date")),
+                        DataColumn(label: Text("Course")),
+                        DataColumn(label: Text("Type")),
+                        DataColumn(label: Text("Present")),
+                        DataColumn(label: Text("Action")),
                       ],
                       rows: docs.map((doc) {
                         final data = doc.data() as Map<String, dynamic>;

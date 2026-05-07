@@ -80,7 +80,7 @@ class SubmitList extends StatelessWidget {
               Navigator.pop(context); // Close dialog
               _submitToFirebase(context); // Start upload
             },
-            child: const Text('Submit', style: TextStyle(color: Colors.white)),
+            child: const Text('Confirm', style: TextStyle(color: Colors.white)),
           ),
         ],
       ),
@@ -209,7 +209,7 @@ class SubmitList extends StatelessWidget {
                       borderRadius: BorderRadius.circular(4)),
                   elevation: 0,
                 ),
-                child: const Text('Submit List',
+                child: const Text('Confirm List',
                     style: TextStyle(
                         color: Colors.white,
                         fontWeight: FontWeight.bold,

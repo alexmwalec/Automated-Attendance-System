@@ -33,8 +33,6 @@ class _CourseSelectionScreenState extends State<CourseSelectionScreen> {
     {'code': 'COM 424', 'year': '4 Year'},
     {'code': 'INF 423', 'year': '4 Year'},
     {'code': 'COM 423', 'year': '4 Year'},
-
-
   ];
 
   @override
@@ -44,7 +42,6 @@ class _CourseSelectionScreenState extends State<CourseSelectionScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Info Box
           Container(
             width: double.infinity,
             padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
@@ -127,7 +124,7 @@ class _CourseSelectionScreenState extends State<CourseSelectionScreen> {
                         fontSize: 13,
                         color: isSelected ? Colors.white : Colors.black87,
                         fontWeight:
-                            isSelected ? FontWeight.bold : FontWeight.normal,
+                        isSelected ? FontWeight.bold : FontWeight.normal,
                       ),
                     ),
                   ),
@@ -187,7 +184,7 @@ class _CourseSelectionScreenState extends State<CourseSelectionScreen> {
                         style: TextStyle(
                           fontSize: 11,
                           color:
-                              isSelected ? tealPrimary : Colors.grey.shade600,
+                          isSelected ? tealPrimary : Colors.grey.shade600,
                         ),
                       ),
                     ],
@@ -199,7 +196,7 @@ class _CourseSelectionScreenState extends State<CourseSelectionScreen> {
 
           const SizedBox(height: 28),
 
-          // Proceed Button - wider, aligned to the right
+
           Align(
             alignment: Alignment.centerRight,
             child: SizedBox(
@@ -210,7 +207,10 @@ class _CourseSelectionScreenState extends State<CourseSelectionScreen> {
                     Navigator.push(
                       context,
                       MaterialPageRoute(
-                        builder: (context) => const AttendancePage(),
+                        builder: (context) => AttendancePage(
+                          courseCode: selectedCourse!,
+                          sessionType: selectedSessionType!,
+                        ),
                       ),
                     );
                   } else {

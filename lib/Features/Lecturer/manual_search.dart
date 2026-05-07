@@ -1,5 +1,4 @@
-import 'dart:nativewrappers/_internal/vm/lib/async_patch.dart';
-
+import 'dart:async'; // Required for Timer (Debouncing)
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 
@@ -22,25 +21,25 @@ class _ManualSearchState extends State<ManualSearch> {
   List<Map<String, String>> _results = [];
   bool _isLoading = false;
 
+  // Debouncing Timer
+  Timer? _debounce;
 
-  Timer? _debounce;  // debouncing timer
   @override
   void dispose() {
     _ctrl.dispose();
-    _debounce? cancel();
+    _debounce?.cancel();
     super.dispose();
   }
 
   // Debounced Search Function
-  void _onSearchChanged(String query){
-    if (_debounce?.isActive ?? false) _debounce?. cancel();
-    _debounce = Timer(const Duration(milliseconds: 500), (){
-       _performanceSearch(query);
-    })
+  void _onSearchChanged(String query) {
+    if (_debounce?.isActive ?? false) _debounce?.cancel();
+    _debounce = Timer(const Duration(milliseconds: 500), () {
+      _performSearch(query);
+    });
   }
 
-
-  void _search(String query) async {
+  void _performSearch(String query) async {
     final q = query.trim();
     if (q.isEmpty) {
       setState(() => _results = []);
@@ -49,54 +48,121 @@ class _ManualSearchState extends State<ManualSearch> {
 
     setState(() => _isLoading = true);
 
-    final snapshot = await FirebaseFirestore.instance
-        .collection('students')
-        .where('regNo', isGreaterThanOrEqualTo: q)
-        .where('regNo', isLessThanOrEqualTo: '$q\uf8ff')
-        .get();
+    try {
+      String upperQuery = q.toUpperCase();
+      String nameQuery = q.length > 1
+          ? q[0].toUpperCase() + q.substring(1).toLowerCase()
+          : q.toUpperCase();
 
-    setState(() {
-      _results = snapshot.docs.map((doc) => {
-        'regNo': doc['regNo'].toString(),
-        'name': doc['name'].toString(),
-        'surname': doc['surname'].toString(),
-      }).toList();
-      _isLoading = false;
-    });
+      final results = await Future.wait([
+        // Search by Registration Number
+        FirebaseFirestore.instance
+            .collection('students')
+            .where('regNo', isGreaterThanOrEqualTo: upperQuery)
+            .where('regNo', isLessThanOrEqualTo: '$upperQuery\uf8ff')
+            .limit(10)
+            .get(),
+
+        // Search by Name
+        FirebaseFirestore.instance
+            .collection('students')
+            .where('name', isGreaterThanOrEqualTo: nameQuery)
+            .where('name', isLessThanOrEqualTo: '$nameQuery\uf8ff')
+            .limit(10)
+            .get(),
+      ]);
+
+      final regSnapshot = results[0];
+      final nameSnapshot = results[1];
+
+      // 3. Combine results using a Map to prevent duplicates
+      final Map<String, Map<String, String>> combined = {};
+
+      for (var doc in regSnapshot.docs) {
+        combined[doc.id] = {
+          'regNo': doc['regNo']?.toString() ?? '',
+          'name': doc['name']?.toString() ?? '',
+          'surname': doc['surname']?.toString() ?? '',
+        };
+      }
+
+      for (var doc in nameSnapshot.docs) {
+        combined[doc.id] = {
+          'regNo': doc['regNo']?.toString() ?? '',
+          'name': doc['name']?.toString() ?? '',
+          'surname': doc['surname']?.toString() ?? '',
+        };
+      }
+
+
+      if (mounted) {
+        setState(() {
+          _results = combined.values.toList();
+          _isLoading = false;
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() => _isLoading = false);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text("Search error: $e"), backgroundColor: Colors.red),
+        );
+      }
+    }
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: tealLight,
-      appBar: AppBar(backgroundColor: tealPrimary, title: const Text('Manual Search')),
+      appBar: AppBar(
+        backgroundColor: tealPrimary,
+        iconTheme: const IconThemeData(color: Colors.white),
+        title: const Text('Manual Search', style: TextStyle(color: Colors.white)),
+      ),
       body: Column(
         children: [
           Padding(
             padding: const EdgeInsets.all(16.0),
             child: TextField(
               controller: _ctrl,
-              onChanged: _search,
+              onChanged: _onSearchChanged, // Calls the debouncer
               decoration: InputDecoration(
                 filled: true,
                 fillColor: Colors.white,
-                hintText: "Enter Registration Number or Student Name ",
-                prefixIcon: const Icon(Icons.search),
+                hintText: "Search Reg No or Student Name",
+                prefixIcon: const Icon(Icons.search, color: tealPrimary),
+                suffixIcon: _ctrl.text.isNotEmpty
+                    ? IconButton(
+                    icon: const Icon(Icons.clear),
+                    onPressed: () {
+                      _ctrl.clear();
+                      _onSearchChanged('');
+                    })
+                    : null,
                 border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
               ),
             ),
           ),
           if (_isLoading) const LinearProgressIndicator(color: tealPrimary),
           Expanded(
-            child: ListView.builder(
+            child: _results.isEmpty && _ctrl.text.isNotEmpty && !_isLoading
+                ? const Center(child: Text("No students found."))
+                : ListView.builder(
               itemCount: _results.length,
               itemBuilder: (context, i) {
                 final s = _results[i];
                 bool added = widget.existingStudents.any((e) => e['regNo'] == s['regNo']);
                 return ListTile(
-                  title: Text(s['regNo']!),
+                  leading: CircleAvatar(
+                    backgroundColor: tealPrimary,
+                    child: Text(s['name']![0], style: const TextStyle(color: Colors.white)),
+                  ),
+                  title: Text(s['regNo']!, style: const TextStyle(fontWeight: FontWeight.bold)),
                   subtitle: Text("${s['name']} ${s['surname']}"),
-                  trailing: added ? const Icon(Icons.check_circle, color: tealPrimary) : const Icon(Icons.add_circle_outline),
+                  trailing: added
+                      ? const Icon(Icons.check_circle, color: tealPrimary)
+                      : const Icon(Icons.add_circle_outline, color: tealDark),
                   onTap: added ? null : () {
                     widget.onStudentAdded(s);
                     Navigator.pop(context);
