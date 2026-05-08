@@ -6,15 +6,14 @@ const Color tealDark = Color(0xFF227A6D);
 const Color tealLight = Color(0xFFDFF2EF);
 
 class ViewList extends StatelessWidget {
-  // Pass the record data from the History screen to this view
   final Map<String, dynamic> attendanceData;
 
   const ViewList({super.key, required this.attendanceData});
 
   @override
   Widget build(BuildContext context) {
-    // Extract students array from Firestore document data
-    final List students = attendanceData['presentStudents'] ?? [];
+    // UPDATED: Using fullAttendanceList which contains Present, Absent, and Exit records
+    final List fullList = attendanceData['fullAttendanceList'] ?? [];
 
     return Scaffold(
       backgroundColor: tealLight,
@@ -30,7 +29,6 @@ class ViewList extends StatelessWidget {
       body: Column(
         children: [
           const SizedBox(height: 16),
-          // Dynamic Header Info
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 16.0),
             child: Row(
@@ -39,32 +37,66 @@ class ViewList extends StatelessWidget {
                 _buildDetailBox(attendanceData['sessionType'] ?? 'N/A'),
                 _buildDetailBox(attendanceData['courseCode'] ?? 'N/A'),
                 _buildDetailBox(attendanceData['date'] ?? 'N/A'),
-                _buildDetailBox('${students.length} Present'),
+                _buildDetailBox('${attendanceData['totalPresent'] ?? 0} Present'),
               ],
             ),
           ),
           const SizedBox(height: 16),
           const Divider(color: tealPrimary, thickness: 4),
 
-          // Table Header
           _buildTableHeader(["REG NO", "FULL NAME", "STATUS"]),
 
-          // Students List
           Expanded(
             child: ListView.builder(
-              itemCount: students.length,
+              itemCount: fullList.length,
               itemBuilder: (context, index) {
-                final student = students[index];
-                return _buildTableRow([
-                  student['regNo'] ?? '',
-                  '${student['name']} ${student['surname']}',
-                  'Present'
-                ]);
+                final student = fullList[index];
+
+                // Ensure keys match exactly what was saved in submit_list.dart
+                String regNo = student['regNo']?.toString() ?? 'N/A';
+                String firstName = student['name']?.toString() ?? 'Unknown';
+                String lastName = student['surname']?.toString() ?? '';
+                String status = student['status']?.toString() ?? 'Absent';
+
+                // Logic for Status Widget Styling
+                Widget statusWidget;
+                if (status == 'Present') {
+                  statusWidget = const Text('Present',
+                      style: TextStyle(fontSize: 10, color: tealDark, fontWeight: FontWeight.bold));
+                } else if (status == 'Exit') {
+                  statusWidget = const Text('E',
+                      style: TextStyle(fontSize: 12, color: Colors.green, fontWeight: FontWeight.bold));
+                } else {
+                  statusWidget = const Text('Absent',
+                      style: TextStyle(fontSize: 10, color: Colors.red));
+                }
+
+                return Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 12.0),
+                  decoration: const BoxDecoration(
+                    border: Border(bottom: BorderSide(color: Colors.black12, width: 0.5)),
+                  ),
+                  child: Row(
+                    children: [
+                      Expanded(
+                          flex: 3,
+                          child: Text(regNo, style: const TextStyle(fontSize: 10))
+                      ),
+                      Expanded(
+                          flex: 4,
+                          child: Text('$firstName $lastName', style: const TextStyle(fontSize: 10))
+                      ),
+                      Expanded(
+                          flex: 2,
+                          child: statusWidget
+                      ),
+                    ],
+                  ),
+                );
               },
             ),
           ),
 
-          // Download Action
           Padding(
             padding: const EdgeInsets.all(20.0),
             child: Align(
@@ -108,37 +140,22 @@ class ViewList extends StatelessWidget {
       color: Colors.teal.withOpacity(0.1),
       padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 10.0),
       child: Row(
-        children: headers
-            .map((h) => Expanded(
-          child: Text(
-            h,
-            style: const TextStyle(
-                fontWeight: FontWeight.bold,
-                fontSize: 11,
-                color: tealDark),
-          ),
-        ))
-            .toList(),
+        children: [
+          Expanded(flex: 3, child: _headerText(headers[0])),
+          Expanded(flex: 4, child: _headerText(headers[1])),
+          Expanded(flex: 2, child: _headerText(headers[2])),
+        ],
       ),
     );
   }
 
-  Widget _buildTableRow(List<String> cells) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 12.0),
-      decoration: const BoxDecoration(
-        border: Border(bottom: BorderSide(color: Colors.black12, width: 0.5)),
-      ),
-      child: Row(
-        children: cells
-            .map((c) => Expanded(
-          child: Text(
-            c,
-            style: const TextStyle(fontSize: 10, color: Colors.black87),
-          ),
-        ))
-            .toList(),
-      ),
+  Widget _headerText(String text) {
+    return Text(
+      text,
+      style: const TextStyle(
+          fontWeight: FontWeight.bold,
+          fontSize: 11,
+          color: tealDark),
     );
   }
 }

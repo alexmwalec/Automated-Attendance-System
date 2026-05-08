@@ -19,17 +19,53 @@ class SubmitList extends StatelessWidget {
 
   Future<void> _submitToFirebase(BuildContext context) async {
     try {
+      final studentQuery = await FirebaseFirestore.instance.collection('students').get();
+      final presentRegNos = students.map((s) => s['regNo']).toSet();
+
+      List<Map<String, dynamic>> fullAttendanceList = [];
+
+      for (var doc in studentQuery.docs) {
+        final data = doc.data();
+
+        String regNo = data['regNo']?.toString() ?? '';
+        String name = data['name']?.toString() ?? 'Unknown';
+        String surname = data['surname']?.toString() ?? '';
+        String studentStatus = data['status']?.toString() ?? 'Active';
+
+        if (presentRegNos.contains(regNo)) {
+          fullAttendanceList.add({
+            'regNo': regNo,
+            'name': name,
+            'surname': surname,
+            'status': 'Present',
+          });
+        } else if (studentStatus == 'Exit') {
+          fullAttendanceList.add({
+            'regNo': regNo,
+            'name': name,
+            'surname': surname,
+            'status': 'Exit',
+          });
+        } else {
+          fullAttendanceList.add({
+            'regNo': regNo,
+            'name': name,
+            'surname': surname,
+            'status': 'Absent',
+          });
+        }
+      }
+
 
       final attendanceRecord = {
         'courseCode': courseCode,
         'sessionType': sessionType,
-        'date': DateTime.now().toIso8601String().split('T')[0], // e.g. 2024-05-02
+        'date': DateTime.now().toIso8601String().split('T')[0],
         'timestamp': FieldValue.serverTimestamp(),
         'lecturerId': 'lecturer_001',
-        'presentStudents': students,
+        'fullAttendanceList': fullAttendanceList, // Store the combined list for history
         'totalPresent': students.length,
       };
-
 
       await FirebaseFirestore.instance
           .collection('attendance')
@@ -42,7 +78,6 @@ class SubmitList extends StatelessWidget {
             backgroundColor: tealDark,
           ),
         );
-
         Navigator.of(context).popUntil((r) => r.isFirst);
       }
     } catch (e) {
@@ -63,7 +98,7 @@ class SubmitList extends StatelessWidget {
             style: TextStyle(
                 color: tealPrimary, fontWeight: FontWeight.bold, fontSize: 15)),
         content: Text(
-            'Submit $sessionType attendance for $courseCode with ${students.length} students?'),
+            'Submit $sessionType attendance for $courseCode? This will automatically mark missing students as Absent or Exit.'),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
@@ -100,7 +135,6 @@ class SubmitList extends StatelessWidget {
       ),
       body: Column(
         children: [
-          // Dynamic Session info chips
           Container(
             color: tealLight,
             padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
@@ -114,35 +148,28 @@ class SubmitList extends StatelessWidget {
                   const SizedBox(width: 6),
                   _chip(DateTime.now().toIso8601String().split('T')[0]),
                   const SizedBox(width: 6),
-                  _chip('${students.length} Students'),
+                  _chip('${students.length} Scanned'),
                 ],
               ),
             ),
           ),
-
           const Divider(height: 1, color: Color(0xFFB2DFDB)),
-
-          // Table header
           Container(
             color: tealLight,
             padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
             child: const Row(
               children: [
                 _HeaderCell('Reg No', flex: 3),
-                _HeaderCell('Fist Name', flex: 2),
-                _HeaderCell('Surname', flex: 2),
+                _HeaderCell('Name', flex: 4),
                 _HeaderCell('Status', flex: 2),
               ],
             ),
           ),
-
           const Divider(height: 1, color: Color(0xFFB2DFDB)),
-
-          // Rows
           Expanded(
             child: students.isEmpty
                 ? const Center(
-              child: Text('No students added yet.',
+              child: Text('No students scanned yet.',
                   style: TextStyle(color: tealDark, fontSize: 13)),
             )
                 : ListView.builder(
@@ -163,26 +190,20 @@ class SubmitList extends StatelessWidget {
                         flex: 3,
                         child: Text(s['regNo'] ?? '',
                             style: const TextStyle(
-                                fontSize: 9.5, color: Colors.black87)),
+                                fontSize: 10, color: Colors.black87)),
                       ),
                       Expanded(
-                        flex: 2,
-                        child: Text(s['name'] ?? '',
+                        flex: 4,
+                        child: Text('${s['name']} ${s['surname']}',
                             style: const TextStyle(
-                                fontSize: 9.5, color: Colors.black87)),
-                      ),
-                      Expanded(
-                        flex: 2,
-                        child: Text(s['surname'] ?? '',
-                            style: const TextStyle(
-                                fontSize: 9.5, color: Colors.black87)),
+                                fontSize: 10, color: Colors.black87)),
                       ),
                       const Expanded(
                         flex: 2,
                         child: Text('Present',
                             style: TextStyle(
-                                fontSize: 9.5,
-                                fontWeight: FontWeight.w600,
+                                fontSize: 10,
+                                fontWeight: FontWeight.bold,
                                 color: tealDark)),
                       ),
                     ],
@@ -191,8 +212,6 @@ class SubmitList extends StatelessWidget {
               },
             ),
           ),
-
-          // Submit button
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
             child: Align(
@@ -248,8 +267,7 @@ class _HeaderCell extends StatelessWidget {
           style: const TextStyle(
               fontWeight: FontWeight.bold,
               fontSize: 10,
-              color: Colors.black87,
-              letterSpacing: 0.3)),
+              color: Colors.black87)),
     );
   }
 }

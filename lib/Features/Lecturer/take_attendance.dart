@@ -221,7 +221,7 @@ class _AttendancePageState extends State<AttendancePage> {
         currentIndex: 1,
         onTap: (i) {
           if (i == 0) Navigator.pop(context);
-          if (i == 3) {
+          if (i == 2) {
 
             Navigator.push(
               context,
