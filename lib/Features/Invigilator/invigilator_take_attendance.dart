@@ -689,8 +689,25 @@ class _InvigilatorManualSearchState extends State<_InvigilatorManualSearch> {
       appBar: AppBar(
         backgroundColor: tealPrimary,
         iconTheme: const IconThemeData(color: Colors.white),
-        title:
-            const Text('Manual Search', style: TextStyle(color: Colors.white)),
+        title: const Text(
+          'AAS',
+          style: TextStyle(
+              color: Colors.white, fontWeight: FontWeight.bold, fontSize: 18),
+        ),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.notifications_none, color: Colors.white),
+            onPressed: () {},
+          ),
+          const Padding(
+            padding: EdgeInsets.only(right: 16),
+            child: CircleAvatar(
+              backgroundColor: Colors.white24,
+              radius: 15,
+              child: Icon(Icons.person, color: Colors.white, size: 18),
+            ),
+          ),
+        ],
       ),
       body: Column(
         children: [
