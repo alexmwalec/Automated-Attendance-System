@@ -44,13 +44,27 @@ class InvigilatorAttendanceList extends StatelessWidget {
           appBar: AppBar(
             backgroundColor: tealPrimary,
             automaticallyImplyLeading: false,
-            title: Text(
-              assignedCourse.isEmpty
-                  ? 'Attendance List'
-                  : 'Attendance – $assignedCourse',
-              style: const TextStyle(
-                  color: Colors.white, fontWeight: FontWeight.bold),
+            title: const Text(
+              'AAS',
+              style: TextStyle(
+                  color: Colors.white,
+                  fontWeight: FontWeight.bold,
+                  fontSize: 18),
             ),
+            actions: [
+              IconButton(
+                icon: const Icon(Icons.notifications_none, color: Colors.white),
+                onPressed: () {},
+              ),
+              const Padding(
+                padding: EdgeInsets.only(right: 16),
+                child: CircleAvatar(
+                  backgroundColor: Colors.white24,
+                  radius: 15,
+                  child: Icon(Icons.person, color: Colors.white, size: 18),
+                ),
+              ),
+            ],
           ),
           body: assignedCourse.isEmpty
               ? const Center(
@@ -165,9 +179,24 @@ class _AttendanceDetailPage extends StatelessWidget {
         elevation: 0,
         iconTheme: const IconThemeData(color: Colors.white),
         title: const Text(
-          'Attendance Details',
-          style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+          'AAS',
+          style: TextStyle(
+              color: Colors.white, fontWeight: FontWeight.bold, fontSize: 18),
         ),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.notifications_none, color: Colors.white),
+            onPressed: () {},
+          ),
+          const Padding(
+            padding: EdgeInsets.only(right: 16),
+            child: CircleAvatar(
+              backgroundColor: Colors.white24,
+              radius: 15,
+              child: Icon(Icons.person, color: Colors.white, size: 18),
+            ),
+          ),
+        ],
       ),
       body: Column(
         children: [
