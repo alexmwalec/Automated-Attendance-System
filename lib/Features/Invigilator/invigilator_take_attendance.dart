@@ -39,9 +39,28 @@ class InvigilatorTakeAttendance extends StatelessWidget {
             appBar: AppBar(
               backgroundColor: tealPrimary,
               automaticallyImplyLeading: false,
-              title: const Text('Scan Student ID',
-                  style: TextStyle(
-                      color: Colors.white, fontWeight: FontWeight.bold)),
+              title: const Text(
+                'AAS',
+                style: TextStyle(
+                    color: Colors.white,
+                    fontWeight: FontWeight.bold,
+                    fontSize: 18),
+              ),
+              actions: [
+                IconButton(
+                  icon:
+                      const Icon(Icons.notifications_none, color: Colors.white),
+                  onPressed: () {},
+                ),
+                const Padding(
+                  padding: EdgeInsets.only(right: 16),
+                  child: CircleAvatar(
+                    backgroundColor: Colors.white24,
+                    radius: 15,
+                    child: Icon(Icons.person, color: Colors.white, size: 18),
+                  ),
+                ),
+              ],
             ),
             body: const Center(
               child: Padding(
@@ -295,8 +314,11 @@ class _ScannerScreenState extends State<_ScannerScreen> {
       appBar: AppBar(
         backgroundColor: tealPrimary,
         automaticallyImplyLeading: false,
-        title: const Text('Scan Student ID',
-            style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+        title: const Text(
+          'AAS',
+          style: TextStyle(
+              color: Colors.white, fontWeight: FontWeight.bold, fontSize: 18),
+        ),
         actions: [
           // Manual search button
           IconButton(
@@ -310,6 +332,18 @@ class _ScannerScreenState extends State<_ScannerScreen> {
                   onStudentAdded: _onManualStudentAdded,
                 ),
               ),
+            ),
+          ),
+          IconButton(
+            icon: const Icon(Icons.notifications_none, color: Colors.white),
+            onPressed: () {},
+          ),
+          const Padding(
+            padding: EdgeInsets.only(right: 16),
+            child: CircleAvatar(
+              backgroundColor: Colors.white24,
+              radius: 15,
+              child: Icon(Icons.person, color: Colors.white, size: 18),
             ),
           ),
         ],
