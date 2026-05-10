@@ -45,7 +45,6 @@ class InvigilatorHome extends StatelessWidget {
                 child: CircularProgressIndicator(color: tealPrimary));
           }
 
-          // Default values if no data exists yet
           String venue = 'No Venue Assigned';
           String date = 'No Date Set';
           String course = 'N/A';
@@ -65,7 +64,7 @@ class InvigilatorHome extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // ── Welcome Card ─────────────────────────────────────────
+                // ── Welcome Card ──────────────────────────────────────────
                 Container(
                   width: double.infinity,
                   padding: const EdgeInsets.all(18),
@@ -84,11 +83,10 @@ class InvigilatorHome extends StatelessWidget {
                       ),
                     ],
                   ),
-                  child: Column(
+                  child: const Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      // Welcome text
-                      const Text(
+                      Text(
                         'Welcome Back!',
                         style: TextStyle(
                           color: Colors.white,
@@ -97,8 +95,8 @@ class InvigilatorHome extends StatelessWidget {
                           letterSpacing: 0.3,
                         ),
                       ),
-                      const SizedBox(height: 4),
-                      const Text(
+                      SizedBox(height: 6),
+                      Text(
                         'Use this dashboard to manage exam attendance.',
                         style: TextStyle(
                           color: Colors.white70,
@@ -106,55 +104,13 @@ class InvigilatorHome extends StatelessWidget {
                           height: 1.4,
                         ),
                       ),
-                      const SizedBox(height: 14),
-                      const Divider(color: Colors.white24, thickness: 1),
-                      const SizedBox(height: 10),
-                      // Assigned course row
-                      Row(
-                        children: [
-                          Container(
-                            padding: const EdgeInsets.all(8),
-                            decoration: BoxDecoration(
-                              color: Colors.white24,
-                              borderRadius: BorderRadius.circular(8),
-                            ),
-                            child: const Icon(
-                              Icons.menu_book_rounded,
-                              color: Colors.white,
-                              size: 20,
-                            ),
-                          ),
-                          const SizedBox(width: 12),
-                          Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              const Text(
-                                'Assigned Course',
-                                style: TextStyle(
-                                  color: Colors.white60,
-                                  fontSize: 11,
-                                ),
-                              ),
-                              const SizedBox(height: 2),
-                              Text(
-                                course,
-                                style: const TextStyle(
-                                  color: Colors.white,
-                                  fontSize: 15,
-                                  fontWeight: FontWeight.bold,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ],
-                      ),
                     ],
                   ),
                 ),
 
                 const SizedBox(height: 24),
 
-                // ── Section label ────────────────────────────────────────
+                // ── Assigned Exam Details ─────────────────────────────────
                 const Text(
                   'ASSIGNED EXAM DETAILS',
                   style: TextStyle(
@@ -166,6 +122,13 @@ class InvigilatorHome extends StatelessWidget {
                 ),
                 const SizedBox(height: 12),
 
+                // Assigned Course — same card format as venue/date/time
+                _buildInfoCard(
+                  icon: Icons.menu_book_rounded,
+                  title: 'Assigned Course',
+                  value: course,
+                  color: tealPrimary,
+                ),
                 _buildInfoCard(
                   icon: Icons.location_on_outlined,
                   title: 'Exam Venue',
@@ -187,7 +150,7 @@ class InvigilatorHome extends StatelessWidget {
 
                 const SizedBox(height: 24),
 
-                // ── General Notice ───────────────────────────────────────
+                // ── General Notice ────────────────────────────────────────
                 const Text(
                   'GENERAL NOTICE',
                   style: TextStyle(
