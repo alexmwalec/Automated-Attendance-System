@@ -373,50 +373,47 @@ class _ScannerScreenState extends State<_ScannerScreen> {
           // ── Camera ───────────────────────────────────────────────────────
           Expanded(
             flex: 4,
-            child: Stack(
-              children: [
-                MobileScanner(
-                  controller: _cameraController,
-                  onDetect: (capture) {
-                    for (final barcode in capture.barcodes) {
-                      if (barcode.rawValue != null) {
-                        _handleScan(barcode.rawValue!);
-                      }
-                    }
-                  },
-                ),
-                // Scanning frame overlay
-                Center(
-                  child: Container(
-                    width: 240,
-                    height: 240,
-                    decoration: BoxDecoration(
-                      border: Border.all(color: Colors.white, width: 2.5),
-                      borderRadius: BorderRadius.circular(16),
+            child: Container(
+              color: tealLight,
+              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+              child: Stack(
+                children: [
+                  // Large rounded camera view matching the screenshot
+                  ClipRRect(
+                    borderRadius: BorderRadius.circular(28),
+                    child: MobileScanner(
+                      controller: _cameraController,
+                      onDetect: (capture) {
+                        for (final barcode in capture.barcodes) {
+                          if (barcode.rawValue != null) {
+                            _handleScan(barcode.rawValue!);
+                          }
+                        }
+                      },
                     ),
                   ),
-                ),
-                // Scanned count badge
-                Positioned(
-                  top: 12,
-                  right: 12,
-                  child: Container(
-                    padding:
-                        const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                    decoration: BoxDecoration(
-                      color: tealDark.withOpacity(0.85),
-                      borderRadius: BorderRadius.circular(20),
-                    ),
-                    child: Text(
-                      '${_scannedStudents.length} scanned',
-                      style: const TextStyle(
-                          color: Colors.white,
-                          fontSize: 13,
-                          fontWeight: FontWeight.bold),
+                  // Scanned count badge
+                  Positioned(
+                    top: 12,
+                    right: 12,
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 12, vertical: 6),
+                      decoration: BoxDecoration(
+                        color: tealDark.withOpacity(0.85),
+                        borderRadius: BorderRadius.circular(20),
+                      ),
+                      child: Text(
+                        '${_scannedStudents.length} scanned',
+                        style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 13,
+                            fontWeight: FontWeight.bold),
+                      ),
                     ),
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
           ),
 
