@@ -33,32 +33,30 @@ class InvigilatorHome extends StatelessWidget {
           ),
         ],
       ),
-
       body: StreamBuilder<QuerySnapshot>(
         stream: FirebaseFirestore.instance
             .collection('exam_assignments')
             .orderBy('createdAt', descending: true)
-            .limit(1) // Get only the most recent assignment
+            .limit(1)
             .snapshots(),
         builder: (context, snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting) {
-            return const Center(child: CircularProgressIndicator(color: tealPrimary));
+            return const Center(
+                child: CircularProgressIndicator(color: tealPrimary));
           }
 
-          // Default values if no data exists yet
-          String venue = "No Venue Assigned";
-          String date = "No Date Set";
-          String course = "N/A";
-          String time = "N/A";
-          String invigilator = "Invigilator";
+          String venue = 'No Venue Assigned';
+          String date = 'No Date Set';
+          String course = 'N/A';
+          String time = 'N/A';
 
           if (snapshot.hasData && snapshot.data!.docs.isNotEmpty) {
-            final data = snapshot.data!.docs.first.data() as Map<String, dynamic>;
-            venue = data['room'] ?? "No Venue Assigned";
-            date = data['date'] ?? "No Date Set";
-            course = data['course'] ?? "N/A";
-            time = data['time'] ?? "N/A";
-            invigilator = data['invigilatorName'] ?? "Invigilator";
+            final data =
+                snapshot.data!.docs.first.data() as Map<String, dynamic>;
+            venue = data['room'] ?? 'No Venue Assigned';
+            date = data['date'] ?? 'No Date Set';
+            course = data['course'] ?? 'N/A';
+            time = data['time'] ?? 'N/A';
           }
 
           return SingleChildScrollView(
@@ -66,10 +64,10 @@ class InvigilatorHome extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // Welcome Section
+                // ── Welcome Card ──────────────────────────────────────────
                 Container(
                   width: double.infinity,
-                  padding: const EdgeInsets.all(20),
+                  padding: const EdgeInsets.all(18),
                   decoration: BoxDecoration(
                     gradient: const LinearGradient(
                       colors: [tealPrimary, tealDark],
@@ -85,42 +83,52 @@ class InvigilatorHome extends StatelessWidget {
                       ),
                     ],
                   ),
-                  child: Column(
+                  child: const Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      const Text(
-                        'Welcome',
+                      Text(
+                        'Welcome Back!',
                         style: TextStyle(
                           color: Colors.white,
-                          fontSize: 20,
+                          fontSize: 18,
                           fontWeight: FontWeight.bold,
+                          letterSpacing: 0.3,
                         ),
                       ),
-                      const SizedBox(height: 8),
+                      SizedBox(height: 6),
                       Text(
-                        'Assigned to: $course',
-                        style: const TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.w500),
-                      ),
-                      const Text(
-                        'Manage examination attendance efficiently.',
-                        style: TextStyle(color: Colors.white70, fontSize: 13),
+                        'Use this dashboard to manage exam attendance.',
+                        style: TextStyle(
+                          color: Colors.white70,
+                          fontSize: 12,
+                          height: 1.4,
+                        ),
                       ),
                     ],
                   ),
                 ),
+
                 const SizedBox(height: 24),
 
-                
+                // ── Assigned Exam Details ─────────────────────────────────
                 const Text(
                   'ASSIGNED EXAM DETAILS',
                   style: TextStyle(
                     color: tealDark,
                     fontWeight: FontWeight.bold,
-                    fontSize: 14,
+                    fontSize: 12,
                     letterSpacing: 1.2,
                   ),
                 ),
                 const SizedBox(height: 12),
+
+                // Assigned Course — same card format as venue/date/time
+                _buildInfoCard(
+                  icon: Icons.menu_book_rounded,
+                  title: 'Assigned Course',
+                  value: course,
+                  color: tealPrimary,
+                ),
                 _buildInfoCard(
                   icon: Icons.location_on_outlined,
                   title: 'Exam Venue',
@@ -139,15 +147,16 @@ class InvigilatorHome extends StatelessWidget {
                   value: time,
                   color: Colors.purple,
                 ),
+
                 const SizedBox(height: 24),
 
-                // General Notice Section
+                // ── General Notice ────────────────────────────────────────
                 const Text(
                   'GENERAL NOTICE',
                   style: TextStyle(
                     color: tealDark,
                     fontWeight: FontWeight.bold,
-                    fontSize: 14,
+                    fontSize: 12,
                     letterSpacing: 1.2,
                   ),
                 ),
@@ -164,19 +173,24 @@ class InvigilatorHome extends StatelessWidget {
                     children: [
                       _NoticeItem(
                         title: 'Authorized Access Only',
-                        subtitle: 'Invigilators must use official credentials. Sharing login details is strictly prohibited.',
+                        subtitle:
+                            'Invigilators must use official credentials. Sharing login details is strictly prohibited.',
                       ),
                       _NoticeItem(
                         title: 'Correct Exam & Course Selection',
-                        subtitle: 'Before taking attendance, confirm the correct exam and course are selected.',
+                        subtitle:
+                            'Before taking attendance, confirm the correct exam and course are selected.',
                       ),
                       _NoticeItem(
                         title: 'Accurate Attendance Recording',
-                        subtitle: 'Scan each student ID carefully. Report any discrepancies to the Exams Office immediately.',
+                        subtitle:
+                            'Scan each student ID carefully. Report any discrepancies to the Exams Office immediately.',
                       ),
                     ],
                   ),
                 ),
+
+                const SizedBox(height: 16),
               ],
             ),
           );
@@ -193,7 +207,7 @@ class InvigilatorHome extends StatelessWidget {
   }) {
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(12),
@@ -213,22 +227,27 @@ class InvigilatorHome extends StatelessWidget {
               color: color.withOpacity(0.1),
               borderRadius: BorderRadius.circular(8),
             ),
-            child: Icon(icon, color: color),
+            child: Icon(icon, color: color, size: 20),
           ),
-          const SizedBox(width: 16),
-          Expanded( // Wrap in Expanded to handle long text
+          const SizedBox(width: 14),
+          Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
                   title,
-                  style: const TextStyle(color: Colors.grey, fontSize: 12),
+                  style: const TextStyle(
+                    color: Colors.grey,
+                    fontSize: 11,
+                    fontWeight: FontWeight.w500,
+                  ),
                 ),
+                const SizedBox(height: 3),
                 Text(
                   value,
                   style: const TextStyle(
                     fontWeight: FontWeight.bold,
-                    fontSize: 16,
+                    fontSize: 14,
                     color: Colors.black87,
                   ),
                 ),
@@ -258,14 +277,18 @@ class _NoticeItem extends StatelessWidget {
             title,
             style: const TextStyle(
               fontWeight: FontWeight.bold,
-              fontSize: 14,
+              fontSize: 13,
               color: Colors.redAccent,
             ),
           ),
           const SizedBox(height: 4),
           Text(
             subtitle,
-            style: TextStyle(color: Colors.grey.shade700, fontSize: 13, height: 1.4),
+            style: TextStyle(
+              color: Colors.grey.shade700,
+              fontSize: 12,
+              height: 1.4,
+            ),
           ),
         ],
       ),
