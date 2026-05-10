@@ -6,7 +6,7 @@ import 'Features/Lecturer/attendance_history.dart';
 import 'Features/Lecturer/report.dart';
 import 'Features/Lecturer/take_attendance.dart';
 import 'Features/Lecturer/lecturer_dashboard.dart';
-import 'Features/Invigilator/invigilator_dashboard.dart'; // Added this
+import 'Features/Invigilator/invigilator_dashboard.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'firebase_options.dart';
 
@@ -30,16 +30,22 @@ class AttendanceApp extends StatelessWidget {
       debugShowCheckedModeBanner: false,
       theme: ThemeData(
         useMaterial3: true,
-       
         primaryColor: const Color(0xFF2E9E8E),
         colorScheme: ColorScheme.fromSeed(seedColor: const Color(0xFF2E9E8E)),
       ),
       initialRoute: "/",
       routes: {
         "/": (context) => const LoginScreen(),
-        "/lecturer_dashboard": (context) => const LecturerDashboard(), // for lecturer
-        "/invigilator_dashboard": (context) => const InvigilatorDashboard(), // for invigilator
-        "/scanner": (context) => const AttendancePage(),
+        "/lecturer_dashboard": (context) => const LecturerDashboard(),
+        "/invigilator_dashboard": (context) => const InvigilatorDashboard(),
+        "/scanner": (context) {
+          final args = ModalRoute.of(context)?.settings.arguments as Map<String, dynamic>?;
+          return AttendancePage(
+            courseCode: args?['courseCode'] ?? 'Unknown Course',
+            sessionType: args?['sessionType'] ?? 'Unknown Session',
+          );
+        },
+
         "/profile": (context) => const Profile(),
         "/course": (context) => const Course(),
         "/report": (context) => const Report(),

@@ -9,7 +9,7 @@ const Color tealDark = Color(0xFF227A6D);
 const Color tealLight = Color(0xFFDFF2EF);
 const Color tealAccent = Color(0xFF26A69A);
 
-// Entry Widget
+
 class LecturerDashboard extends StatefulWidget {
   final int initialIndex;
 
@@ -19,7 +19,7 @@ class LecturerDashboard extends StatefulWidget {
   State<LecturerDashboard> createState() => _LecturerDashboardState();
 }
 
-// Renamed from _InvigilatorDashboardState to _LecturerDashboardState
+
 class _LecturerDashboardState extends State<LecturerDashboard> {
   late int _currentIndex;
 
@@ -103,7 +103,7 @@ class _LecturerDashboardState extends State<LecturerDashboard> {
       bottomNavigationBar: BottomNavigationBar(
         currentIndex: _currentIndex,
         onTap: (i) {
-          // Keep navigation logic as per your design
+
           if (i == 3) {
             Navigator.push(
               context,

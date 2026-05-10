@@ -1,94 +1,114 @@
+import 'dart:async'; // Required for Timer (Debouncing)
 import 'package:flutter/material.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 
 const Color tealPrimary = Color(0xFF2E9E8E);
 const Color tealDark = Color(0xFF227A6D);
 const Color tealLight = Color(0xFFE0F2F0);
 
-// TODO: replace with your real DB/API call
-// Dummy student database
-const List<Map<String, String>> _kDatabase = [
-  {'regNo': 'Bed-com-27-22', 'name': 'Sulphuric', 'surname': 'Moyo'},
-  {'regNo': 'Bed-com-27-21', 'name': 'Sulphuric', 'surname': 'Moyo'},
-  {'regNo': 'Bed-com-27-23', 'name': 'Sulphuric', 'surname': 'Moyo'},
-  {'regNo': 'Bed-com-27-20', 'name': 'Sulphuric', 'surname': 'Moyo'},
-  {'regNo': 'Bed-com-27-19', 'name': 'Sulphuric', 'surname': 'Moyo'},
-  {'regNo': 'Bed-com-27-24', 'name': 'Sulphuric', 'surname': 'Moyo'},
-  {'regNo': 'Bed-com-27-25', 'name': 'Sulphuric', 'surname': 'Moyo'},
-];
-
-enum _Method { all, regNo, email }
-
 class ManualSearch extends StatefulWidget {
   final List<Map<String, String>> existingStudents;
   final void Function(Map<String, String>) onStudentAdded;
 
-  const ManualSearch({
-    super.key,
-    required this.existingStudents,
-    required this.onStudentAdded,
-  });
+  const ManualSearch({super.key, required this.existingStudents, required this.onStudentAdded});
 
   @override
   State<ManualSearch> createState() => _ManualSearchState();
 }
 
 class _ManualSearchState extends State<ManualSearch> {
-  _Method _method = _Method.all;
   final TextEditingController _ctrl = TextEditingController();
   List<Map<String, String>> _results = [];
+  bool _isLoading = false;
+
+  // Debouncing Timer
+  Timer? _debounce;
 
   @override
   void dispose() {
     _ctrl.dispose();
+    _debounce?.cancel();
     super.dispose();
   }
 
-  void _search(String query) {
-    final q = query.trim().toLowerCase();
+  // Debounced Search Function
+  void _onSearchChanged(String query) {
+    if (_debounce?.isActive ?? false) _debounce?.cancel();
+    _debounce = Timer(const Duration(milliseconds: 500), () {
+      _performSearch(query);
+    });
+  }
+
+  void _performSearch(String query) async {
+    final q = query.trim();
     if (q.isEmpty) {
       setState(() => _results = []);
       return;
     }
-    setState(() {
-      _results = _kDatabase.where((s) {
-        switch (_method) {
-          case _Method.regNo:
-            return s['regNo']!.toLowerCase().contains(q);
-          case _Method.email:
-            return s['name']!.toLowerCase().contains(q) ||
-                s['surname']!.toLowerCase().contains(q);
-          case _Method.all:
-            return s['regNo']!.toLowerCase().contains(q) ||
-                s['name']!.toLowerCase().contains(q) ||
-                s['surname']!.toLowerCase().contains(q);
-        }
-      }).toList();
-    });
-  }
 
-  bool _alreadyAdded(Map<String, String> s) =>
-      widget.existingStudents.any((e) => e['regNo'] == s['regNo']);
+    setState(() => _isLoading = true);
 
-  void _add(Map<String, String> student) {
-    if (_alreadyAdded(student)) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('${student['regNo']} already in the list.'),
-          backgroundColor: Colors.orange,
-          duration: const Duration(seconds: 2),
-        ),
-      );
-      return;
+    try {
+      String upperQuery = q.toUpperCase();
+      String nameQuery = q.length > 1
+          ? q[0].toUpperCase() + q.substring(1).toLowerCase()
+          : q.toUpperCase();
+
+      final results = await Future.wait([
+        // Search by Registration Number
+        FirebaseFirestore.instance
+            .collection('students')
+            .where('regNo', isGreaterThanOrEqualTo: upperQuery)
+            .where('regNo', isLessThanOrEqualTo: '$upperQuery\uf8ff')
+            .limit(10)
+            .get(),
+
+        // Search by Name
+        FirebaseFirestore.instance
+            .collection('students')
+            .where('name', isGreaterThanOrEqualTo: nameQuery)
+            .where('name', isLessThanOrEqualTo: '$nameQuery\uf8ff')
+            .limit(10)
+            .get(),
+      ]);
+
+      final regSnapshot = results[0];
+      final nameSnapshot = results[1];
+
+      // 3. Combine results using a Map to prevent duplicates
+      final Map<String, Map<String, String>> combined = {};
+
+      for (var doc in regSnapshot.docs) {
+        combined[doc.id] = {
+          'regNo': doc['regNo']?.toString() ?? '',
+          'name': doc['name']?.toString() ?? '',
+          'surname': doc['surname']?.toString() ?? '',
+        };
+      }
+
+      for (var doc in nameSnapshot.docs) {
+        combined[doc.id] = {
+          'regNo': doc['regNo']?.toString() ?? '',
+          'name': doc['name']?.toString() ?? '',
+          'surname': doc['surname']?.toString() ?? '',
+        };
+      }
+
+
+      if (mounted) {
+        setState(() {
+          _results = combined.values.toList();
+          _isLoading = false;
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() => _isLoading = false);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text("Search error: $e"), backgroundColor: Colors.red),
+        );
+      }
     }
-    widget.onStudentAdded(Map<String, String>.from(student));
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text('${student['regNo']} added as Present.'),
-        backgroundColor: tealDark,
-        duration: const Duration(seconds: 2),
-      ),
-    );
-    Navigator.pop(context);
   }
 
   @override
@@ -98,172 +118,60 @@ class _ManualSearchState extends State<ManualSearch> {
       appBar: AppBar(
         backgroundColor: tealPrimary,
         iconTheme: const IconThemeData(color: Colors.white),
-        title: const Text('AAS',
-            style: TextStyle(
-                color: Colors.white,
-                fontWeight: FontWeight.bold,
-                fontSize: 18)),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.notifications_none, color: Colors.white),
-            onPressed: () {},
-          ),
-          const Padding(
-            padding: EdgeInsets.only(right: 14),
-            child: CircleAvatar(
-              backgroundColor: tealDark,
-              radius: 15,
-              child: Icon(Icons.person_outline, color: Colors.white, size: 18),
-            ),
-          ),
-        ],
+        title: const Text('Manual Search', style: TextStyle(color: Colors.white)),
       ),
       body: Column(
         children: [
-          // Search card
-          Container(
-            margin: const EdgeInsets.all(14),
-            padding: const EdgeInsets.all(14),
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(10),
-              border:
-                  Border.all(color: tealPrimary.withOpacity(0.2), width: 0.8),
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const Text('Search student',
-                    style: TextStyle(
-                        fontSize: 14,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.black87)),
-                const SizedBox(height: 8),
-                const Text('Search by',
-                    style: TextStyle(fontSize: 11, color: Colors.black54)),
-                const SizedBox(height: 8),
-                // Method toggle pills
-                Row(
-                  children: [
-                    _pill('All methods', _Method.all),
-                    const SizedBox(width: 6),
-                    _pill('Registration number', _Method.regNo),
-                    const SizedBox(width: 6),
-                    _pill('Email', _Method.email),
-                  ],
-                ),
-                const SizedBox(height: 10),
-                // Search field
-                TextField(
-                  controller: _ctrl,
-                  onChanged: _search,
-                  style: const TextStyle(fontSize: 12),
-                  decoration: InputDecoration(
-                    prefixIcon: const Icon(Icons.search,
-                        size: 18, color: Colors.black38),
-                    hintText: _method == _Method.email
-                        ? 'Search by email'
-                        : 'Search by registration number',
-                    hintStyle:
-                        const TextStyle(fontSize: 11, color: Colors.black38),
-                    contentPadding:
-                        const EdgeInsets.symmetric(vertical: 8, horizontal: 10),
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(6),
-                      borderSide: const BorderSide(
-                          color: Color(0xFFCCCCCC), width: 0.8),
-                    ),
-                    enabledBorder: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(6),
-                      borderSide: const BorderSide(
-                          color: Color(0xFFCCCCCC), width: 0.8),
-                    ),
-                    focusedBorder: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(6),
-                      borderSide:
-                          const BorderSide(color: tealPrimary, width: 1.2),
-                    ),
-                    filled: true,
-                    fillColor: const Color(0xFFF8F8F8),
-                  ),
-                ),
-              ],
+          Padding(
+            padding: const EdgeInsets.all(16.0),
+            child: TextField(
+              controller: _ctrl,
+              onChanged: _onSearchChanged, // Calls the debouncer
+              decoration: InputDecoration(
+                filled: true,
+                fillColor: Colors.white,
+                hintText: "Search Reg No or Student Name",
+                prefixIcon: const Icon(Icons.search, color: tealPrimary),
+                suffixIcon: _ctrl.text.isNotEmpty
+                    ? IconButton(
+                    icon: const Icon(Icons.clear),
+                    onPressed: () {
+                      _ctrl.clear();
+                      _onSearchChanged('');
+                    })
+                    : null,
+                border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+              ),
             ),
           ),
-
-          // Results list
+          if (_isLoading) const LinearProgressIndicator(color: tealPrimary),
           Expanded(
-            child: ListView.builder(
-              padding: const EdgeInsets.symmetric(horizontal: 14),
+            child: _results.isEmpty && _ctrl.text.isNotEmpty && !_isLoading
+                ? const Center(child: Text("No students found."))
+                : ListView.builder(
               itemCount: _results.length,
               itemBuilder: (context, i) {
                 final s = _results[i];
-                final added = _alreadyAdded(s);
-                return GestureDetector(
-                  onTap: () => _add(s),
-                  child: Container(
-                    padding:
-                        const EdgeInsets.symmetric(vertical: 13, horizontal: 4),
-                    decoration: const BoxDecoration(
-                      border: Border(
-                          bottom:
-                              BorderSide(color: Color(0xFFB2DFDB), width: 0.5)),
-                    ),
-                    child: Row(
-                      children: [
-                        Expanded(
-                          child: Text(
-                            s['regNo']!,
-                            style: TextStyle(
-                              fontSize: 14,
-                              fontWeight: FontWeight.w400,
-                              letterSpacing: 1.2,
-                              color: added ? Colors.grey : Colors.black87,
-                            ),
-                          ),
-                        ),
-                        if (added)
-                          const Icon(Icons.check_circle,
-                              color: tealPrimary, size: 16),
-                      ],
-                    ),
+                bool added = widget.existingStudents.any((e) => e['regNo'] == s['regNo']);
+                return ListTile(
+                  leading: CircleAvatar(
+                    backgroundColor: tealPrimary,
+                    child: Text(s['name']![0], style: const TextStyle(color: Colors.white)),
                   ),
+                  title: Text(s['regNo']!, style: const TextStyle(fontWeight: FontWeight.bold)),
+                  subtitle: Text("${s['name']} ${s['surname']}"),
+                  trailing: added
+                      ? const Icon(Icons.check_circle, color: tealPrimary)
+                      : const Icon(Icons.add_circle_outline, color: tealDark),
+                  onTap: added ? null : () {
+                    widget.onStudentAdded(s);
+                    Navigator.pop(context);
+                  },
                 );
               },
             ),
           ),
         ],
-      ),
-    );
-  }
-
-  Widget _pill(String label, _Method method) {
-    final selected = _method == method;
-    return GestureDetector(
-      onTap: () {
-        setState(() {
-          _method = method;
-          _search(_ctrl.text);
-        });
-      },
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-        decoration: BoxDecoration(
-          color: selected ? tealPrimary : Colors.transparent,
-          border: Border.all(
-            color: selected ? tealPrimary : Colors.grey.shade400,
-            width: 0.8,
-          ),
-          borderRadius: BorderRadius.circular(20),
-        ),
-        child: Text(
-          label,
-          style: TextStyle(
-            fontSize: 9,
-            fontWeight: FontWeight.w600,
-            color: selected ? Colors.white : Colors.black54,
-          ),
-        ),
       ),
     );
   }

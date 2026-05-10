@@ -29,18 +29,10 @@ class _CourseSelectionScreenState extends State<CourseSelectionScreen> {
   final List<String> sessionTypes = ['Class', 'Lab', 'Exam'];
 
   final List<Map<String, String>> courses = [
-    {'code': 'COM 323', 'year': '3 Year'},
-    {'code': 'COM 321', 'year': '3 Year'},
-    {'code': 'COM 325', 'year': '3 Year'},
-    {'code': 'COM 330', 'year': '4 Year'},
-    {'code': 'COM J23', 'year': '3 Year'},
-    {'code': 'COM S21', 'year': '3 Year'},
-    {'code': 'COM 401', 'year': '4 Year'},
-    {'code': 'COM 402', 'year': '4 Year'},
-    {'code': 'COM 403', 'year': '4 Year'},
-    {'code': 'COM 404', 'year': '4 Year'},
-    {'code': 'COM 405', 'year': '4 Year'},
-    {'code': 'COM 406', 'year': '4 Year'},
+    {'code': 'COM 421', 'year': '4 Year'},
+    {'code': 'COM 424', 'year': '4 Year'},
+    {'code': 'INF 423', 'year': '4 Year'},
+    {'code': 'COM 423', 'year': '4 Year'},
   ];
 
   @override
@@ -50,7 +42,6 @@ class _CourseSelectionScreenState extends State<CourseSelectionScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Info Box
           Container(
             width: double.infinity,
             padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
@@ -133,7 +124,7 @@ class _CourseSelectionScreenState extends State<CourseSelectionScreen> {
                         fontSize: 13,
                         color: isSelected ? Colors.white : Colors.black87,
                         fontWeight:
-                            isSelected ? FontWeight.bold : FontWeight.normal,
+                        isSelected ? FontWeight.bold : FontWeight.normal,
                       ),
                     ),
                   ),
@@ -193,7 +184,7 @@ class _CourseSelectionScreenState extends State<CourseSelectionScreen> {
                         style: TextStyle(
                           fontSize: 11,
                           color:
-                              isSelected ? tealPrimary : Colors.grey.shade600,
+                          isSelected ? tealPrimary : Colors.grey.shade600,
                         ),
                       ),
                     ],
@@ -205,7 +196,7 @@ class _CourseSelectionScreenState extends State<CourseSelectionScreen> {
 
           const SizedBox(height: 28),
 
-          // Proceed Button - wider, aligned to the right
+
           Align(
             alignment: Alignment.centerRight,
             child: SizedBox(
@@ -216,7 +207,10 @@ class _CourseSelectionScreenState extends State<CourseSelectionScreen> {
                     Navigator.push(
                       context,
                       MaterialPageRoute(
-                        builder: (context) => const AttendancePage(),
+                        builder: (context) => AttendancePage(
+                          courseCode: selectedCourse!,
+                          sessionType: selectedSessionType!,
+                        ),
                       ),
                     );
                   } else {
