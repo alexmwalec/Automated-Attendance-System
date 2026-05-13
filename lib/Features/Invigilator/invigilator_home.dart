@@ -4,31 +4,42 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 class InvigilatorHome extends StatelessWidget {
   const InvigilatorHome({super.key});
 
-  static const Color tealPrimary = Color(0xFF2E9E8E);
-  static const Color tealDark = Color(0xFF227A6D);
+  static const Color primaryColor = Color(0xFF2E9E8E);
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFF5F5F5),
+      backgroundColor: const Color(0xFFF5F7F9),
       appBar: AppBar(
-        backgroundColor: tealPrimary,
+        elevation: 0,
+        backgroundColor: primaryColor,
+        automaticallyImplyLeading: false,
         title: const Text(
           'AAS',
-          style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+          style: TextStyle(
+            color: Colors.white,
+            fontWeight: FontWeight.bold,
+            letterSpacing: 1,
+          ),
         ),
-        automaticallyImplyLeading: false,
         actions: [
           IconButton(
-            icon: const Icon(Icons.notifications_none, color: Colors.white),
+            icon: const Icon(
+              Icons.notifications_none_rounded,
+              color: Colors.white,
+            ),
             onPressed: () {},
           ),
           const Padding(
-            padding: EdgeInsets.only(right: 16.0),
+            padding: EdgeInsets.only(right: 16),
             child: CircleAvatar(
+              radius: 16,
               backgroundColor: Colors.white24,
-              radius: 15,
-              child: Icon(Icons.person, color: Colors.white, size: 20),
+              child: Icon(
+                Icons.person,
+                color: Colors.white,
+                size: 18,
+              ),
             ),
           ),
         ],
@@ -41,10 +52,14 @@ class InvigilatorHome extends StatelessWidget {
         builder: (context, snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting) {
             return const Center(
-                child: CircularProgressIndicator(color: tealPrimary));
+              child: CircularProgressIndicator(
+                color: primaryColor,
+              ),
+            );
           }
 
           final List<Map<String, dynamic>> assignments = [];
+
           if (snapshot.hasData && snapshot.data!.docs.isNotEmpty) {
             for (final doc in snapshot.data!.docs) {
               assignments.add(doc.data() as Map<String, dynamic>);
@@ -52,27 +67,25 @@ class InvigilatorHome extends StatelessWidget {
           }
 
           return SingleChildScrollView(
-            padding:
-                const EdgeInsets.symmetric(horizontal: 16.0, vertical: 16.0),
+            padding: const EdgeInsets.symmetric(
+              horizontal: 16,
+              vertical: 16,
+            ),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // ── Welcome Card ──────────────────────────────────────────
+                // WELCOME CARD
                 Container(
                   width: double.infinity,
                   padding: const EdgeInsets.all(18),
                   decoration: BoxDecoration(
-                    gradient: const LinearGradient(
-                      colors: [tealPrimary, tealDark],
-                      begin: Alignment.topLeft,
-                      end: Alignment.bottomRight,
-                    ),
-                    borderRadius: BorderRadius.circular(12),
+                    color: primaryColor,
+                    borderRadius: BorderRadius.circular(16),
                     boxShadow: [
                       BoxShadow(
-                        color: tealPrimary.withOpacity(0.3),
+                        color: primaryColor.withOpacity(0.18),
                         blurRadius: 8,
-                        offset: const Offset(0, 4),
+                        offset: const Offset(0, 3),
                       ),
                     ],
                   ),
@@ -85,58 +98,58 @@ class InvigilatorHome extends StatelessWidget {
                           color: Colors.white,
                           fontSize: 18,
                           fontWeight: FontWeight.bold,
-                          letterSpacing: 0.3,
                         ),
                       ),
                       SizedBox(height: 6),
                       Text(
-                        'Use this dashboard to manage exam attendance.',
+                        'Manage exam attendance and monitor assigned sessions.',
                         style: TextStyle(
                           color: Colors.white70,
                           fontSize: 12,
-                          height: 1.4,
+                          height: 1.5,
                         ),
                       ),
                     ],
                   ),
                 ),
 
-                const SizedBox(height: 24),
+                const SizedBox(height: 20),
 
-                // ── Assigned Tasks label ──────────────────────────────────
+                // ASSIGNED TASKS TITLE
                 const Text(
                   'ASSIGNED TASKS',
                   style: TextStyle(
-                    color: tealDark,
+                    color: primaryColor,
                     fontWeight: FontWeight.bold,
                     fontSize: 12,
                     letterSpacing: 1.2,
                   ),
                 ),
+
                 const SizedBox(height: 12),
 
-                // First assigned task card
+                // FIRST CARD
                 _AssignmentCard(
                   course: assignments.isNotEmpty
                       ? (assignments[0]['course'] ?? 'N/A')
-                      : 'N/A',
+                      : 'Not Assigned',
                   venue: assignments.isNotEmpty
                       ? (assignments[0]['room'] ?? 'N/A')
-                      : 'N/A',
+                      : '—',
                   date: assignments.isNotEmpty
                       ? (assignments[0]['date'] ?? 'N/A')
-                      : 'N/A',
+                      : '—',
                   time: assignments.isNotEmpty
                       ? (assignments[0]['time'] ?? 'N/A')
-                      : 'N/A',
+                      : '—',
                   sessionType: assignments.isNotEmpty
                       ? (assignments[0]['sessionType'] ?? 'N/A')
-                      : 'N/A',
+                      : '—',
                 ),
 
-                const SizedBox(height: 14),
+                const SizedBox(height: 10),
 
-                // Second assigned task card (if exists, else placeholder)
+                // SECOND CARD
                 _AssignmentCard(
                   course: assignments.length >= 2
                       ? (assignments[1]['course'] ?? 'N/A')
@@ -155,25 +168,30 @@ class InvigilatorHome extends StatelessWidget {
                       : '—',
                 ),
 
-                const SizedBox(height: 24),
+                const SizedBox(height: 20),
 
-                // ── General Notice ────────────────────────────────────────
+                // NOTICE TITLE
                 const Text(
                   'GENERAL NOTICE',
                   style: TextStyle(
-                    color: tealDark,
+                    color: primaryColor,
                     fontWeight: FontWeight.bold,
                     fontSize: 12,
                     letterSpacing: 1.2,
                   ),
                 ),
+
                 const SizedBox(height: 12),
+
+                // NOTICE CARD
                 Container(
                   padding: const EdgeInsets.all(16),
                   decoration: BoxDecoration(
                     color: Colors.white,
-                    borderRadius: BorderRadius.circular(12),
-                    border: Border.all(color: Colors.red.withOpacity(0.2)),
+                    borderRadius: BorderRadius.circular(16),
+                    border: Border.all(
+                      color: primaryColor.withOpacity(0.12),
+                    ),
                   ),
                   child: const Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -181,23 +199,23 @@ class InvigilatorHome extends StatelessWidget {
                       _NoticeItem(
                         title: 'Authorized Access Only',
                         subtitle:
-                            'Invigilators must use official credentials. Sharing login details is strictly prohibited.',
+                            'Invigilators must use official credentials. Sharing login details is prohibited.',
                       ),
                       _NoticeItem(
-                        title: 'Correct Exam & Course Selection',
+                        title: 'Correct Exam Selection',
                         subtitle:
-                            'Before taking attendance, confirm the correct exam and course are selected.',
+                            'Always confirm the correct exam and course before attendance scanning.',
                       ),
                       _NoticeItem(
-                        title: 'Accurate Attendance Recording',
+                        title: 'Accurate Attendance',
                         subtitle:
-                            'Scan each student ID carefully. Report any discrepancies to the Exams Office immediately.',
+                            'Scan student IDs carefully and report any discrepancies immediately.',
                       ),
                     ],
                   ),
                 ),
 
-                const SizedBox(height: 16),
+                const SizedBox(height: 20),
               ],
             ),
           );
@@ -207,9 +225,7 @@ class InvigilatorHome extends StatelessWidget {
   }
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// Assignment Card  — Optimized for mobile with clean white design
-// ─────────────────────────────────────────────────────────────────────────────
+// ASSIGNMENT CARD
 
 class _AssignmentCard extends StatelessWidget {
   final String course;
@@ -226,27 +242,28 @@ class _AssignmentCard extends StatelessWidget {
     required this.sessionType,
   });
 
-  static const Color tealPrimary = Color(0xFF2E9E8E);
-  static const Color tealDark = Color(0xFF227A6D);
+  static const Color primaryColor = Color(0xFF2E9E8E);
 
   @override
   Widget build(BuildContext context) {
-    // If course is "Not Assigned", use greyed out styling
     final bool isAssigned = course != 'Not Assigned';
-    final Color accentColor = isAssigned ? tealPrimary : Colors.grey.shade400;
-    final Color textColor = isAssigned ? Colors.black87 : Colors.grey.shade500;
-    final Color courseColor = isAssigned ? tealDark : Colors.grey.shade500;
 
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.symmetric(
+        horizontal: 16,
+        vertical: 14,
+      ),
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(16),
+        border: Border.all(
+          color: primaryColor.withOpacity(0.12),
+        ),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.05),
-            blurRadius: 8,
+            color: Colors.black.withOpacity(0.03),
+            blurRadius: 6,
             offset: const Offset(0, 2),
           ),
         ],
@@ -254,47 +271,32 @@ class _AssignmentCard extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Course row with icon and course name
+          // COURSE HEADER
           Row(
             children: [
-              Icon(Icons.menu_book_rounded, color: accentColor, size: 24),
-              const SizedBox(width: 12),
+              Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: primaryColor.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: const Icon(
+                  Icons.menu_book_rounded,
+                  color: primaryColor,
+                  size: 18,
+                ),
+              ),
+              const SizedBox(width: 10),
               Expanded(
                 child: Text(
                   course,
-                  style: TextStyle(
-                    color: courseColor,
-                    fontSize: 20,
-                    fontWeight: FontWeight.bold,
-                  ),
+                  maxLines: 1,
                   overflow: TextOverflow.ellipsis,
-                ),
-              ),
-            ],
-          ),
-
-          const SizedBox(height: 20),
-
-          // Two rows of details for better mobile layout
-          Row(
-            children: [
-              Expanded(
-                child: _DetailItem(
-                  icon: Icons.location_on_outlined,
-                  label: 'Venue',
-                  value: venue,
-                  accentColor: accentColor,
-                  textColor: textColor,
-                ),
-              ),
-              const SizedBox(width: 16),
-              Expanded(
-                child: _DetailItem(
-                  icon: Icons.calendar_today_outlined,
-                  label: 'Date',
-                  value: date,
-                  accentColor: accentColor,
-                  textColor: textColor,
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                    color: isAssigned ? primaryColor : Colors.grey,
+                  ),
                 ),
               ),
             ],
@@ -302,25 +304,39 @@ class _AssignmentCard extends StatelessWidget {
 
           const SizedBox(height: 16),
 
+          // FIRST ROW
           Row(
             children: [
               Expanded(
-                child: _DetailItem(
-                  icon: Icons.access_time_rounded,
-                  label: 'Time',
-                  value: time,
-                  accentColor: accentColor,
-                  textColor: textColor,
+                child: _CompactDetail(
+                  title: 'Venue',
+                  value: venue,
                 ),
               ),
-              const SizedBox(width: 16),
               Expanded(
-                child: _DetailItem(
-                  icon: Icons.assignment_outlined,
-                  label: 'Session',
+                child: _CompactDetail(
+                  title: 'Date',
+                  value: date,
+                ),
+              ),
+            ],
+          ),
+
+          const SizedBox(height: 12),
+
+          // SECOND ROW
+          Row(
+            children: [
+              Expanded(
+                child: _CompactDetail(
+                  title: 'Time',
+                  value: time,
+                ),
+              ),
+              Expanded(
+                child: _CompactDetail(
+                  title: 'Session',
                   value: sessionType,
-                  accentColor: accentColor,
-                  textColor: textColor,
                 ),
               ),
             ],
@@ -331,74 +347,65 @@ class _AssignmentCard extends StatelessWidget {
   }
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// Detail Item — icon + label + value (optimized for mobile)
-// ─────────────────────────────────────────────────────────────────────────────
+// COMPACT DETAIL ITEM
 
-class _DetailItem extends StatelessWidget {
-  final IconData icon;
-  final String label;
+class _CompactDetail extends StatelessWidget {
+  final String title;
   final String value;
-  final Color accentColor;
-  final Color textColor;
 
-  const _DetailItem({
-    required this.icon,
-    required this.label,
+  const _CompactDetail({
+    required this.title,
     required this.value,
-    required this.accentColor,
-    required this.textColor,
   });
+
+  static const Color primaryColor = Color(0xFF2E9E8E);
 
   @override
   Widget build(BuildContext context) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Row(
-          children: [
-            Icon(icon, size: 14, color: accentColor),
-            const SizedBox(width: 6),
-            Text(
-              label,
-              style: TextStyle(
-                color: accentColor,
-                fontSize: 11,
-                fontWeight: FontWeight.w600,
-                letterSpacing: 0.5,
-              ),
-            ),
-          ],
+        Text(
+          title,
+          style: TextStyle(
+            fontSize: 11,
+            fontWeight: FontWeight.w600,
+            color: primaryColor.withOpacity(0.8),
+          ),
         ),
-        const SizedBox(height: 6),
+        const SizedBox(height: 4),
         Text(
           value,
-          style: TextStyle(
-            color: textColor,
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+          style: const TextStyle(
             fontSize: 13,
             fontWeight: FontWeight.w500,
+            color: Colors.black87,
           ),
-          overflow: TextOverflow.ellipsis,
         ),
       ],
     );
   }
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// Notice Item
-// ─────────────────────────────────────────────────────────────────────────────
+// NOTICE ITEM
 
 class _NoticeItem extends StatelessWidget {
   final String title;
   final String subtitle;
 
-  const _NoticeItem({required this.title, required this.subtitle});
+  const _NoticeItem({
+    required this.title,
+    required this.subtitle,
+  });
+
+  static const Color primaryColor = Color(0xFF2E9E8E);
 
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.only(bottom: 12.0),
+      padding: const EdgeInsets.only(bottom: 14),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -407,7 +414,7 @@ class _NoticeItem extends StatelessWidget {
             style: const TextStyle(
               fontWeight: FontWeight.bold,
               fontSize: 13,
-              color: Colors.redAccent,
+              color: primaryColor,
             ),
           ),
           const SizedBox(height: 4),
@@ -416,7 +423,7 @@ class _NoticeItem extends StatelessWidget {
             style: TextStyle(
               color: Colors.grey.shade700,
               fontSize: 12,
-              height: 1.4,
+              height: 1.5,
             ),
           ),
         ],
