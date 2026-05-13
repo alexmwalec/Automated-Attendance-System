@@ -100,7 +100,7 @@ class _AssignState extends State<Assign> {
           'status': 'Assigned',
         };
 
-        // 2. Add to Firestore collection 'exam_assignments'
+
         await FirebaseFirestore.instance
             .collection('exam_assignments')
             .add(assignmentData);
@@ -120,7 +120,7 @@ class _AssignState extends State<Assign> {
         if (!mounted) return;
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
-            content: Text('Assigned and synced to Invigilator Dashboard!'),
+            content: Text('Assigned'),
             backgroundColor: tealPrimary,
             duration: Duration(seconds: 2),
           ),
@@ -138,7 +138,6 @@ class _AssignState extends State<Assign> {
     }
   }
 
-  // ── Bottom nav tap ────────────────────────────────────────────────────────
   void _onNavTap(int i) {
     if (i == _currentIndex) return;
 
