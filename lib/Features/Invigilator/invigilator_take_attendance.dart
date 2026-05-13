@@ -34,12 +34,7 @@ class InvigilatorTakeAttendance extends StatelessWidget {
         if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
           return Scaffold(
             backgroundColor: tealLight,
-            appBar: _buildAppBar(
-              bottom: const PreferredSize(
-                preferredSize: Size.fromHeight(0),
-                child: SizedBox.shrink(),
-              ),
-            ),
+            appBar: _buildAppBar(),
             body: const Center(
               child: Padding(
                 padding: EdgeInsets.all(32),
@@ -70,8 +65,8 @@ class InvigilatorTakeAttendance extends StatelessWidget {
   }
 }
 
-// ── Shared AppBar builder (no manual search icon) ───────────────────────────
-AppBar _buildAppBar({PreferredSizeWidget? bottom}) {
+// ── Shared AppBar builder ───────────────────────────────────────────
+AppBar _buildAppBar() {
   return AppBar(
     backgroundColor: tealPrimary,
     automaticallyImplyLeading: false,
@@ -94,7 +89,6 @@ AppBar _buildAppBar({PreferredSizeWidget? bottom}) {
         ),
       ),
     ],
-    bottom: bottom,
   );
 }
 
@@ -127,11 +121,17 @@ class _ScannerScreenState extends State<_ScannerScreen> {
   Timer? _scanCooldown;
 
   bool _isSubmitting = false;
+  final TextEditingController _searchController = TextEditingController();
+  List<Map<String, String>> _searchResults = [];
+  bool _isSearching = false;
+  Timer? _searchDebounce;
 
   @override
   void dispose() {
     _cameraController.dispose();
     _scanCooldown?.cancel();
+    _searchDebounce?.cancel();
+    _searchController.dispose();
     super.dispose();
   }
 
@@ -188,6 +188,73 @@ class _ScannerScreenState extends State<_ScannerScreen> {
     setState(() => _scannedStudents.add(student));
     _showSnack(
         '✓ ${student['name']} ${student['surname']} added manually', tealDark);
+  }
+
+  Future<void> _performSearch(String query) async {
+    final q = query.trim();
+    if (q.isEmpty) {
+      setState(() => _searchResults = []);
+      return;
+    }
+
+    setState(() => _isSearching = true);
+
+    try {
+      final upperQuery = q.toUpperCase();
+      final nameQuery = q.length > 1
+          ? q[0].toUpperCase() + q.substring(1).toLowerCase()
+          : q.toUpperCase();
+
+      final results = await Future.wait([
+        FirebaseFirestore.instance
+            .collection('students')
+            .where('regNo', isGreaterThanOrEqualTo: upperQuery)
+            .where('regNo', isLessThanOrEqualTo: '$upperQuery\uf8ff')
+            .limit(10)
+            .get(),
+        FirebaseFirestore.instance
+            .collection('students')
+            .where('name', isGreaterThanOrEqualTo: nameQuery)
+            .where('name', isLessThanOrEqualTo: '$nameQuery\uf8ff')
+            .limit(10)
+            .get(),
+      ]);
+
+      final Map<String, Map<String, String>> combined = {};
+      for (var doc in results[0].docs) {
+        combined[doc.id] = {
+          'regNo': doc['regNo']?.toString() ?? '',
+          'name': doc['name']?.toString() ?? '',
+          'surname': doc['surname']?.toString() ?? '',
+        };
+      }
+      for (var doc in results[1].docs) {
+        combined[doc.id] = {
+          'regNo': doc['regNo']?.toString() ?? '',
+          'name': doc['name']?.toString() ?? '',
+          'surname': doc['surname']?.toString() ?? '',
+        };
+      }
+
+      if (mounted) {
+        setState(() {
+          _searchResults = combined.values.toList();
+          _isSearching = false;
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() => _isSearching = false);
+        _showSnack('Search error: $e', Colors.red);
+      }
+    }
+  }
+
+  void _onSearchChanged(String query) {
+    if (_searchDebounce?.isActive ?? false) _searchDebounce?.cancel();
+    _searchDebounce = Timer(const Duration(milliseconds: 500), () {
+      _performSearch(query);
+    });
   }
 
   Future<void> _submitToFirebase() async {
@@ -308,57 +375,30 @@ class _ScannerScreenState extends State<_ScannerScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: tealLight,
-      // ── AppBar with details strip built into the bottom ──────────────────
-      appBar: AppBar(
-        backgroundColor: tealPrimary,
-        automaticallyImplyLeading: false,
-        title: const Text(
-          'AAS',
-          style: TextStyle(
-              color: Colors.white, fontWeight: FontWeight.bold, fontSize: 18),
-        ),
-        actions: [
-          // No manual-search icon here anymore
-          IconButton(
-            icon: const Icon(Icons.notifications_none, color: Colors.white),
-            onPressed: () {},
-          ),
-          const Padding(
-            padding: EdgeInsets.only(right: 16),
-            child: CircleAvatar(
-              backgroundColor: Colors.white24,
-              radius: 15,
-              child: Icon(Icons.person, color: Colors.white, size: 18),
-            ),
-          ),
-        ],
-        // ── Assignment details strip lives here, inside the AppBar ──────────
-        bottom: PreferredSize(
-          preferredSize: const Size.fromHeight(36),
-          child: Container(
+      appBar: _buildAppBar(),
+      body: Column(
+        children: [
+          // ── Assignment details strip ──────────────────────────────────
+          Container(
             color: tealDark,
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
             child: SingleChildScrollView(
               scrollDirection: Axis.horizontal,
               child: Row(
                 children: [
                   _chip(Icons.school, widget.courseCode),
-                  const SizedBox(width: 12),
+                  const SizedBox(width: 16),
                   _chip(Icons.category, widget.sessionType),
-                  const SizedBox(width: 12),
+                  const SizedBox(width: 16),
                   _chip(Icons.location_on, widget.venue),
-                  const SizedBox(width: 12),
+                  const SizedBox(width: 16),
                   _chip(Icons.calendar_today, widget.date),
                 ],
               ),
             ),
           ),
-        ),
-      ),
 
-      body: Column(
-        children: [
-          // ── Camera ───────────────────────────────────────────────────────
+          // ── Camera Section ────────────────────────────────────────────
           Expanded(
             flex: 4,
             child: Container(
@@ -403,53 +443,125 @@ class _ScannerScreenState extends State<_ScannerScreen> {
             ),
           ),
 
-          // ── "Add student by searching reg number" inline search bar ──────
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 4),
-            child: GestureDetector(
-              onTap: () => Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (_) => _InvigilatorManualSearch(
-                    existingStudents: _scannedStudents,
-                    onStudentAdded: _onManualStudentAdded,
+          // ── Search Section with "Add student by searching reg number" ──
+          Container(
+            color: Colors.white,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Padding(
+                  padding: EdgeInsets.fromLTRB(16, 12, 16, 4),
+                  child: Text(
+                    'Add student by searching reg number',
+                    style: TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w500,
+                      color: tealDark,
+                      letterSpacing: 0.5,
+                    ),
                   ),
                 ),
-              ),
-              child: Container(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(8),
-                  border: Border.all(color: const Color(0xFFB2DFDB)),
-                ),
-                child: Row(
-                  children: const [
-                    Icon(Icons.search, color: tealPrimary, size: 18),
-                    SizedBox(width: 8),
-                    Text(
-                      'Add student by searching reg number',
-                      style: TextStyle(color: Colors.grey, fontSize: 13),
+                Padding(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+                  child: TextField(
+                    controller: _searchController,
+                    autofocus: false,
+                    onChanged: _onSearchChanged,
+                    decoration: InputDecoration(
+                      hintText: 'Search by Registration Number or Name',
+                      hintStyle:
+                          const TextStyle(fontSize: 13, color: Colors.grey),
+                      prefixIcon: const Icon(Icons.search,
+                          color: tealPrimary, size: 20),
+                      suffixIcon: _searchController.text.isNotEmpty
+                          ? IconButton(
+                              icon: const Icon(Icons.clear, size: 18),
+                              onPressed: () {
+                                _searchController.clear();
+                                _onSearchChanged('');
+                                setState(() => _searchResults = []);
+                              },
+                            )
+                          : null,
+                      filled: true,
+                      fillColor: tealLight.withOpacity(0.3),
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(8),
+                        borderSide: BorderSide.none,
+                      ),
+                      contentPadding: const EdgeInsets.symmetric(vertical: 12),
                     ),
-                  ],
+                  ),
                 ),
-              ),
+                if (_isSearching)
+                  const Padding(
+                    padding: EdgeInsets.all(8.0),
+                    child: LinearProgressIndicator(color: tealPrimary),
+                  ),
+                if (_searchResults.isNotEmpty)
+                  Container(
+                    constraints: const BoxConstraints(maxHeight: 200),
+                    child: ListView.builder(
+                      shrinkWrap: true,
+                      itemCount: _searchResults.length,
+                      itemBuilder: (context, i) {
+                        final s = _searchResults[i];
+                        final alreadyAdded = _scannedStudents
+                            .any((e) => e['regNo'] == s['regNo']);
+                        return ListTile(
+                          dense: true,
+                          leading: CircleAvatar(
+                            radius: 16,
+                            backgroundColor: tealPrimary,
+                            child: Text(
+                              s['name']!.isNotEmpty ? s['name']![0] : '?',
+                              style: const TextStyle(
+                                  color: Colors.white, fontSize: 12),
+                            ),
+                          ),
+                          title: Text(
+                            s['regNo']!,
+                            style: const TextStyle(
+                                fontWeight: FontWeight.bold, fontSize: 13),
+                          ),
+                          subtitle: Text(
+                            '${s['name']} ${s['surname']}',
+                            style: const TextStyle(fontSize: 11),
+                          ),
+                          trailing: alreadyAdded
+                              ? const Icon(Icons.check_circle,
+                                  color: tealPrimary, size: 20)
+                              : const Icon(Icons.add_circle_outline,
+                                  color: tealDark, size: 20),
+                          onTap: alreadyAdded
+                              ? null
+                              : () {
+                                  _onManualStudentAdded(s);
+                                  _searchController.clear();
+                                  setState(() => _searchResults = []);
+                                },
+                        );
+                      },
+                    ),
+                  ),
+                const Divider(height: 1, color: Color(0xFFB2DFDB)),
+              ],
             ),
           ),
 
-          // ── Recent scans list ────────────────────────────────────────────
+          // ── Scanned Students List with Table Headers ─────────────────
           Expanded(
             flex: 3,
             child: Container(
               color: Colors.white,
               child: Column(
                 children: [
-                  // Header
+                  // Table Header - Matching design
                   Container(
                     color: tealLight,
-                    padding:
-                        const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 16, vertical: 10),
                     child: const Row(
                       children: [
                         Expanded(
@@ -457,23 +569,26 @@ class _ScannerScreenState extends State<_ScannerScreen> {
                             child: Text('REG NO',
                                 style: TextStyle(
                                     fontWeight: FontWeight.bold,
-                                    fontSize: 11,
-                                    color: tealDark))),
+                                    fontSize: 12,
+                                    color: tealDark,
+                                    letterSpacing: 0.5))),
                         Expanded(
                             flex: 4,
                             child: Text('FULL NAME',
                                 style: TextStyle(
                                     fontWeight: FontWeight.bold,
-                                    fontSize: 11,
-                                    color: tealDark))),
+                                    fontSize: 12,
+                                    color: tealDark,
+                                    letterSpacing: 0.5))),
                         Expanded(
                             flex: 2,
                             child: Text('STATUS',
                                 style: TextStyle(
                                     fontWeight: FontWeight.bold,
-                                    fontSize: 11,
-                                    color: tealDark))),
-                        SizedBox(width: 32),
+                                    fontSize: 12,
+                                    color: tealDark,
+                                    letterSpacing: 0.5))),
+                        SizedBox(width: 40),
                       ],
                     ),
                   ),
@@ -481,11 +596,24 @@ class _ScannerScreenState extends State<_ScannerScreen> {
                   Expanded(
                     child: _scannedStudents.isEmpty
                         ? const Center(
-                            child: Text(
-                              'No students scanned yet.\nScan a QR or use the search bar above.',
-                              textAlign: TextAlign.center,
-                              style:
-                                  TextStyle(color: Colors.grey, fontSize: 13),
+                            child: Column(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                Icon(Icons.qr_code_scanner,
+                                    size: 48, color: Colors.grey),
+                                SizedBox(height: 12),
+                                Text(
+                                  'No students scanned yet',
+                                  style: TextStyle(
+                                      color: Colors.grey, fontSize: 14),
+                                ),
+                                SizedBox(height: 4),
+                                Text(
+                                  'Scan a QR code or search above',
+                                  style: TextStyle(
+                                      color: Colors.grey, fontSize: 12),
+                                ),
+                              ],
                             ),
                           )
                         : ListView.builder(
@@ -495,7 +623,7 @@ class _ScannerScreenState extends State<_ScannerScreen> {
                                   _scannedStudents.length - 1 - i];
                               return Container(
                                 padding: const EdgeInsets.symmetric(
-                                    horizontal: 16, vertical: 8),
+                                    horizontal: 16, vertical: 10),
                                 decoration: const BoxDecoration(
                                   border: Border(
                                     bottom: BorderSide(
@@ -507,31 +635,35 @@ class _ScannerScreenState extends State<_ScannerScreen> {
                                     Expanded(
                                         flex: 3,
                                         child: Text(s['regNo'] ?? '',
-                                            style:
-                                                const TextStyle(fontSize: 10))),
+                                            style: const TextStyle(
+                                                fontSize: 12,
+                                                fontWeight: FontWeight.w500))),
                                     Expanded(
                                         flex: 4,
                                         child: Text(
                                             '${s['name']} ${s['surname']}',
                                             style:
-                                                const TextStyle(fontSize: 10))),
+                                                const TextStyle(fontSize: 12))),
                                     const Expanded(
                                         flex: 2,
                                         child: Text('Present',
                                             style: TextStyle(
-                                                fontSize: 10,
-                                                color: tealDark,
+                                                fontSize: 12,
+                                                color: tealPrimary,
                                                 fontWeight: FontWeight.bold))),
-                                    IconButton(
-                                      icon: const Icon(Icons.close,
-                                          size: 16, color: Colors.red),
-                                      padding: EdgeInsets.zero,
-                                      constraints: const BoxConstraints(),
-                                      onPressed: () {
-                                        setState(() =>
-                                            _scannedStudents.removeWhere((st) =>
-                                                st['regNo'] == s['regNo']));
-                                      },
+                                    SizedBox(
+                                      width: 40,
+                                      child: IconButton(
+                                        icon: const Icon(Icons.close,
+                                            size: 18, color: Colors.red),
+                                        padding: EdgeInsets.zero,
+                                        constraints: const BoxConstraints(),
+                                        onPressed: () {
+                                          setState(() => _scannedStudents
+                                              .removeWhere((st) =>
+                                                  st['regNo'] == s['regNo']));
+                                        },
+                                      ),
                                     ),
                                   ],
                                 ),
@@ -540,37 +672,53 @@ class _ScannerScreenState extends State<_ScannerScreen> {
                           ),
                   ),
 
-                  // ── Submit button ────────────────────────────────────────
-                  Padding(
+                  // ── Submit button ────────────────────────────────────
+                  Container(
                     padding: const EdgeInsets.symmetric(
-                        horizontal: 16, vertical: 10),
-                    child: Align(
-                      alignment: Alignment.centerRight,
-                      child: ElevatedButton(
-                        onPressed: _scannedStudents.isEmpty || _isSubmitting
-                            ? null
-                            : _showConfirmDialog,
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: tealPrimary,
-                          disabledBackgroundColor: Colors.grey.shade400,
-                          padding: const EdgeInsets.symmetric(
-                              horizontal: 24, vertical: 10),
-                          shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(4)),
-                          elevation: 0,
-                        ),
-                        child: _isSubmitting
-                            ? const SizedBox(
-                                width: 20,
-                                height: 20,
-                                child: CircularProgressIndicator(
-                                    strokeWidth: 2, color: Colors.white))
-                            : const Text('Submit Attendance',
-                                style: TextStyle(
-                                    color: Colors.white,
-                                    fontWeight: FontWeight.bold,
-                                    fontSize: 12)),
+                        horizontal: 16, vertical: 12),
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      border: Border(
+                        top: BorderSide(color: Colors.grey.shade200),
                       ),
+                    ),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text(
+                          '${_scannedStudents.length} student(s) marked present',
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: tealDark,
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                        ElevatedButton(
+                          onPressed: _scannedStudents.isEmpty || _isSubmitting
+                              ? null
+                              : _showConfirmDialog,
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: tealPrimary,
+                            disabledBackgroundColor: Colors.grey.shade400,
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 20, vertical: 10),
+                            shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(6)),
+                            elevation: 0,
+                          ),
+                          child: _isSubmitting
+                              ? const SizedBox(
+                                  width: 20,
+                                  height: 20,
+                                  child: CircularProgressIndicator(
+                                      strokeWidth: 2, color: Colors.white))
+                              : const Text('Submit Attendance',
+                                  style: TextStyle(
+                                      color: Colors.white,
+                                      fontWeight: FontWeight.bold,
+                                      fontSize: 13)),
+                        ),
+                      ],
                     ),
                   ),
                 ],
@@ -585,207 +733,13 @@ class _ScannerScreenState extends State<_ScannerScreen> {
   Widget _chip(IconData icon, String label) => Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(icon, color: Colors.white70, size: 13),
-          const SizedBox(width: 4),
+          Icon(icon, color: Colors.white70, size: 14),
+          const SizedBox(width: 6),
           Text(label,
               style: const TextStyle(
                   color: Colors.white,
-                  fontSize: 11,
+                  fontSize: 12,
                   fontWeight: FontWeight.w600)),
         ],
       );
-}
-
-// ══════════════════════════════════════════════════════════════════════════════
-// Manual Search (unchanged logic)
-// ══════════════════════════════════════════════════════════════════════════════
-class _InvigilatorManualSearch extends StatefulWidget {
-  final List<Map<String, String>> existingStudents;
-  final void Function(Map<String, String>) onStudentAdded;
-
-  const _InvigilatorManualSearch({
-    required this.existingStudents,
-    required this.onStudentAdded,
-  });
-
-  @override
-  State<_InvigilatorManualSearch> createState() =>
-      _InvigilatorManualSearchState();
-}
-
-class _InvigilatorManualSearchState extends State<_InvigilatorManualSearch> {
-  final TextEditingController _ctrl = TextEditingController();
-  List<Map<String, String>> _results = [];
-  bool _isLoading = false;
-  Timer? _debounce;
-
-  @override
-  void dispose() {
-    _ctrl.dispose();
-    _debounce?.cancel();
-    super.dispose();
-  }
-
-  void _onSearchChanged(String query) {
-    if (_debounce?.isActive ?? false) _debounce?.cancel();
-    _debounce = Timer(const Duration(milliseconds: 500), () {
-      _performSearch(query);
-    });
-  }
-
-  Future<void> _performSearch(String query) async {
-    final q = query.trim();
-    if (q.isEmpty) {
-      setState(() => _results = []);
-      return;
-    }
-
-    setState(() => _isLoading = true);
-
-    try {
-      final upperQuery = q.toUpperCase();
-      final nameQuery = q.length > 1
-          ? q[0].toUpperCase() + q.substring(1).toLowerCase()
-          : q.toUpperCase();
-
-      final results = await Future.wait([
-        FirebaseFirestore.instance
-            .collection('students')
-            .where('regNo', isGreaterThanOrEqualTo: upperQuery)
-            .where('regNo', isLessThanOrEqualTo: '$upperQuery\uf8ff')
-            .limit(10)
-            .get(),
-        FirebaseFirestore.instance
-            .collection('students')
-            .where('name', isGreaterThanOrEqualTo: nameQuery)
-            .where('name', isLessThanOrEqualTo: '$nameQuery\uf8ff')
-            .limit(10)
-            .get(),
-      ]);
-
-      final Map<String, Map<String, String>> combined = {};
-      for (var doc in results[0].docs) {
-        combined[doc.id] = {
-          'regNo': doc['regNo']?.toString() ?? '',
-          'name': doc['name']?.toString() ?? '',
-          'surname': doc['surname']?.toString() ?? '',
-        };
-      }
-      for (var doc in results[1].docs) {
-        combined[doc.id] = {
-          'regNo': doc['regNo']?.toString() ?? '',
-          'name': doc['name']?.toString() ?? '',
-          'surname': doc['surname']?.toString() ?? '',
-        };
-      }
-
-      if (mounted) {
-        setState(() {
-          _results = combined.values.toList();
-          _isLoading = false;
-        });
-      }
-    } catch (e) {
-      if (mounted) {
-        setState(() => _isLoading = false);
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-              content: Text('Search error: $e'), backgroundColor: Colors.red),
-        );
-      }
-    }
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: tealLight,
-      appBar: AppBar(
-        backgroundColor: tealPrimary,
-        iconTheme: const IconThemeData(color: Colors.white),
-        title: const Text(
-          'AAS',
-          style: TextStyle(
-              color: Colors.white, fontWeight: FontWeight.bold, fontSize: 18),
-        ),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.notifications_none, color: Colors.white),
-            onPressed: () {},
-          ),
-          const Padding(
-            padding: EdgeInsets.only(right: 16),
-            child: CircleAvatar(
-              backgroundColor: Colors.white24,
-              radius: 15,
-              child: Icon(Icons.person, color: Colors.white, size: 18),
-            ),
-          ),
-        ],
-      ),
-      body: Column(
-        children: [
-          Padding(
-            padding: const EdgeInsets.all(16),
-            child: TextField(
-              controller: _ctrl,
-              autofocus: true,
-              onChanged: _onSearchChanged,
-              decoration: InputDecoration(
-                filled: true,
-                fillColor: Colors.white,
-                hintText: 'Search Reg No or Student Name',
-                prefixIcon: const Icon(Icons.search, color: tealPrimary),
-                suffixIcon: _ctrl.text.isNotEmpty
-                    ? IconButton(
-                        icon: const Icon(Icons.clear),
-                        onPressed: () {
-                          _ctrl.clear();
-                          _onSearchChanged('');
-                        })
-                    : null,
-                border:
-                    OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
-              ),
-            ),
-          ),
-          if (_isLoading) const LinearProgressIndicator(color: tealPrimary),
-          Expanded(
-            child: _results.isEmpty && _ctrl.text.isNotEmpty && !_isLoading
-                ? const Center(child: Text('No students found.'))
-                : ListView.builder(
-                    itemCount: _results.length,
-                    itemBuilder: (context, i) {
-                      final s = _results[i];
-                      final added = widget.existingStudents
-                          .any((e) => e['regNo'] == s['regNo']);
-                      return ListTile(
-                        leading: CircleAvatar(
-                          backgroundColor: tealPrimary,
-                          child: Text(
-                              s['name']!.isNotEmpty ? s['name']![0] : '?',
-                              style: const TextStyle(color: Colors.white)),
-                        ),
-                        title: Text(s['regNo']!,
-                            style:
-                                const TextStyle(fontWeight: FontWeight.bold)),
-                        subtitle: Text('${s['name']} ${s['surname']}'),
-                        trailing: added
-                            ? const Icon(Icons.check_circle, color: tealPrimary)
-                            : const Icon(Icons.add_circle_outline,
-                                color: tealDark),
-                        onTap: added
-                            ? null
-                            : () {
-                                widget.onStudentAdded(s);
-                                Navigator.pop(context);
-                              },
-                      );
-                    },
-                  ),
-          ),
-        ],
-      ),
-    );
-  }
 }
