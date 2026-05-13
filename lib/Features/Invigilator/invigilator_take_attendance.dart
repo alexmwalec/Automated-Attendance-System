@@ -10,8 +10,7 @@ const Color tealDark = Color(0xFF227A6D);
 const Color tealLight = Color(0xFFE0F2F0);
 
 // ══════════════════════════════════════════════════════════════════════════════
-// Entry point – no course-selection screen; the assigned course is loaded from
-// Firestore (exam_assignments collection – same source used by InvigilatorHome).
+// Entry point
 // ══════════════════════════════════════════════════════════════════════════════
 class InvigilatorTakeAttendance extends StatelessWidget {
   const InvigilatorTakeAttendance({super.key});
@@ -32,35 +31,14 @@ class InvigilatorTakeAttendance extends StatelessWidget {
           );
         }
 
-        // No assignment yet
         if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
           return Scaffold(
             backgroundColor: tealLight,
-            appBar: AppBar(
-              backgroundColor: tealPrimary,
-              automaticallyImplyLeading: false,
-              title: const Text(
-                'AAS',
-                style: TextStyle(
-                    color: Colors.white,
-                    fontWeight: FontWeight.bold,
-                    fontSize: 18),
+            appBar: _buildAppBar(
+              bottom: const PreferredSize(
+                preferredSize: Size.fromHeight(0),
+                child: SizedBox.shrink(),
               ),
-              actions: [
-                IconButton(
-                  icon:
-                      const Icon(Icons.notifications_none, color: Colors.white),
-                  onPressed: () {},
-                ),
-                const Padding(
-                  padding: EdgeInsets.only(right: 16),
-                  child: CircleAvatar(
-                    backgroundColor: Colors.white24,
-                    radius: 15,
-                    child: Icon(Icons.person, color: Colors.white, size: 18),
-                  ),
-                ),
-              ],
             ),
             body: const Center(
               child: Padding(
@@ -77,7 +55,7 @@ class InvigilatorTakeAttendance extends StatelessWidget {
 
         final data = snapshot.data!.docs.first.data() as Map<String, dynamic>;
         final String courseCode = data['course'] ?? 'N/A';
-        final String sessionType = 'Exam'; // invigilators always do exams
+        const String sessionType = 'Exam';
         final String venue = data['room'] ?? 'N/A';
         final String date = data['date'] ?? 'N/A';
 
@@ -90,6 +68,34 @@ class InvigilatorTakeAttendance extends StatelessWidget {
       },
     );
   }
+}
+
+// ── Shared AppBar builder (no manual search icon) ───────────────────────────
+AppBar _buildAppBar({PreferredSizeWidget? bottom}) {
+  return AppBar(
+    backgroundColor: tealPrimary,
+    automaticallyImplyLeading: false,
+    title: const Text(
+      'AAS',
+      style: TextStyle(
+          color: Colors.white, fontWeight: FontWeight.bold, fontSize: 18),
+    ),
+    actions: [
+      IconButton(
+        icon: const Icon(Icons.notifications_none, color: Colors.white),
+        onPressed: () {},
+      ),
+      const Padding(
+        padding: EdgeInsets.only(right: 16),
+        child: CircleAvatar(
+          backgroundColor: Colors.white24,
+          radius: 15,
+          child: Icon(Icons.person, color: Colors.white, size: 18),
+        ),
+      ),
+    ],
+    bottom: bottom,
+  );
 }
 
 // ══════════════════════════════════════════════════════════════════════════════
@@ -115,10 +121,8 @@ class _ScannerScreen extends StatefulWidget {
 class _ScannerScreenState extends State<_ScannerScreen> {
   final MobileScannerController _cameraController = MobileScannerController();
 
-  // Students confirmed present by scanning or manual search
   final List<Map<String, String>> _scannedStudents = [];
 
-  // Prevent the same QR from firing multiple times in quick succession
   String? _lastScanned;
   Timer? _scanCooldown;
 
@@ -131,11 +135,9 @@ class _ScannerScreenState extends State<_ScannerScreen> {
     super.dispose();
   }
 
-  // ── Handle a raw barcode value (reg number expected) ─────────────────────
   Future<void> _handleScan(String rawValue) async {
     final regNo = rawValue.trim().toUpperCase();
 
-    // Cooldown: ignore duplicate scans within 2 seconds
     if (_lastScanned == regNo) return;
     _lastScanned = regNo;
     _scanCooldown?.cancel();
@@ -143,14 +145,12 @@ class _ScannerScreenState extends State<_ScannerScreen> {
       _lastScanned = null;
     });
 
-    // Already in the list?
     if (_scannedStudents.any((s) => s['regNo'] == regNo)) {
       HapticFeedback.mediumImpact();
       _showSnack('$regNo already marked present', Colors.orange);
       return;
     }
 
-    // Look up student in Firestore
     try {
       final query = await FirebaseFirestore.instance
           .collection('students')
@@ -180,7 +180,6 @@ class _ScannerScreenState extends State<_ScannerScreen> {
     }
   }
 
-  // ── Called when ManualSearch adds a student ───────────────────────────────
   void _onManualStudentAdded(Map<String, String> student) {
     if (_scannedStudents.any((s) => s['regNo'] == student['regNo'])) {
       _showSnack('${student['regNo']} already marked present', Colors.orange);
@@ -191,7 +190,6 @@ class _ScannerScreenState extends State<_ScannerScreen> {
         '✓ ${student['name']} ${student['surname']} added manually', tealDark);
   }
 
-  // ── Submit to Firestore (same logic as SubmitList._submitToFirebase) ──────
   Future<void> _submitToFirebase() async {
     setState(() => _isSubmitting = true);
     try {
@@ -237,7 +235,7 @@ class _ScannerScreenState extends State<_ScannerScreen> {
         'sessionType': widget.sessionType,
         'date': DateTime.now().toIso8601String().split('T')[0],
         'timestamp': FieldValue.serverTimestamp(),
-        'lecturerId': 'invigilator', // distinguish from lecturer submissions
+        'lecturerId': 'invigilator',
         'fullAttendanceList': fullAttendanceList,
         'totalPresent': _scannedStudents.length,
       };
@@ -306,11 +304,11 @@ class _ScannerScreenState extends State<_ScannerScreen> {
     );
   }
 
-  // ─── Build ────────────────────────────────────────────────────────────────
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: tealLight,
+      // ── AppBar with details strip built into the bottom ──────────────────
       appBar: AppBar(
         backgroundColor: tealPrimary,
         automaticallyImplyLeading: false,
@@ -320,20 +318,7 @@ class _ScannerScreenState extends State<_ScannerScreen> {
               color: Colors.white, fontWeight: FontWeight.bold, fontSize: 18),
         ),
         actions: [
-          // Manual search button
-          IconButton(
-            icon: const Icon(Icons.person_search, color: Colors.white),
-            tooltip: 'Manual Search',
-            onPressed: () => Navigator.push(
-              context,
-              MaterialPageRoute(
-                builder: (_) => _InvigilatorManualSearch(
-                  existingStudents: _scannedStudents,
-                  onStudentAdded: _onManualStudentAdded,
-                ),
-              ),
-            ),
-          ),
+          // No manual-search icon here anymore
           IconButton(
             icon: const Icon(Icons.notifications_none, color: Colors.white),
             onPressed: () {},
@@ -347,11 +332,10 @@ class _ScannerScreenState extends State<_ScannerScreen> {
             ),
           ),
         ],
-      ),
-      body: Column(
-        children: [
-          // ── Assignment info strip ────────────────────────────────────────
-          Container(
+        // ── Assignment details strip lives here, inside the AppBar ──────────
+        bottom: PreferredSize(
+          preferredSize: const Size.fromHeight(36),
+          child: Container(
             color: tealDark,
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
             child: SingleChildScrollView(
@@ -359,17 +343,21 @@ class _ScannerScreenState extends State<_ScannerScreen> {
               child: Row(
                 children: [
                   _chip(Icons.school, widget.courseCode),
-                  const SizedBox(width: 8),
+                  const SizedBox(width: 12),
                   _chip(Icons.category, widget.sessionType),
-                  const SizedBox(width: 8),
+                  const SizedBox(width: 12),
                   _chip(Icons.location_on, widget.venue),
-                  const SizedBox(width: 8),
+                  const SizedBox(width: 12),
                   _chip(Icons.calendar_today, widget.date),
                 ],
               ),
             ),
           ),
+        ),
+      ),
 
+      body: Column(
+        children: [
           // ── Camera ───────────────────────────────────────────────────────
           Expanded(
             flex: 4,
@@ -378,7 +366,6 @@ class _ScannerScreenState extends State<_ScannerScreen> {
               padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
               child: Stack(
                 children: [
-                  // Large rounded camera view matching the screenshot
                   ClipRRect(
                     borderRadius: BorderRadius.circular(28),
                     child: MobileScanner(
@@ -392,7 +379,6 @@ class _ScannerScreenState extends State<_ScannerScreen> {
                       },
                     ),
                   ),
-                  // Scanned count badge
                   Positioned(
                     top: 12,
                     right: 12,
@@ -417,6 +403,41 @@ class _ScannerScreenState extends State<_ScannerScreen> {
             ),
           ),
 
+          // ── "Add student by searching reg number" inline search bar ──────
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 4),
+            child: GestureDetector(
+              onTap: () => Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (_) => _InvigilatorManualSearch(
+                    existingStudents: _scannedStudents,
+                    onStudentAdded: _onManualStudentAdded,
+                  ),
+                ),
+              ),
+              child: Container(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(color: const Color(0xFFB2DFDB)),
+                ),
+                child: Row(
+                  children: const [
+                    Icon(Icons.search, color: tealPrimary, size: 18),
+                    SizedBox(width: 8),
+                    Text(
+                      'Add student by searching reg number',
+                      style: TextStyle(color: Colors.grey, fontSize: 13),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+
           // ── Recent scans list ────────────────────────────────────────────
           Expanded(
             flex: 3,
@@ -429,31 +450,30 @@ class _ScannerScreenState extends State<_ScannerScreen> {
                     color: tealLight,
                     padding:
                         const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                    child: Row(
+                    child: const Row(
                       children: [
-                        const Expanded(
+                        Expanded(
                             flex: 3,
                             child: Text('REG NO',
                                 style: TextStyle(
                                     fontWeight: FontWeight.bold,
                                     fontSize: 11,
                                     color: tealDark))),
-                        const Expanded(
+                        Expanded(
                             flex: 4,
                             child: Text('FULL NAME',
                                 style: TextStyle(
                                     fontWeight: FontWeight.bold,
                                     fontSize: 11,
                                     color: tealDark))),
-                        const Expanded(
+                        Expanded(
                             flex: 2,
                             child: Text('STATUS',
                                 style: TextStyle(
                                     fontWeight: FontWeight.bold,
                                     fontSize: 11,
                                     color: tealDark))),
-                        // remove button column spacer
-                        const SizedBox(width: 32),
+                        SizedBox(width: 32),
                       ],
                     ),
                   ),
@@ -462,7 +482,7 @@ class _ScannerScreenState extends State<_ScannerScreen> {
                     child: _scannedStudents.isEmpty
                         ? const Center(
                             child: Text(
-                              'No students scanned yet.\nScan a QR or use manual search.',
+                              'No students scanned yet.\nScan a QR or use the search bar above.',
                               textAlign: TextAlign.center,
                               style:
                                   TextStyle(color: Colors.grey, fontSize: 13),
@@ -472,9 +492,7 @@ class _ScannerScreenState extends State<_ScannerScreen> {
                             itemCount: _scannedStudents.length,
                             itemBuilder: (context, i) {
                               final s = _scannedStudents[
-                                  _scannedStudents.length -
-                                      1 -
-                                      i]; // newest first
+                                  _scannedStudents.length - 1 - i];
                               return Container(
                                 padding: const EdgeInsets.symmetric(
                                     horizontal: 16, vertical: 8),
@@ -522,7 +540,7 @@ class _ScannerScreenState extends State<_ScannerScreen> {
                           ),
                   ),
 
-                  // ── Submit button ──────────────────────────────────────
+                  // ── Submit button ────────────────────────────────────────
                   Padding(
                     padding: const EdgeInsets.symmetric(
                         horizontal: 16, vertical: 10),
@@ -579,8 +597,7 @@ class _ScannerScreenState extends State<_ScannerScreen> {
 }
 
 // ══════════════════════════════════════════════════════════════════════════════
-// Manual Search (same logic as ManualSearch widget but self-contained here
-// so no cross-file dependency is added to the invigilator feature folder)
+// Manual Search (unchanged logic)
 // ══════════════════════════════════════════════════════════════════════════════
 class _InvigilatorManualSearch extends StatefulWidget {
   final List<Map<String, String>> existingStudents;
@@ -712,6 +729,7 @@ class _InvigilatorManualSearchState extends State<_InvigilatorManualSearch> {
             padding: const EdgeInsets.all(16),
             child: TextField(
               controller: _ctrl,
+              autofocus: true,
               onChanged: _onSearchChanged,
               decoration: InputDecoration(
                 filled: true,
