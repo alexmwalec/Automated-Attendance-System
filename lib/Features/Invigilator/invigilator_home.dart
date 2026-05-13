@@ -37,7 +37,6 @@ class InvigilatorHome extends StatelessWidget {
         stream: FirebaseFirestore.instance
             .collection('exam_assignments')
             .orderBy('createdAt', descending: true)
-            .limit(1)
             .snapshots(),
         builder: (context, snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting) {
@@ -45,18 +44,12 @@ class InvigilatorHome extends StatelessWidget {
                 child: CircularProgressIndicator(color: tealPrimary));
           }
 
-          String venue = 'No Venue Assigned';
-          String date = 'No Date Set';
-          String course = 'N/A';
-          String time = 'N/A';
-
+          // Collect all assignments
+          final List<Map<String, dynamic>> assignments = [];
           if (snapshot.hasData && snapshot.data!.docs.isNotEmpty) {
-            final data =
-                snapshot.data!.docs.first.data() as Map<String, dynamic>;
-            venue = data['room'] ?? 'No Venue Assigned';
-            date = data['date'] ?? 'No Date Set';
-            course = data['course'] ?? 'N/A';
-            time = data['time'] ?? 'N/A';
+            for (final doc in snapshot.data!.docs) {
+              assignments.add(doc.data() as Map<String, dynamic>);
+            }
           }
 
           return SingleChildScrollView(
@@ -110,9 +103,9 @@ class InvigilatorHome extends StatelessWidget {
 
                 const SizedBox(height: 24),
 
-                // ── Assigned Exam Details ─────────────────────────────────
+                // ── Assigned Tasks ────────────────────────────────────────
                 const Text(
-                  'ASSIGNED EXAM DETAILS',
+                  'ASSIGNED TASKS',
                   style: TextStyle(
                     color: tealDark,
                     fontWeight: FontWeight.bold,
@@ -122,31 +115,22 @@ class InvigilatorHome extends StatelessWidget {
                 ),
                 const SizedBox(height: 12),
 
-                // Assigned Course — same card format as venue/date/time
-                _buildInfoCard(
-                  icon: Icons.menu_book_rounded,
-                  title: 'Assigned Course',
-                  value: course,
-                  color: tealPrimary,
-                ),
-                _buildInfoCard(
-                  icon: Icons.location_on_outlined,
-                  title: 'Exam Venue',
-                  value: venue,
-                  color: Colors.blue,
-                ),
-                _buildInfoCard(
-                  icon: Icons.calendar_today_outlined,
-                  title: 'Exam Date',
-                  value: date,
-                  color: Colors.orange,
-                ),
-                _buildInfoCard(
-                  icon: Icons.access_time,
-                  title: 'Exam Time',
-                  value: time,
-                  color: Colors.purple,
-                ),
+                // Show a card per assignment, or a placeholder if none
+                if (assignments.isEmpty)
+                  _buildEmptyAssignmentCard()
+                else
+                  ...assignments.asMap().entries.map((entry) {
+                    final index = entry.key;
+                    final data = entry.value;
+                    return _buildAssignmentCard(
+                      index: index + 1,
+                      course: data['course'] ?? 'N/A',
+                      venue: data['room'] ?? 'No Venue Assigned',
+                      date: data['date'] ?? 'No Date Set',
+                      time: data['time'] ?? 'N/A',
+                      sessionType: data['sessionType'] ?? 'N/A',
+                    );
+                  }),
 
                 const SizedBox(height: 24),
 
@@ -199,63 +183,220 @@ class InvigilatorHome extends StatelessWidget {
     );
   }
 
-  Widget _buildInfoCard({
-    required IconData icon,
-    required String title,
-    required String value,
-    required Color color,
+  /// A single card that groups all details for one assignment.
+  Widget _buildAssignmentCard({
+    required int index,
+    required String course,
+    required String venue,
+    required String date,
+    required String time,
+    required String sessionType,
   }) {
+    // Pick a colour/icon for the session-type badge
+    final (Color badgeColor, IconData sessionIcon) =
+        switch (sessionType.toLowerCase()) {
+      'lab' => (Colors.green, Icons.science_outlined),
+      'class' => (Colors.blue, Icons.class_outlined),
+      _ => (tealPrimary, Icons.assignment_outlined), // default → exam
+    };
+
     return Container(
-      margin: const EdgeInsets.only(bottom: 12),
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+      margin: const EdgeInsets.only(bottom: 16),
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(14),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.03),
-            blurRadius: 10,
-            offset: const Offset(0, 2),
+            color: Colors.black.withOpacity(0.05),
+            blurRadius: 12,
+            offset: const Offset(0, 4),
           ),
         ],
       ),
-      child: Row(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          // ── Card header ──────────────────────────────────────────────
           Container(
-            padding: const EdgeInsets.all(10),
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
             decoration: BoxDecoration(
-              color: color.withOpacity(0.1),
-              borderRadius: BorderRadius.circular(8),
+              color: tealPrimary.withOpacity(0.08),
+              borderRadius:
+                  const BorderRadius.vertical(top: Radius.circular(14)),
             ),
-            child: Icon(icon, color: color, size: 20),
-          ),
-          const SizedBox(width: 14),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+            child: Row(
               children: [
-                Text(
-                  title,
-                  style: const TextStyle(
-                    color: Colors.grey,
-                    fontSize: 11,
-                    fontWeight: FontWeight.w500,
+                // Session-type badge
+                Container(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                  decoration: BoxDecoration(
+                    color: badgeColor.withOpacity(0.15),
+                    borderRadius: BorderRadius.circular(20),
+                    border: Border.all(color: badgeColor.withOpacity(0.4)),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(sessionIcon, size: 13, color: badgeColor),
+                      const SizedBox(width: 5),
+                      Text(
+                        sessionType.toUpperCase(),
+                        style: TextStyle(
+                          color: badgeColor,
+                          fontSize: 11,
+                          fontWeight: FontWeight.bold,
+                          letterSpacing: 0.8,
+                        ),
+                      ),
+                    ],
                   ),
                 ),
-                const SizedBox(height: 3),
+                const Spacer(),
                 Text(
-                  value,
+                  'Task #$index',
                   style: const TextStyle(
-                    fontWeight: FontWeight.bold,
-                    fontSize: 14,
-                    color: Colors.black87,
+                    color: tealDark,
+                    fontSize: 11,
+                    fontWeight: FontWeight.w600,
+                    letterSpacing: 0.5,
                   ),
+                ),
+              ],
+            ),
+          ),
+
+          // ── Detail rows ──────────────────────────────────────────────
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 14, 16, 16),
+            child: Column(
+              children: [
+                _buildDetailRow(
+                  icon: Icons.menu_book_rounded,
+                  label: 'Course',
+                  value: course,
+                  color: tealPrimary,
+                ),
+                const _RowDivider(),
+                _buildDetailRow(
+                  icon: Icons.location_on_outlined,
+                  label: 'Venue',
+                  value: venue,
+                  color: Colors.blue,
+                ),
+                const _RowDivider(),
+                _buildDetailRow(
+                  icon: Icons.calendar_today_outlined,
+                  label: 'Date',
+                  value: date,
+                  color: Colors.orange,
+                ),
+                const _RowDivider(),
+                _buildDetailRow(
+                  icon: Icons.access_time,
+                  label: 'Time',
+                  value: time,
+                  color: Colors.purple,
                 ),
               ],
             ),
           ),
         ],
       ),
+    );
+  }
+
+  /// Shown when the invigilator has no assignments yet.
+  Widget _buildEmptyAssignmentCard() {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(24),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: Colors.grey.shade200),
+      ),
+      child: Column(
+        children: [
+          Icon(Icons.event_busy_outlined,
+              size: 40, color: Colors.grey.shade400),
+          const SizedBox(height: 10),
+          Text(
+            'No tasks assigned yet',
+            style: TextStyle(
+              color: Colors.grey.shade500,
+              fontSize: 13,
+              fontWeight: FontWeight.w500,
+            ),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            'Your assignments will appear here once added by a lecturer.',
+            textAlign: TextAlign.center,
+            style: TextStyle(color: Colors.grey.shade400, fontSize: 11),
+          ),
+        ],
+      ),
+    );
+  }
+
+  /// A single label + value row inside an assignment card.
+  Widget _buildDetailRow({
+    required IconData icon,
+    required String label,
+    required String value,
+    required Color color,
+  }) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 8),
+      child: Row(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(7),
+            decoration: BoxDecoration(
+              color: color.withOpacity(0.1),
+              borderRadius: BorderRadius.circular(7),
+            ),
+            child: Icon(icon, color: color, size: 16),
+          ),
+          const SizedBox(width: 12),
+          SizedBox(
+            width: 64,
+            child: Text(
+              label,
+              style: const TextStyle(
+                color: Colors.grey,
+                fontSize: 11,
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+          ),
+          Expanded(
+            child: Text(
+              value,
+              style: const TextStyle(
+                fontWeight: FontWeight.w600,
+                fontSize: 13,
+                color: Colors.black87,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// Thin divider used between detail rows.
+class _RowDivider extends StatelessWidget {
+  const _RowDivider();
+
+  @override
+  Widget build(BuildContext context) {
+    return Divider(
+      height: 1,
+      thickness: 0.5,
+      color: Colors.grey.shade100,
     );
   }
 }
