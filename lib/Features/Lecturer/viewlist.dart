@@ -11,6 +11,7 @@ class ViewList extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // This is the list of objects we built in submit_list.dart
     final List fullList = attendanceData['fullAttendanceList'] ?? [];
 
     return Scaffold(
@@ -20,8 +21,7 @@ class ViewList extends StatelessWidget {
         elevation: 0,
         centerTitle: true,
         iconTheme: const IconThemeData(color: Colors.white),
-        title: const Text(
-          'Attendance Details',
+        title: const Text('Attendance Details',
           style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 18),
         ),
       ),
@@ -56,7 +56,7 @@ class ViewList extends StatelessWidget {
             child: Row(
               children: const [
                 Expanded(flex: 3, child: Text("REG NO", style: TextStyle(fontWeight: FontWeight.bold, color: tealDark, fontSize: 12))),
-                Expanded(flex: 4, child: Text("NAME", style: TextStyle(fontWeight: FontWeight.bold, color: tealDark, fontSize: 12))),
+                Expanded(flex: 4, child: Text("NAME & SURNAME", style: TextStyle(fontWeight: FontWeight.bold, color: tealDark, fontSize: 12))),
                 Expanded(flex: 2, child: Text("STATUS", style: TextStyle(fontWeight: FontWeight.bold, color: tealDark, fontSize: 12))),
               ],
             ),
@@ -82,8 +82,11 @@ class ViewList extends StatelessWidget {
                   ),
                   child: Row(
                     children: [
+                      // REG NO
                       Expanded(flex: 3, child: Text(student['regNo'] ?? 'N/A', style: const TextStyle(fontSize: 11))),
+                      // NAME + SURNAME
                       Expanded(flex: 4, child: Text('${student['name']} ${student['surname']}', style: const TextStyle(fontSize: 11))),
+                      // STATUS CHIP
                       Expanded(flex: 2, child: _statusChip(status)),
                     ],
                   ),
@@ -106,8 +109,7 @@ class ViewList extends StatelessWidget {
   }
 
   Widget _statusChip(String status) {
-    Color color = status == 'Present' ? tealPrimary : (status == 'Exit' ? Colors.green : Colors.red);
-    String label = status == 'Exit' ? 'E' : status;
+    Color color = status == 'Present' ? tealPrimary : Colors.red;
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
       decoration: BoxDecoration(
@@ -115,7 +117,7 @@ class ViewList extends StatelessWidget {
         borderRadius: BorderRadius.circular(8),
       ),
       child: Text(
-        label,
+        status,
         textAlign: TextAlign.center,
         style: TextStyle(color: color, fontSize: 10, fontWeight: FontWeight.bold),
       ),
