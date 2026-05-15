@@ -63,7 +63,7 @@ class SubmitList extends StatelessWidget {
         'date': DateTime.now().toIso8601String().split('T')[0],
         'timestamp': FieldValue.serverTimestamp(),
         'lecturerId': 'lecturer_001',
-        'fullAttendanceList': fullAttendanceList, 
+        'fullAttendanceList': fullAttendanceList,
         'totalPresent': students.length,
       };
 
