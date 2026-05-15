@@ -20,14 +20,12 @@ class _AttendanceHistoryState extends State<AttendanceHistory> with SingleTicker
   late TabController _tabController;
   final int _currentIndex = 2;
 
-  // Selection state for "Create Session"
   String? selectedCourse;
   String? selectedType;
   List<String> assignedCourses = [];
   final List<String> types = ["Class", "Lab", "Exam"];
 
-  bool isSessionCreated = false; // Logic to lock selection and show options
-  bool showAssignForm = false;   // To toggle the Assign form view
+  bool isLoading = true;
 
   @override
   void initState() {
@@ -47,35 +45,46 @@ class _AttendanceHistoryState extends State<AttendanceHistory> with SingleTicker
         String val = item.toString();
         val.contains(',') ? codes.addAll(val.split(',').map((e) => e.trim())) : codes.add(val.trim());
       }
-      setState(() => assignedCourses = codes);
+      setState(() {
+        assignedCourses = codes;
+        isLoading = false;
+      });
     }
   }
 
-  // This function pushes the created session to the 'courses' metadata
-  // so it reflects on the Lecturer Dashboard immediately.
-  Future<void> _confirmSessionCreation() async {
+  Future<void> _createSession() async {
     if (selectedCourse == null || selectedType == null) return;
+    final uid = FirebaseAuth.instance.currentUser?.uid;
 
+    setState(() => isLoading = true);
     try {
-      // Update the course document to reflect this is the "Active" session for today
-      await FirebaseFirestore.instance.collection('courses').doc(selectedCourse).update({
-        'type': selectedType,
-        'date': 'Today', // Or DateTime.now() formatted
-        'status': 'Active',
+      // Use a unique ID for this session (Lecturer + Course)
+      String sessionId = "${uid}_$selectedCourse";
+
+      await FirebaseFirestore.instance.collection('active_sessions').doc(sessionId).set({
+        'lecturerId': uid,
+        'courseCode': selectedCourse,
+        'sessionType': selectedType,
+        'createdAt': FieldValue.serverTimestamp(),
       });
 
       setState(() {
-        isSessionCreated = true;
+        selectedCourse = null;
+        selectedType = null;
+        isLoading = false;
       });
 
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Session Created Successfully!"), backgroundColor: tealPrimary),
+        const SnackBar(content: Text("Session Created! Check the list below."), backgroundColor: tealPrimary),
       );
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text("Error: $e"), backgroundColor: Colors.red),
-      );
+      setState(() => isLoading = false);
+      debugPrint("Error creating session: $e");
     }
+  }
+
+  Future<void> _endSession(String sessionId) async {
+    await FirebaseFirestore.instance.collection('active_sessions').doc(sessionId).delete();
   }
 
   void _onNavTap(int index) {
@@ -99,14 +108,14 @@ class _AttendanceHistoryState extends State<AttendanceHistory> with SingleTicker
           controller: _tabController,
           indicatorColor: Colors.white,
           tabs: const [
-            Tab(icon: Icon(Icons.add_circle_outline), text: "Create Session"),
-            Tab(icon: Icon(Icons.history), text: "View History"),
+            Tab(icon: Icon(Icons.add_task), text: "Manage Sessions"),
+            Tab(icon: Icon(Icons.history), text: "History"),
           ],
         ),
       ),
       body: TabBarView(
         controller: _tabController,
-        children: [_buildCreateSessionTab(), _buildHistoryTab()],
+        children: [_buildManageSessionsTab(), _buildHistoryTab()],
       ),
       bottomNavigationBar: BottomNavigationBar(
         currentIndex: _currentIndex,
@@ -125,104 +134,116 @@ class _AttendanceHistoryState extends State<AttendanceHistory> with SingleTicker
     );
   }
 
-  Widget _buildCreateSessionTab() {
-    return SingleChildScrollView(
-      padding: const EdgeInsets.all(20),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+  Widget _buildManageSessionsTab() {
+    final uid = FirebaseAuth.instance.currentUser?.uid ?? "";
+
+    return Column(
+      children: [
+        // Creation Section
+        Padding(
+          padding: const EdgeInsets.all(16.0),
+          child: Card(
+            elevation: 0,
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12), side: BorderSide(color: tealPrimary.withOpacity(0.2))),
+            child: Padding(
+              padding: const EdgeInsets.all(16.0),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text("Create New Session", style: TextStyle(fontWeight: FontWeight.bold, color: tealPrimary)),
+                  const SizedBox(height: 12),
+                  _buildDropdown("Select Course", selectedCourse, assignedCourses, (v) => setState(() => selectedCourse = v)),
+                  const SizedBox(height: 10),
+                  _buildDropdown("Session Type", selectedType, types, (v) => setState(() => selectedType = v)),
+                  const SizedBox(height: 16),
+                  SizedBox(
+                    width: double.infinity,
+                    child: ElevatedButton(
+                      style: ElevatedButton.styleFrom(backgroundColor: tealPrimary, foregroundColor: Colors.white),
+                      onPressed: (selectedCourse == null || selectedType == null) ? null : _createSession,
+                      child: const Text("Add Session"),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+        const Padding(
+          padding: EdgeInsets.symmetric(horizontal: 16),
+          child: Text("Active Sessions", style: TextStyle(fontWeight: FontWeight.bold, color: tealDark)),
+        ),
+        // Active Sessions List
+        Expanded(
+          child: StreamBuilder<QuerySnapshot>(
+            stream: FirebaseFirestore.instance
+                .collection('active_sessions')
+                .where('lecturerId', isEqualTo: uid)
+                .snapshots(),
+            builder: (context, snapshot) {
+              if (!snapshot.hasData) return const Center(child: CircularProgressIndicator());
+              final docs = snapshot.data!.docs;
+              if (docs.isEmpty) return const Center(child: Text("No active sessions. Create one above."));
+
+              return ListView.builder(
+                padding: const EdgeInsets.all(16),
+                itemCount: docs.length,
+                itemBuilder: (context, i) {
+                  final data = docs[i].data() as Map<String, dynamic>;
+                  return _buildActiveSessionCard(docs[i].id, data);
+                },
+              );
+            },
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildActiveSessionCard(String docId, Map<String, dynamic> data) {
+    return Card(
+      margin: const EdgeInsets.only(bottom: 12),
+      child: ExpansionTile(
+        leading: const Icon(Icons.sensors, color: Colors.green),
+        title: Text("${data['courseCode']} - ${data['sessionType']}", style: const TextStyle(fontWeight: FontWeight.bold)),
+        subtitle: const Text("Tap for options"),
         children: [
-          const Text("Select Course", style: TextStyle(fontWeight: FontWeight.bold, color: tealDark)),
-          const SizedBox(height: 10),
-          // Disable dropdown if session is already created to prevent accidental changes
-          IgnorePointer(
-            ignoring: isSessionCreated,
-            child: _buildDropdown("Choose Course", selectedCourse, assignedCourses, (v) => setState(() => selectedCourse = v)),
-          ),
-
-          const SizedBox(height: 20),
-          const Text("Session Type", style: TextStyle(fontWeight: FontWeight.bold, color: tealDark)),
-          const SizedBox(height: 10),
-          IgnorePointer(
-            ignoring: isSessionCreated,
-            child: _buildDropdown("Choose Type", selectedType, types, (v) => setState(() => selectedType = v)),
-          ),
-
-          const SizedBox(height: 30),
-
-          if (!isSessionCreated)
-            SizedBox(
-              width: double.infinity,
-              child: ElevatedButton(
-                style: ElevatedButton.styleFrom(backgroundColor: tealPrimary, foregroundColor: Colors.white),
-                onPressed: (selectedCourse == null || selectedType == null) ? null : _confirmSessionCreation,
-                child: const Text("Confirm & Create Session"),
-              ),
-            ),
-
-          if (isSessionCreated) ...[
-            const Divider(height: 40),
-            const Text("Session Active", style: TextStyle(color: tealPrimary, fontWeight: FontWeight.bold)),
-            const SizedBox(height: 15),
-
-            _buildActionButton(
-              title: "Take Attendance Myself",
-              subtitle: "Start scanning students now",
-              icon: Icons.qr_code_scanner,
-              color: tealPrimary,
-              onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => AttendancePage(
-                courseCode: selectedCourse!,
-                sessionType: selectedType!,
-              ))),
-            ),
-
-            const SizedBox(height: 12),
-
-            _buildActionButton(
-              title: showAssignForm ? "Cancel Assignment" : "Assign Invigilator",
-              subtitle: showAssignForm ? "Tap to close form" : "Delegate session to another staff",
-              icon: showAssignForm ? Icons.close : Icons.person_add,
-              color: showAssignForm ? Colors.red : Colors.orange.shade800,
-              onTap: () => setState(() => showAssignForm = !showAssignForm),
-            ),
-
-            if (showAssignForm) ...[
-              const SizedBox(height: 20),
-              const Card(
-                color: Colors.white,
-                child: Padding(
-                  padding: EdgeInsets.all(8.0),
-                  child: Text("Invigilator form is now visible below.", style: TextStyle(fontSize: 12, color: tealDark)),
+          Padding(
+            padding: const EdgeInsets.all(16.0),
+            child: Column(
+              children: [
+                _buildActionButton(
+                  title: "Take Attendance",
+                  subtitle: "Start scanning now",
+                  icon: Icons.qr_code_scanner,
+                  color: tealPrimary,
+                  onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => AttendancePage(
+                    courseCode: data['courseCode'],
+                    sessionType: data['sessionType'],
+                  ))),
                 ),
-              ),
-              // We reuse the existing Assign logic here or navigate
-              const SizedBox(height: 10),
-              SizedBox(
-                width: double.infinity,
-                child: ElevatedButton.icon(
-                  icon: const Icon(Icons.arrow_forward),
-                  label: const Text("Go to Full Assignment Form"),
-                  onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const Assign())),
+                const SizedBox(height: 10),
+                _buildActionButton(
+                  title: "Assign Invigilator",
+                  subtitle: "Delegate to staff",
+                  icon: Icons.person_add,
+                  color: Colors.orange,
+                  onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const Assign())),
                 ),
-              )
-            ],
-
-            const SizedBox(height: 30),
-            Center(
-              child: TextButton(
-                onPressed: () => setState(() {
-                  isSessionCreated = false;
-                  showAssignForm = false;
-                }),
-                child: const Text("Reset Session Selection", style: TextStyle(color: Colors.grey)),
-              ),
-            )
-          ]
+                const SizedBox(height: 10),
+                TextButton.icon(
+                  onPressed: () => _endSession(docId),
+                  icon: const Icon(Icons.delete, color: Colors.red),
+                  label: const Text("End & Remove Session", style: TextStyle(color: Colors.red)),
+                )
+              ],
+            ),
+          )
         ],
       ),
     );
   }
 
-  // History and Helper methods remain same as provided in context
   Widget _buildHistoryTab() {
     final uid = FirebaseAuth.instance.currentUser?.uid ?? "";
     Query<Map<String, dynamic>> query = FirebaseFirestore.instance.collection('attendance').where('lecturerId', isEqualTo: uid);
@@ -232,11 +253,16 @@ class _AttendanceHistoryState extends State<AttendanceHistory> with SingleTicker
       builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.waiting) return const Center(child: CircularProgressIndicator());
         final docs = snapshot.data?.docs ?? [];
+        if (docs.isEmpty) return const Center(child: Text("No records found."));
         return ListView.builder(
           itemCount: docs.length,
           itemBuilder: (context, i) {
             final d = docs[i].data();
-            return ListTile(title: Text(d['courseCode']), subtitle: Text(d['date']));
+            return ListTile(
+              title: Text(d['courseCode']),
+              subtitle: Text(d['date']),
+              onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => ViewList(attendanceData: d))),
+            );
           },
         );
       },
@@ -247,17 +273,17 @@ class _AttendanceHistoryState extends State<AttendanceHistory> with SingleTicker
     return InkWell(
       onTap: onTap,
       child: Container(
-        padding: const EdgeInsets.all(16),
-        decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(12), border: Border.all(color: color.withOpacity(0.3))),
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(8), border: Border.all(color: color.withOpacity(0.3))),
         child: Row(
           children: [
-            CircleAvatar(backgroundColor: color.withOpacity(0.1), child: Icon(icon, color: color)),
-            const SizedBox(width: 16),
+            Icon(icon, color: color),
+            const SizedBox(width: 12),
             Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-              Text(title, style: const TextStyle(fontWeight: FontWeight.bold)),
-              Text(subtitle, style: const TextStyle(fontSize: 12, color: Colors.grey)),
+              Text(title, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
+              Text(subtitle, style: const TextStyle(fontSize: 11, color: Colors.grey)),
             ])),
-            const Icon(Icons.chevron_right, color: Colors.grey),
+            const Icon(Icons.chevron_right, size: 16, color: Colors.grey),
           ],
         ),
       ),
