@@ -24,16 +24,10 @@ class _ProfileState extends State<Profile> {
   final String role = 'Lecturer';
 
   void _onNavTap(int index) {
-    if (index == 0) {
+    if (index == 0 || index == 1) {
       Navigator.pushAndRemoveUntil(
         context,
         MaterialPageRoute(builder: (_) => const LecturerDashboard(initialIndex: 0)),
-            (route) => false,
-      );
-    } else if (index == 1) {
-      Navigator.pushAndRemoveUntil(
-        context,
-        MaterialPageRoute(builder: (_) => const LecturerDashboard(initialIndex: 1)),
             (route) => false,
       );
     } else if (index == 2) {
