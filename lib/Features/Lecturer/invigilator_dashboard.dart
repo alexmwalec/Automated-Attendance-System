@@ -207,6 +207,7 @@ class _DashboardPageState extends State<_DashboardPage> {
   }
 }
 
+// ─── Table Widget (Dynamic) ──────────────────────────────────────────────────
 class _TodaysSessionsTable extends StatelessWidget {
   final List<Map<String, dynamic>> sessions;
   const _TodaysSessionsTable({required this.sessions});
@@ -216,7 +217,7 @@ class _TodaysSessionsTable extends StatelessWidget {
     if (sessions.isEmpty) {
       return const Center(child: Padding(
         padding: EdgeInsets.all(20),
-        child: Text("No courses assigned"),
+        child: Text("No courses assigned to your account."),
       ));
     }
 
