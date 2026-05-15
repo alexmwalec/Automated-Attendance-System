@@ -141,16 +141,10 @@ class _AssignState extends State<Assign> {
   void _onNavTap(int i) {
     if (i == _currentIndex) return;
 
-    if (i == 0) {
+    if (i == 0 || i == 1) {
       Navigator.pushAndRemoveUntil(
         context,
         MaterialPageRoute(builder: (_) => const LecturerDashboard(initialIndex: 0)),
-            (route) => false,
-      );
-    } else if (i == 1) {
-      Navigator.pushAndRemoveUntil(
-        context,
-        MaterialPageRoute(builder: (_) => const LecturerDashboard(initialIndex: 1)),
             (route) => false,
       );
     } else if (i == 2) {
