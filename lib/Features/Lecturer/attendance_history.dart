@@ -58,7 +58,6 @@ class _AttendanceHistoryState extends State<AttendanceHistory> with SingleTicker
 
     setState(() => isLoading = true);
     try {
-      // Use a unique ID for this session (Lecturer + Course)
       String sessionId = "${uid}_$selectedCourse";
 
       await FirebaseFirestore.instance.collection('active_sessions').doc(sessionId).set({
@@ -107,8 +106,10 @@ class _AttendanceHistoryState extends State<AttendanceHistory> with SingleTicker
         bottom: TabBar(
           controller: _tabController,
           indicatorColor: Colors.white,
+          labelStyle: const TextStyle(fontWeight: FontWeight.bold),
+          unselectedLabelStyle: const TextStyle(fontWeight: FontWeight.normal),
           tabs: const [
-            Tab(icon: Icon(Icons.add_task), text: "Manage Sessions"),
+            Tab(icon: Icon(Icons.add_task), text: "Manage"),
             Tab(icon: Icon(Icons.history), text: "History"),
           ],
         ),
@@ -139,18 +140,17 @@ class _AttendanceHistoryState extends State<AttendanceHistory> with SingleTicker
 
     return Column(
       children: [
-        // Creation Section
         Padding(
           padding: const EdgeInsets.all(16.0),
           child: Card(
-            elevation: 0,
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12), side: BorderSide(color: tealPrimary.withOpacity(0.2))),
+            elevation: 2,
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
             child: Padding(
               padding: const EdgeInsets.all(16.0),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Text("Create New Session", style: TextStyle(fontWeight: FontWeight.bold, color: tealPrimary)),
+                  const Text("Create New Session", style: TextStyle(fontWeight: FontWeight.bold, color: tealPrimary, fontSize: 16)),
                   const SizedBox(height: 12),
                   _buildDropdown("Select Course", selectedCourse, assignedCourses, (v) => setState(() => selectedCourse = v)),
                   const SizedBox(height: 10),
@@ -159,9 +159,9 @@ class _AttendanceHistoryState extends State<AttendanceHistory> with SingleTicker
                   SizedBox(
                     width: double.infinity,
                     child: ElevatedButton(
-                      style: ElevatedButton.styleFrom(backgroundColor: tealPrimary, foregroundColor: Colors.white),
+                      style: ElevatedButton.styleFrom(backgroundColor: tealPrimary, foregroundColor: Colors.white, padding: const EdgeInsets.all(12)),
                       onPressed: (selectedCourse == null || selectedType == null) ? null : _createSession,
-                      child: const Text("Add Session"),
+                      child: const Text("Add Session", style: TextStyle(fontWeight: FontWeight.bold)),
                     ),
                   ),
                 ],
@@ -173,7 +173,6 @@ class _AttendanceHistoryState extends State<AttendanceHistory> with SingleTicker
           padding: EdgeInsets.symmetric(horizontal: 16),
           child: Text("Active Sessions", style: TextStyle(fontWeight: FontWeight.bold, color: tealDark)),
         ),
-        // Active Sessions List
         Expanded(
           child: StreamBuilder<QuerySnapshot>(
             stream: FirebaseFirestore.instance
@@ -183,7 +182,7 @@ class _AttendanceHistoryState extends State<AttendanceHistory> with SingleTicker
             builder: (context, snapshot) {
               if (!snapshot.hasData) return const Center(child: CircularProgressIndicator());
               final docs = snapshot.data!.docs;
-              if (docs.isEmpty) return const Center(child: Text("No active sessions. Create one above."));
+              if (docs.isEmpty) return const Center(child: Text("No active sessions."));
 
               return ListView.builder(
                 padding: const EdgeInsets.all(16),
@@ -206,7 +205,6 @@ class _AttendanceHistoryState extends State<AttendanceHistory> with SingleTicker
       child: ExpansionTile(
         leading: const Icon(Icons.sensors, color: Colors.green),
         title: Text("${data['courseCode']} - ${data['sessionType']}", style: const TextStyle(fontWeight: FontWeight.bold)),
-        subtitle: const Text("Tap for options"),
         children: [
           Padding(
             padding: const EdgeInsets.all(16.0),
@@ -244,24 +242,111 @@ class _AttendanceHistoryState extends State<AttendanceHistory> with SingleTicker
     );
   }
 
+  // ─── IMPROVED HISTORY TAB ────────────────────────────────────────────────
   Widget _buildHistoryTab() {
     final uid = FirebaseAuth.instance.currentUser?.uid ?? "";
-    Query<Map<String, dynamic>> query = FirebaseFirestore.instance.collection('attendance').where('lecturerId', isEqualTo: uid);
+    Query<Map<String, dynamic>> query = FirebaseFirestore.instance
+        .collection('attendance')
+        .where('lecturerId', isEqualTo: uid);
+
     query = query.orderBy('timestamp', descending: true);
+
     return StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
       stream: query.snapshots(),
       builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.waiting) return const Center(child: CircularProgressIndicator());
         final docs = snapshot.data?.docs ?? [];
-        if (docs.isEmpty) return const Center(child: Text("No records found."));
+
+        if (docs.isEmpty) {
+          return const Center(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(Icons.history_toggle_off, size: 64, color: Colors.grey),
+                SizedBox(height: 10),
+                Text("No attendance records found.", style: TextStyle(color: Colors.grey)),
+              ],
+            ),
+          );
+        }
+
         return ListView.builder(
           itemCount: docs.length,
+          padding: const EdgeInsets.all(12),
           itemBuilder: (context, i) {
             final d = docs[i].data();
-            return ListTile(
-              title: Text(d['courseCode']),
-              subtitle: Text(d['date']),
-              onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => ViewList(attendanceData: d))),
+            String sType = d['sessionType'] ?? 'Class';
+
+            // UI Color logic for session type
+            Color typeColor = tealPrimary;
+            if (sType == 'Lab') typeColor = Colors.purple;
+            if (sType == 'Exam') typeColor = Colors.orange.shade800;
+
+            return Card(
+              elevation: 0.5,
+              margin: const EdgeInsets.only(bottom: 12),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+              child: InkWell(
+                borderRadius: BorderRadius.circular(10),
+                onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => ViewList(attendanceData: d))),
+                child: Padding(
+                  padding: const EdgeInsets.all(16),
+                  child: Row(
+                    children: [
+                      // Session Icon with dynamic color
+                      Container(
+                        padding: const EdgeInsets.all(10),
+                        decoration: BoxDecoration(
+                          color: typeColor.withOpacity(0.1),
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: Icon(
+                          sType == 'Exam' ? Icons.assignment : sType == 'Lab' ? Icons.science : Icons.school,
+                          color: typeColor,
+                          size: 24,
+                        ),
+                      ),
+                      const SizedBox(width: 16),
+                      // Details
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              d['courseCode'] ?? 'Unknown Course',
+                              style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: Colors.black87),
+                            ),
+                            const SizedBox(height: 4),
+                            Row(
+                              children: [
+                                Icon(Icons.calendar_today, size: 12, color: Colors.grey.shade600),
+                                const SizedBox(width: 4),
+                                Text(d['date'] ?? 'N/A', style: TextStyle(color: Colors.grey.shade600, fontSize: 12)),
+                                const SizedBox(width: 12),
+                                Icon(Icons.group, size: 12, color: Colors.grey.shade600),
+                                const SizedBox(width: 4),
+                                Text("${d['totalPresent']} Present", style: TextStyle(color: Colors.grey.shade600, fontSize: 12)),
+                              ],
+                            ),
+                          ],
+                        ),
+                      ),
+                      // Badge for Session Type
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                        decoration: BoxDecoration(
+                          color: typeColor,
+                          borderRadius: BorderRadius.circular(6),
+                        ),
+                        child: Text(
+                          sType.toUpperCase(),
+                          style: const TextStyle(color: Colors.white, fontSize: 9, fontWeight: FontWeight.bold),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
             );
           },
         );
