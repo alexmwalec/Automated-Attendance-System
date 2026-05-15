@@ -207,7 +207,6 @@ class _DashboardPageState extends State<_DashboardPage> {
   }
 }
 
-// ─── Table Widget (Dynamic) ──────────────────────────────────────────────────
 class _TodaysSessionsTable extends StatelessWidget {
   final List<Map<String, dynamic>> sessions;
   const _TodaysSessionsTable({required this.sessions});
