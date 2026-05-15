@@ -22,18 +22,31 @@ class SubmitList extends StatelessWidget {
     try {
       final String? uid = FirebaseAuth.instance.currentUser?.uid;
 
-
+      // 1. Get official enrollment for this course
       final courseDoc = await FirebaseFirestore.instance.collection('courses').doc(courseCode).get();
       if (!courseDoc.exists) throw Exception("Course not found");
 
-      List<dynamic> expectedRegNos = courseDoc.data()?['enrolledStudents'] ?? [];
+      // --- NEW LOGIC TO HANDLE COMMA-SEPARATED STRING IN ARRAY ---
+      List<dynamic> rawEnrolled = courseDoc.data()?['enrolledStudents'] ?? [];
+      List<String> expectedRegNos = [];
+
+      if (rawEnrolled.isNotEmpty) {
+        // Since your image shows index 0 is a long string: "id1,id2,id3"
+        String allIds = rawEnrolled[0].toString();
+        expectedRegNos = allIds.split(',').map((e) => e.trim()).toList();
+      }
+      // ----------------------------------------------------------------
+
       final presentRegNos = students.map((s) => s['regNo']).toSet();
       List<Map<String, dynamic>> fullAttendanceList = [];
 
-      // 2. Map Present/Absent
+      // 2. Build the full report by fetching details from 'students' collection
       for (String regNo in expectedRegNos) {
+        if (regNo.isEmpty) continue;
+
         var sDoc = await FirebaseFirestore.instance.collection('students').doc(regNo).get();
         var sData = sDoc.data();
+
         fullAttendanceList.add({
           'regNo': regNo,
           'name': sData?['name'] ?? 'Unknown',
@@ -42,26 +55,32 @@ class SubmitList extends StatelessWidget {
         });
       }
 
-      // 3. Save Record using actual Lecturer UID
+      // 3. Save the final report
       await FirebaseFirestore.instance.collection('attendance').add({
         'courseCode': courseCode,
         'sessionType': sessionType,
         'date': DateTime.now().toIso8601String().split('T')[0],
         'timestamp': FieldValue.serverTimestamp(),
-        'lecturerId': uid, // THIS IS THE KEY FOR HISTORY
+        'lecturerId': uid,
         'fullAttendanceList': fullAttendanceList,
         'totalPresent': students.length,
         'totalExpected': expectedRegNos.length,
       });
 
       if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Saved Successfully')));
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Attendance Saved Successfully'), backgroundColor: tealPrimary),
+        );
+        // Returns to Dashboard
         Navigator.of(context).popUntil((r) => r.isFirst);
       }
     } catch (e) {
-      if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error: $e')));
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error: $e')));
+      }
     }
   }
+
   void _showConfirmDialog(BuildContext context) {
     showDialog(
       context: context,
@@ -83,8 +102,8 @@ class SubmitList extends StatelessWidget {
               elevation: 0,
             ),
             onPressed: () {
-              Navigator.pop(context); // Close dialog
-              _submitToFirebase(context); // Start processing
+              Navigator.pop(context);
+              _submitToFirebase(context);
             },
             child: const Text('Confirm', style: TextStyle(color: Colors.white)),
           ),
@@ -128,7 +147,7 @@ class SubmitList extends StatelessWidget {
             child: const Row(
               children: [
                 _HeaderCell('Reg No', flex: 3),
-                _HeaderCell('Name', flex: 4),
+                _HeaderCell('Name & Surname', flex: 4),
                 _HeaderCell('Status', flex: 2),
               ],
             ),
@@ -153,7 +172,14 @@ class SubmitList extends StatelessWidget {
                     children: [
                       Expanded(flex: 3, child: Text(s['regNo'] ?? '', style: const TextStyle(fontSize: 10))),
                       Expanded(flex: 4, child: Text('${s['name']} ${s['surname']}', style: const TextStyle(fontSize: 10))),
-                      const Expanded(flex: 2, child: Text('Present', style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: tealDark))),
+                      const Expanded(
+                        flex: 2,
+                        child: Text('Present',
+                            style: TextStyle(
+                                fontSize: 10,
+                                fontWeight: FontWeight.bold,
+                                color: tealDark)),
+                      ),
                     ],
                   ),
                 );
@@ -171,7 +197,8 @@ class SubmitList extends StatelessWidget {
                   padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 10),
                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(4)),
                 ),
-                child: const Text('Confirm & Save', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+                child: const Text('Confirm & Save',
+                    style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
               ),
             ),
           ),
