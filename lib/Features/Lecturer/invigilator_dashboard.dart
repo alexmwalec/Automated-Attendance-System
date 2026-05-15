@@ -217,7 +217,7 @@ class _TodaysSessionsTable extends StatelessWidget {
     if (sessions.isEmpty) {
       return const Center(child: Padding(
         padding: EdgeInsets.all(20),
-        child: Text("No courses assigned to your account."),
+        child: Text("No courses assigned"),
       ));
     }
 
