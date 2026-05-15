@@ -54,39 +54,41 @@ class _AttendancePageState extends State<AttendancePage> {
       setState(() => _isProcessing = true);
 
       try {
-        // Fetching student from the global 'students' collection
-        var doc = await FirebaseFirestore.instance.collection('students').doc(code).get();
+        var studentDoc = await FirebaseFirestore.instance.collection('students').doc(code).get();
 
-        if (doc.exists) {
-          final data = doc.data()!;
-          final student = {
-            'regNo': data['regNo'].toString(),
-            'name': data['name'].toString(),
-            'surname': data['surname'].toString(),
-          };
+        if (studentDoc.exists) {
+          final data = studentDoc.data()!;
+          List<dynamic> enrolledCourses = data['courses'] ?? []; // Array of strings in Firestore
 
-          final alreadyAdded = _scannedStudents.any((s) => s['regNo'] == student['regNo']);
+          // VALIDATION: Is student registered for THIS course?
+          if (enrolledCourses.contains(widget.courseCode)) {
+            final student = {
+              'regNo': data['regNo'].toString(),
+              'name': data['name'].toString(),
+              'surname': data['surname'].toString(),
+            };
 
-          if (alreadyAdded) {
-            _showSnack('${student['regNo']} already marked!', Colors.orange);
+            if (_scannedStudents.any((s) => s['regNo'] == student['regNo'])) {
+              _showSnack('${student['regNo']} already marked!', Colors.orange);
+            } else {
+              setState(() => _scannedStudents.add(student));
+              _showSnack('Captured: ${student['name']}', tealDark);
+            }
           } else {
-            setState(() => _scannedStudents.add(student));
-            _showSnack('Captured: ${student['name']} ${student['surname']}', tealDark);
+            _showSnack('Student not registered for ${widget.courseCode}', Colors.red);
           }
         } else {
           _showSnack('Student $code not found', Colors.red);
         }
       } catch (e) {
-        _showSnack('Database Error: $e', Colors.red);
+        _showSnack('Error: $e', Colors.red);
       }
-
 
       await Future.delayed(const Duration(seconds: 1));
       if (mounted) setState(() => _isProcessing = false);
       break;
     }
   }
-
   void _showSnack(String msg, Color color) {
     if (!mounted) return;
     ScaffoldMessenger.of(context).clearSnackBars();

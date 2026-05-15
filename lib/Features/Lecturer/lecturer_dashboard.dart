@@ -31,7 +31,7 @@ class _LecturerDashboardState extends State<LecturerDashboard> {
 
   final List<Widget> _pages = [
     const _DashboardPage(),
-    const Course(),
+    const CourseSelectionScreen(),
     const _AttendanceHistoryPage(),
     const _AssignTaskPage(),
   ];

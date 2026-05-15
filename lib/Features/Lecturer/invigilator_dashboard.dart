@@ -29,11 +29,12 @@ class _InvigilatorDashboardState extends State<InvigilatorDashboard> {
     _currentIndex = widget.initialIndex;
   }
 
+  // Updated _pages list to use actual imported class names
   final List<Widget> _pages = [
     const _DashboardPage(),
-    const Course(),
-    const _AttendanceHistoryPage(),
-    const _AssignTaskPage(),
+    const CourseSelectionScreen(),
+    const AttendanceHistory(),
+    const Assign(),
   ];
 
   @override
@@ -74,7 +75,6 @@ class _InvigilatorDashboardState extends State<InvigilatorDashboard> {
                   constraints: const BoxConstraints(),
                 ),
                 const SizedBox(width: 12),
-                // Profile icon — tapping navigates to Profile page
                 GestureDetector(
                   onTap: () {
                     Navigator.push(
@@ -110,15 +110,13 @@ class _InvigilatorDashboardState extends State<InvigilatorDashboard> {
       bottomNavigationBar: BottomNavigationBar(
         currentIndex: _currentIndex,
         onTap: (i) {
-          if (i == 3) {
+          // Updated onTap logic: Push History and Assign pages instead of switching tabs
+          if (i == 2 || i == 3) {
             Navigator.push(
               context,
-              MaterialPageRoute(builder: (_) => const Assign()),
-            );
-          } else if (i == 2) {
-            Navigator.push(
-              context,
-              MaterialPageRoute(builder: (_) => const AttendanceHistory()),
+              MaterialPageRoute(
+                builder: (_) => i == 2 ? const AttendanceHistory() : const Assign(),
+              ),
             );
           } else {
             setState(() => _currentIndex = i);
@@ -238,8 +236,8 @@ class _WelcomeCard extends StatelessWidget {
           SizedBox(height: 6),
           Text(
             'Welcome to the Automated Attendance System.\n'
-            'Use this dashboard to manage class, lab, and exam attendance,\n'
-            'assign invigilators, and monitor attendance reports',
+                'Use this dashboard to manage class, lab, and exam attendance,\n'
+                'assign invigilators, and monitor attendance reports',
             style: TextStyle(
               fontSize: 12,
               color: Colors.black54,
@@ -378,8 +376,7 @@ class _TodaysSessionsTable extends StatelessWidget {
               children: headers.map((h) {
                 return Expanded(
                   child: Padding(
-                    padding:
-                        const EdgeInsets.symmetric(vertical: 8, horizontal: 4),
+                    padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 4),
                     child: Text(
                       h,
                       style: const TextStyle(
@@ -404,102 +401,21 @@ class _TodaysSessionsTable extends StatelessWidget {
                   final isType = cell.key == 0;
                   return Expanded(
                     child: Padding(
-                      padding: const EdgeInsets.symmetric(
-                          vertical: 8, horizontal: 4),
-                      child: isType
-                          ? Container(
-                              padding: const EdgeInsets.symmetric(
-                                  horizontal: 5, vertical: 2),
-                              decoration: BoxDecoration(
-                                color: typeColor.withOpacity(0.12),
-                                borderRadius: BorderRadius.circular(4),
-                              ),
-                              child: Text(
-                                cell.value,
-                                style: TextStyle(
-                                  color: typeColor,
-                                  fontWeight: FontWeight.bold,
-                                  fontSize: 9.5,
-                                ),
-                              ),
-                            )
-                          : Text(
-                              cell.value,
-                              style: const TextStyle(
-                                fontSize: 10,
-                                color: Colors.black87,
-                              ),
-                            ),
+                      padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 4),
+                      child: Text(
+                        cell.value,
+                        style: TextStyle(
+                          fontSize: 10,
+                          color: isType ? typeColor : Colors.black87,
+                          fontWeight: isType ? FontWeight.bold : FontWeight.normal,
+                        ),
+                      ),
                     ),
                   );
                 }).toList(),
               ),
             );
           }),
-        ],
-      ),
-    );
-  }
-}
-
-// ─── Placeholder Pages ────────────────────────────────────────────────────────
-class _AttendanceHistoryPage extends StatelessWidget {
-  const _AttendanceHistoryPage();
-  @override
-  Widget build(BuildContext context) => const _PlaceholderPage(
-        icon: Icons.history_outlined,
-        title: 'Attendance History',
-        subtitle: 'View past attendance records',
-      );
-}
-
-class _AssignTaskPage extends StatelessWidget {
-  const _AssignTaskPage();
-  @override
-  Widget build(BuildContext context) {
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      Navigator.push(
-        context,
-        MaterialPageRoute(builder: (_) => const Assign()),
-      );
-    });
-    return const Center(
-      child: CircularProgressIndicator(color: tealPrimary),
-    );
-  }
-}
-
-class _PlaceholderPage extends StatelessWidget {
-  final IconData icon;
-  final String title;
-  final String subtitle;
-  const _PlaceholderPage({
-    required this.icon,
-    required this.title,
-    required this.subtitle,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Icon(icon, size: 64, color: tealPrimary.withOpacity(0.4)),
-          const SizedBox(height: 16),
-          Text(
-            title,
-            style: const TextStyle(
-              fontSize: 20,
-              fontWeight: FontWeight.bold,
-              color: tealPrimary,
-            ),
-          ),
-          const SizedBox(height: 8),
-          Text(
-            subtitle,
-            style: const TextStyle(fontSize: 14, color: Colors.black45),
-          ),
         ],
       ),
     );
