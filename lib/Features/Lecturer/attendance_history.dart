@@ -24,6 +24,9 @@ class _AttendanceHistoryState extends State<AttendanceHistory> with SingleTicker
   void initState() {
     super.initState();
     _tabController = TabController(length: 2, vsync: this);
+    _tabController.addListener(() {
+      setState(() {}); // Rebuild to show/hide FAB based on tab index
+    });
     _fetchAssignedCourses();
   }
 
@@ -42,17 +45,38 @@ class _AttendanceHistoryState extends State<AttendanceHistory> with SingleTicker
     }
   }
 
-  void _showCreateSessionDialog() {
-    String? selCourse;
-    String? selType;
-    TimeOfDay startTime = TimeOfDay.now();
-    TimeOfDay endTime = TimeOfDay.now();
+  // Helper to convert Firestore string "08:30 AM" back to TimeOfDay for editing
+  TimeOfDay _parseTime(String timeStr) {
+    try {
+      final parts = timeStr.split(' ');
+      final timeParts = parts[0].split(':');
+      int hour = int.parse(timeParts[0]);
+      int minute = int.parse(timeParts[1]);
+      final ampm = parts[1].toLowerCase();
+      if (ampm == 'pm' && hour < 12) hour += 12;
+      if (ampm == 'am' && hour == 12) hour = 0;
+      return TimeOfDay(hour: hour, minute: minute);
+    } catch (e) {
+      return TimeOfDay.now();
+    }
+  }
+
+  void _showSessionDialog({String? docId, Map<String, dynamic>? existingData}) {
+    String? selCourse = existingData?['courseCode'];
+    String? selType = existingData?['sessionType'];
+    TimeOfDay startTime = existingData != null
+        ? _parseTime(existingData['startTime'])
+        : TimeOfDay.now();
+    TimeOfDay endTime = existingData != null
+        ? _parseTime(existingData['endTime'])
+        : TimeOfDay.now();
 
     showDialog(
       context: context,
       builder: (context) => StatefulBuilder(
         builder: (context, setDialogState) => AlertDialog(
-          title: const Text("Create Active Session", style: TextStyle(color: tealPrimary)),
+          title: Text(docId == null ? "Create Active Session" : "Edit Active Session",
+              style: const TextStyle(color: tealPrimary)),
           content: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
@@ -72,7 +96,7 @@ class _AttendanceHistoryState extends State<AttendanceHistory> with SingleTicker
               ),
               ListTile(
                 title: Text("Start: ${startTime.format(context)}"),
-                trailing: const Icon(Icons.access_time),
+                trailing: const Icon(Icons.access_time, size: 20),
                 onTap: () async {
                   final t = await showTimePicker(context: context, initialTime: startTime);
                   if (t != null) setDialogState(() => startTime = t);
@@ -80,7 +104,7 @@ class _AttendanceHistoryState extends State<AttendanceHistory> with SingleTicker
               ),
               ListTile(
                 title: Text("End: ${endTime.format(context)}"),
-                trailing: const Icon(Icons.access_time),
+                trailing: const Icon(Icons.access_time, size: 20),
                 onTap: () async {
                   final t = await showTimePicker(context: context, initialTime: endTime);
                   if (t != null) setDialogState(() => endTime = t);
@@ -94,17 +118,25 @@ class _AttendanceHistoryState extends State<AttendanceHistory> with SingleTicker
               style: ElevatedButton.styleFrom(backgroundColor: tealPrimary),
               onPressed: (selCourse == null || selType == null) ? null : () async {
                 final uid = FirebaseAuth.instance.currentUser?.uid;
-                await FirebaseFirestore.instance.collection('active_sessions').add({
+                final data = {
                   'lecturerId': uid,
                   'courseCode': selCourse,
                   'sessionType': selType,
                   'startTime': startTime.format(context),
                   'endTime': endTime.format(context),
-                  'createdAt': FieldValue.serverTimestamp(),
-                });
-                Navigator.pop(context);
+                  'updatedAt': FieldValue.serverTimestamp(),
+                };
+
+                if (docId == null) {
+                  data['createdAt'] = FieldValue.serverTimestamp();
+                  await FirebaseFirestore.instance.collection('active_sessions').add(data);
+                } else {
+                  await FirebaseFirestore.instance.collection('active_sessions').doc(docId).update(data);
+                }
+
+                if (context.mounted) Navigator.pop(context);
               },
-              child: const Text("Create", style: TextStyle(color: Colors.white)),
+              child: Text(docId == null ? "Create" : "Update", style: const TextStyle(color: Colors.white)),
             )
           ],
         ),
@@ -123,7 +155,7 @@ class _AttendanceHistoryState extends State<AttendanceHistory> with SingleTicker
         bottom: TabBar(
           controller: _tabController,
           indicatorColor: Colors.white,
-          tabs: const [Tab(text: "Create sessions"), Tab(text: "History")],
+          tabs: const [Tab(text: "Manage Sessions"), Tab(text: "History")],
         ),
       ),
       body: TabBarView(
@@ -133,7 +165,7 @@ class _AttendanceHistoryState extends State<AttendanceHistory> with SingleTicker
       floatingActionButton: _tabController.index == 0
           ? FloatingActionButton(
         backgroundColor: tealPrimary,
-        onPressed: _showCreateSessionDialog,
+        onPressed: () => _showSessionDialog(),
         child: const Icon(Icons.add, color: Colors.white),
       )
           : null,
@@ -164,6 +196,8 @@ class _AttendanceHistoryState extends State<AttendanceHistory> with SingleTicker
       builder: (context, snapshot) {
         if (!snapshot.hasData) return const Center(child: CircularProgressIndicator());
         final docs = snapshot.data!.docs;
+        if (docs.isEmpty) return const Center(child: Text("No active sessions."));
+
         return ListView.builder(
           itemCount: docs.length,
           padding: const EdgeInsets.all(12),
@@ -174,9 +208,18 @@ class _AttendanceHistoryState extends State<AttendanceHistory> with SingleTicker
                 leading: const Icon(Icons.timer, color: tealPrimary),
                 title: Text("${data['courseCode']} (${data['sessionType']})", style: const TextStyle(fontWeight: FontWeight.bold)),
                 subtitle: Text("Time: ${data['startTime']} - ${data['endTime']}"),
-                trailing: IconButton(
-                  icon: const Icon(Icons.delete_outline, color: Colors.red),
-                  onPressed: () => FirebaseFirestore.instance.collection('active_sessions').doc(docs[i].id).delete(),
+                trailing: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    IconButton(
+                      icon: const Icon(Icons.edit, color: tealPrimary, size: 20),
+                      onPressed: () => _showSessionDialog(docId: docs[i].id, existingData: data),
+                    ),
+                    IconButton(
+                      icon: const Icon(Icons.delete_outline, color: Colors.red, size: 20),
+                      onPressed: () => FirebaseFirestore.instance.collection('active_sessions').doc(docs[i].id).delete(),
+                    ),
+                  ],
                 ),
               ),
             );
@@ -202,7 +245,7 @@ class _AttendanceHistoryState extends State<AttendanceHistory> with SingleTicker
               child: ListTile(
                 title: Text("${d['courseCode']} - ${d['sessionType']}"),
                 subtitle: Text("Date: ${d['date']}"),
-                trailing: const Icon(Icons.edit, color: tealPrimary), // Edit icon as requested
+                trailing: const Icon(Icons.visibility, color: tealPrimary),
                 onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => ViewList(attendanceData: d))),
               ),
             );

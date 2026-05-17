@@ -152,12 +152,18 @@ class _CourseSelectionScreenState extends State<CourseSelectionScreen> {
             child: const Text("Take Attendance",
                 style: TextStyle(color: tealPrimary)),
           ),
+          // UPDATED: Navigates to Assign page with pre-filled session data
           TextButton(
             onPressed: () {
               Navigator.pop(context);
               Navigator.push(
                 context,
-                MaterialPageRoute(builder: (_) => const Assign()),
+                MaterialPageRoute(
+                  builder: (_) => Assign(
+                    courseCode: session['courseCode'],
+                    sessionType: session['sessionType'],
+                  ),
+                ),
               );
             },
             child: const Text("Assign Invigilator",

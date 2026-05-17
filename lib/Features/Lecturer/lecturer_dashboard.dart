@@ -221,7 +221,7 @@ class _TodaysSessionsTable extends StatelessWidget {
                                 fontWeight: FontWeight.bold,
                                 fontSize: 10)))))
                     .toList())),
-        ...sessions.asMap().entries.map((e) => Container(
+        ...(sessions ?? []).asMap().entries.map((e) => Container(
           color: e.key.isEven ? Colors.white : tealLight.withOpacity(0.3),
           padding: const EdgeInsets.symmetric(vertical: 12),
           child: Row(children: [
