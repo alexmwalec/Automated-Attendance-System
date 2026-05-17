@@ -109,7 +109,7 @@ class _AssignState extends State<Assign> {
               _buildReadOnlyField('SESSION TYPE', widget.sessionType ?? 'Select from Active Sessions'),
               const SizedBox(height: 16),
 
-              _buildInputField('ROOM / VENUE', _roomController, 'ck1'),
+              _buildInputField('ROOM / VENUE', _roomController, 'e.g CK1'),
               const SizedBox(height: 24),
 
               const Text('ADD INVIGILATORS', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: tealDark)),
@@ -126,12 +126,6 @@ class _AssignState extends State<Assign> {
                         border: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: BorderSide.none),
                       ),
                     ),
-                  ),
-                  const SizedBox(width: 10),
-                  ElevatedButton(
-                    onPressed: _addInvigilator,
-                    style: ElevatedButton.styleFrom(backgroundColor: tealDark, foregroundColor: Colors.white),
-                    child: const Icon(Icons.add),
                   ),
                 ],
               ),
@@ -159,7 +153,7 @@ class _AssignState extends State<Assign> {
                   style: ElevatedButton.styleFrom(backgroundColor: tealPrimary, foregroundColor: Colors.white),
                   child: _isAssigning
                       ? const CircularProgressIndicator(color: Colors.white)
-                      : const Text('Confirm & Assign All', style: TextStyle(fontWeight: FontWeight.bold)),
+                      : const Text('Confirm', style: TextStyle(fontWeight: FontWeight.bold)),
                 ),
               ),
             ],
