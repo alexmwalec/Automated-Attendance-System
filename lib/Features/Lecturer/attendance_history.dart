@@ -123,7 +123,7 @@ class _AttendanceHistoryState extends State<AttendanceHistory> with SingleTicker
         bottom: TabBar(
           controller: _tabController,
           indicatorColor: Colors.white,
-          tabs: const [Tab(text: "Manage"), Tab(text: "History")],
+          tabs: const [Tab(text: "Create sessions"), Tab(text: "History")],
         ),
       ),
       body: TabBarView(
