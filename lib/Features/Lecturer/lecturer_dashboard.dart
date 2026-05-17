@@ -79,8 +79,7 @@ class _LecturerDashboardState extends State<LecturerDashboard> {
         items: const [
           BottomNavigationBarItem(icon: Icon(Icons.home_outlined), label: 'Home'),
           BottomNavigationBarItem(icon: Icon(Icons.check_circle_outline), label: 'Attendance'),
-          BottomNavigationBarItem(icon: Icon(Icons.history_outlined), label: 'History'),
-          BottomNavigationBarItem(icon: Icon(Icons.assignment_outlined), label: 'Assign'),
+          BottomNavigationBarItem(icon: Icon(Icons.history_outlined), label: 'Manage'),
         ],
       ),
     );
