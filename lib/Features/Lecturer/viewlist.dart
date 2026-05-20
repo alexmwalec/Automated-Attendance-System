@@ -11,7 +11,6 @@ class ViewList extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // This is the list of objects we built in submit_list.dart
     final List fullList = attendanceData['fullAttendanceList'] ?? [];
 
     return Scaffold(
@@ -33,10 +32,6 @@ class ViewList extends StatelessWidget {
             padding: const EdgeInsets.all(16),
             decoration: const BoxDecoration(
               color: tealPrimary,
-              borderRadius: BorderRadius.only(
-                bottomLeft: Radius.circular(24),
-                bottomRight: Radius.circular(24),
-              ),
             ),
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceAround,
@@ -48,7 +43,7 @@ class ViewList extends StatelessWidget {
             ),
           ),
 
-          const SizedBox(height: 10),
+          const SizedBox(height: 3),
 
           // Table Header
           Padding(
