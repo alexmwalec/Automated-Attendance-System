@@ -151,10 +151,6 @@ class _AssignState extends State<Assign> {
                             fillColor: Colors.white,
                             filled: true)),
                   ),
-                  IconButton(
-                      onPressed: _addInvigilator,
-                      icon: const Icon(Icons.add_circle,
-                          color: tealPrimary, size: 32)),
                 ],
               ),
               Wrap(
