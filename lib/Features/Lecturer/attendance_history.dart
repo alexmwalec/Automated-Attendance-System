@@ -183,7 +183,6 @@ class _AttendanceHistoryState extends State<AttendanceHistory> with SingleTicker
           BottomNavigationBarItem(icon: Icon(Icons.home), label: 'Home'),
           BottomNavigationBarItem(icon: Icon(Icons.qr_code_scanner), label: 'Attendance'),
           BottomNavigationBarItem(icon: Icon(Icons.manage_accounts), label: 'Manager'),
-          BottomNavigationBarItem(icon: Icon(Icons.assignment), label: 'Assign'),
         ],
       ),
     );
