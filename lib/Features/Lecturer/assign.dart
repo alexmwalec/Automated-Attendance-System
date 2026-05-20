@@ -69,7 +69,7 @@ class _AssignState extends State<Assign> {
           'sessionType': widget.sessionType ?? 'N/A',
           'date': DateTime.now().toIso8601String().split('T')[0],
           'room': _roomController.text.trim(),
-          'invigilators': _assignedInvigilators, // Saving as a List
+          'invigilators': _assignedInvigilators,
           'lecturerId': FirebaseAuth.instance.currentUser?.uid,
           'createdAt': FieldValue.serverTimestamp(),
           'status': 'Assigned',

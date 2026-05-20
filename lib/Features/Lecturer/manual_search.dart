@@ -1,4 +1,4 @@
-import 'dart:async'; // Required for Timer (Debouncing)
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 
@@ -9,8 +9,14 @@ const Color tealLight = Color(0xFFE0F2F0);
 class ManualSearch extends StatefulWidget {
   final List<Map<String, String>> existingStudents;
   final void Function(Map<String, String>) onStudentAdded;
+  final String courseCode; // Added this
 
-  const ManualSearch({super.key, required this.existingStudents, required this.onStudentAdded});
+  const ManualSearch({
+    super.key,
+    required this.existingStudents,
+    required this.onStudentAdded,
+    required this.courseCode, // Added this
+  });
 
   @override
   State<ManualSearch> createState() => _ManualSearchState();
@@ -20,8 +26,6 @@ class _ManualSearchState extends State<ManualSearch> {
   final TextEditingController _ctrl = TextEditingController();
   List<Map<String, String>> _results = [];
   bool _isLoading = false;
-
-  // Debouncing Timer
   Timer? _debounce;
 
   @override
@@ -31,7 +35,6 @@ class _ManualSearchState extends State<ManualSearch> {
     super.dispose();
   }
 
-  // Debounced Search Function
   void _onSearchChanged(String query) {
     if (_debounce?.isActive ?? false) _debounce?.cancel();
     _debounce = Timer(const Duration(milliseconds: 500), () {
@@ -40,7 +43,7 @@ class _ManualSearchState extends State<ManualSearch> {
   }
 
   void _performSearch(String query) async {
-    final q = query.trim();
+    final q = query.trim().toLowerCase();
     if (q.isEmpty) {
       setState(() => _results = []);
       return;
@@ -49,65 +52,62 @@ class _ManualSearchState extends State<ManualSearch> {
     setState(() => _isLoading = true);
 
     try {
-      String upperQuery = q.toUpperCase();
-      String nameQuery = q.length > 1
-          ? q[0].toUpperCase() + q.substring(1).toLowerCase()
-          : q.toUpperCase();
+      //  Get the course document to find enrolled students
+      DocumentSnapshot courseDoc = await FirebaseFirestore.instance
+          .collection('courses')
+          .doc(widget.courseCode)
+          .get();
 
-      final results = await Future.wait([
-        // Search by Registration Number
-        FirebaseFirestore.instance
-            .collection('students')
-            .where('regNo', isGreaterThanOrEqualTo: upperQuery)
-            .where('regNo', isLessThanOrEqualTo: '$upperQuery\uf8ff')
-            .limit(10)
-            .get(),
-
-        // Search by Name
-        FirebaseFirestore.instance
-            .collection('students')
-            .where('name', isGreaterThanOrEqualTo: nameQuery)
-            .where('name', isLessThanOrEqualTo: '$nameQuery\uf8ff')
-            .limit(10)
-            .get(),
-      ]);
-
-      final regSnapshot = results[0];
-      final nameSnapshot = results[1];
-
-      // 3. Combine results using a Map to prevent duplicates
-      final Map<String, Map<String, String>> combined = {};
-
-      for (var doc in regSnapshot.docs) {
-        combined[doc.id] = {
-          'regNo': doc['regNo']?.toString() ?? '',
-          'name': doc['name']?.toString() ?? '',
-          'surname': doc['surname']?.toString() ?? '',
-        };
+      if (!courseDoc.exists) {
+        setState(() => _isLoading = false);
+        return;
       }
 
-      for (var doc in nameSnapshot.docs) {
-        combined[doc.id] = {
-          'regNo': doc['regNo']?.toString() ?? '',
-          'name': doc['name']?.toString() ?? '',
-          'surname': doc['surname']?.toString() ?? '',
-        };
+      //  Extract the comma-separated string from the array [0]
+      List<dynamic> enrolledArray = courseDoc.get('enrolledStudents') ?? [];
+      if (enrolledArray.isEmpty) {
+        setState(() { _results = []; _isLoading = false; });
+        return;
       }
 
+      String allRegStr = enrolledArray[0].toString();
+
+      //  Split and filter the list by the user's input
+      List<String> matches = allRegStr
+          .split(',')
+          .map((e) => e.trim().toLowerCase())
+          .where((e) => e.contains(q))
+          .toList();
+
+      if (matches.isEmpty) {
+        setState(() { _results = []; _isLoading = false; });
+        return;
+      }
+
+      //  Fetch full student details for the matching registration numbers
+      final studentSnapshot = await FirebaseFirestore.instance
+          .collection('students')
+          .where('regNo', whereIn: matches.take(30).toList())
+          .get();
+
+      final List<Map<String, String>> searchResults = studentSnapshot.docs.map((doc) {
+        final data = doc.data();
+        return {
+          'regNo': data['regNo']?.toString() ?? 'N/A',
+          'name': data['name']?.toString() ?? 'Unknown',
+          'surname': data['surname']?.toString() ?? '',
+        };
+      }).toList();
 
       if (mounted) {
         setState(() {
-          _results = combined.values.toList();
+          _results = searchResults;
           _isLoading = false;
         });
       }
     } catch (e) {
-      if (mounted) {
-        setState(() => _isLoading = false);
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text("Search error: $e"), backgroundColor: Colors.red),
-        );
-      }
+      debugPrint("Search error: $e");
+      if (mounted) setState(() => _isLoading = false);
     }
   }
 
@@ -118,7 +118,8 @@ class _ManualSearchState extends State<ManualSearch> {
       appBar: AppBar(
         backgroundColor: tealPrimary,
         iconTheme: const IconThemeData(color: Colors.white),
-        title: const Text('Manual Search', style: TextStyle(color: Colors.white)),
+        title: Text('Search Students (${widget.courseCode})',
+            style: const TextStyle(color: Colors.white, fontSize: 18)),
       ),
       body: Column(
         children: [
@@ -126,43 +127,39 @@ class _ManualSearchState extends State<ManualSearch> {
             padding: const EdgeInsets.all(16.0),
             child: TextField(
               controller: _ctrl,
-              onChanged: _onSearchChanged, // Calls the debouncer
+              onChanged: _onSearchChanged,
               decoration: InputDecoration(
                 filled: true,
                 fillColor: Colors.white,
-                hintText: "Search Reg No or Student Name",
+                hintText: "Enter Reg Number...",
                 prefixIcon: const Icon(Icons.search, color: tealPrimary),
-                suffixIcon: _ctrl.text.isNotEmpty
-                    ? IconButton(
-                    icon: const Icon(Icons.clear),
-                    onPressed: () {
-                      _ctrl.clear();
-                      _onSearchChanged('');
-                    })
-                    : null,
                 border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
               ),
             ),
           ),
           if (_isLoading) const LinearProgressIndicator(color: tealPrimary),
           Expanded(
-            child: _results.isEmpty && _ctrl.text.isNotEmpty && !_isLoading
-                ? const Center(child: Text("No students found."))
-                : ListView.builder(
+            child: ListView.builder(
               itemCount: _results.length,
               itemBuilder: (context, i) {
                 final s = _results[i];
-                bool added = widget.existingStudents.any((e) => e['regNo'] == s['regNo']);
+                // SAFETY: Provide fallback if strings are null
+                String reg = s['regNo'] ?? 'N/A';
+                String name = s['name'] ?? 'Unknown';
+                String surname = s['surname'] ?? '';
+
+                bool added = widget.existingStudents.any((e) => e['regNo'] == reg);
+
                 return ListTile(
                   leading: CircleAvatar(
                     backgroundColor: tealPrimary,
-                    child: Text(s['name']![0], style: const TextStyle(color: Colors.white)),
+                    child: Text(name.isNotEmpty ? name[0].toUpperCase() : "?",
+                        style: const TextStyle(color: Colors.white)),
                   ),
-                  title: Text(s['regNo']!, style: const TextStyle(fontWeight: FontWeight.bold)),
-                  subtitle: Text("${s['name']} ${s['surname']}"),
-                  trailing: added
-                      ? const Icon(Icons.check_circle, color: tealPrimary)
-                      : const Icon(Icons.add_circle_outline, color: tealDark),
+                  title: Text(reg, style: const TextStyle(fontWeight: FontWeight.bold)),
+                  subtitle: Text("$name $surname"),
+                  trailing: Icon(added ? Icons.check_circle : Icons.add_circle_outline,
+                      color: added ? tealPrimary : tealDark),
                   onTap: added ? null : () {
                     widget.onStudentAdded(s);
                     Navigator.pop(context);
