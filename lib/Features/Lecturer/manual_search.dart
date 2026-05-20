@@ -9,13 +9,13 @@ const Color tealLight = Color(0xFFE0F2F0);
 class ManualSearch extends StatefulWidget {
   final List<Map<String, String>> existingStudents;
   final void Function(Map<String, String>) onStudentAdded;
-  final String courseCode;
+  final String courseCode; // Added this
 
   const ManualSearch({
     super.key,
     required this.existingStudents,
     required this.onStudentAdded,
-    required this.courseCode,
+    required this.courseCode, // Added this
   });
 
   @override
@@ -52,7 +52,7 @@ class _ManualSearchState extends State<ManualSearch> {
     setState(() => _isLoading = true);
 
     try {
-
+      //  Get the course document to find enrolled students
       DocumentSnapshot courseDoc = await FirebaseFirestore.instance
           .collection('courses')
           .doc(widget.courseCode)
@@ -63,38 +63,39 @@ class _ManualSearchState extends State<ManualSearch> {
         return;
       }
 
-      // Get the enrolledStudents array
+      //  Extract the comma-separated string from the array [0]
       List<dynamic> enrolledArray = courseDoc.get('enrolledStudents') ?? [];
       if (enrolledArray.isEmpty) {
         setState(() { _results = []; _isLoading = false; });
         return;
       }
 
-      String allRegNumbersString = enrolledArray[0].toString();
+      String allRegStr = enrolledArray[0].toString();
 
-      //  Split by comma and filter locally by what the user typed
-      List<String> filteredRegNumbers = allRegNumbersString
+      //  Split and filter the list by the user's input
+      List<String> matches = allRegStr
           .split(',')
           .map((e) => e.trim().toLowerCase())
           .where((e) => e.contains(q))
           .toList();
 
-      if (filteredRegNumbers.isEmpty) {
+      if (matches.isEmpty) {
         setState(() { _results = []; _isLoading = false; });
         return;
       }
 
-      //  Fetch the student details for these specific Reg Number
+      //  Fetch full student details for the matching registration numbers
       final studentSnapshot = await FirebaseFirestore.instance
           .collection('students')
-          .where('regNo', whereIn: filteredRegNumbers.take(30).toList())
+          .where('regNo', whereIn: matches.take(30).toList())
           .get();
 
       final List<Map<String, String>> searchResults = studentSnapshot.docs.map((doc) {
+        final data = doc.data();
         return {
-          'regNo': doc['regNo']?.toString() ?? '',
-          'name': doc['name']?.toString() ?? '',
-          'surname': doc['surname']?.toString() ?? '',
+          'regNo': data['regNo']?.toString() ?? 'N/A',
+          'name': data['name']?.toString() ?? 'Unknown',
+          'surname': data['surname']?.toString() ?? '',
         };
       }).toList();
 
@@ -117,8 +118,8 @@ class _ManualSearchState extends State<ManualSearch> {
       appBar: AppBar(
         backgroundColor: tealPrimary,
         iconTheme: const IconThemeData(color: Colors.white),
-        title: Text('Search in ${widget.courseCode}',
-            style: const TextStyle(color: Colors.white)),
+        title: Text('Search Students (${widget.courseCode})',
+            style: const TextStyle(color: Colors.white, fontSize: 18)),
       ),
       body: Column(
         children: [
@@ -130,7 +131,7 @@ class _ManualSearchState extends State<ManualSearch> {
               decoration: InputDecoration(
                 filled: true,
                 fillColor: Colors.white,
-                hintText: "Enter Reg Number (e.g. bsc-com...)",
+                hintText: "Enter Reg Number...",
                 prefixIcon: const Icon(Icons.search, color: tealPrimary),
                 border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
               ),
@@ -142,22 +143,24 @@ class _ManualSearchState extends State<ManualSearch> {
               itemCount: _results.length,
               itemBuilder: (context, i) {
                 final s = _results[i];
-                bool alreadyAdded = widget.existingStudents
-                    .any((e) => e['regNo'] == s['regNo']);
+                // SAFETY: Provide fallback if strings are null
+                String reg = s['regNo'] ?? 'N/A';
+                String name = s['name'] ?? 'Unknown';
+                String surname = s['surname'] ?? '';
+
+                bool added = widget.existingStudents.any((e) => e['regNo'] == reg);
 
                 return ListTile(
-                  leading: const CircleAvatar(
+                  leading: CircleAvatar(
                     backgroundColor: tealPrimary,
-                    child: Icon(Icons.person, color: Colors.white),
+                    child: Text(name.isNotEmpty ? name[0].toUpperCase() : "?",
+                        style: const TextStyle(color: Colors.white)),
                   ),
-                  title: Text(s['regNo']!,
-                      style: const TextStyle(fontWeight: FontWeight.bold)),
-                  subtitle: Text("${s['name']} ${s['surname']}"),
-                  trailing: Icon(
-                    alreadyAdded ? Icons.check_circle : Icons.add_circle_outline,
-                    color: alreadyAdded ? tealPrimary : tealDark,
-                  ),
-                  onTap: alreadyAdded ? null : () {
+                  title: Text(reg, style: const TextStyle(fontWeight: FontWeight.bold)),
+                  subtitle: Text("$name $surname"),
+                  trailing: Icon(added ? Icons.check_circle : Icons.add_circle_outline,
+                      color: added ? tealPrimary : tealDark),
+                  onTap: added ? null : () {
                     widget.onStudentAdded(s);
                     Navigator.pop(context);
                   },
