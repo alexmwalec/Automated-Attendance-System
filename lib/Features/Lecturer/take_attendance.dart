@@ -103,7 +103,15 @@ class _AttendancePageState extends State<AttendancePage> {
       MaterialPageRoute(
         builder: (_) => ManualSearch(
           existingStudents: _scannedStudents,
-          onStudentAdded: (student) => setState(() => _scannedStudents.add(student)),
+          onStudentAdded: (student) {
+            setState(() {
+              // Avoid adding duplicates if they closed and reopened search
+              if (!_scannedStudents.any((s) => s['regNo'] == student['regNo'])) {
+                _scannedStudents.add(student);
+              }
+            });
+          },
+          courseCode: widget.courseCode,
         ),
       ),
     ).then((_) => setState(() => _isProcessing = false));
