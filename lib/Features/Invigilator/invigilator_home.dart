@@ -1,36 +1,80 @@
+import 'package:firebase_auth/firebase_auth.dart'; // Add this
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import '../Lecturer/take_attendance.dart';
 
-class InvigilatorHome extends StatelessWidget {
+class InvigilatorHome extends StatefulWidget {
   const InvigilatorHome({super.key});
+
+  @override
+  State<InvigilatorHome> createState() => _InvigilatorHomeState();
+}
+
+class _InvigilatorHomeState extends State<InvigilatorHome> {
   static const Color primaryColor = Color(0xFF2E9E8E);
+  String? _currentUserName;
+
+  @override
+  void initState() {
+    super.initState();
+    _fetchCurrentUserName();
+  }
+
+  Future<void> _fetchCurrentUserName() async {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user != null) {
+      final userDoc = await FirebaseFirestore.instance.collection('users').doc(user.uid).get();
+      if (userDoc.exists) {
+        final data = userDoc.data();
+        setState(() {
+          String firstName = data?['name'] ?? '';
+          String lastName = data?['surname'] ?? '';
+          _currentUserName = "$firstName $lastName".trim();
+        });
+      }
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
+    if (_currentUserName == null) {
+      return const Scaffold(body: Center(child: CircularProgressIndicator(color: primaryColor)));
+    }
+
     return Scaffold(
       backgroundColor: const Color(0xFFF5F7F9),
       appBar: AppBar(
         backgroundColor: primaryColor,
-        title: const Text('Invigilator Dashboard', style: TextStyle(color: Colors.white)),
+        title: const Text('Home', style: TextStyle(color: Colors.white)),
       ),
       body: StreamBuilder<QuerySnapshot>(
         stream: FirebaseFirestore.instance
             .collection('exam_assignments')
+            .where('invigilators', arrayContains: _currentUserName)
             .orderBy('createdAt', descending: true)
             .snapshots(),
         builder: (context, snapshot) {
+          if (snapshot.hasError) {
+            return Center(child: Text("Error: ${snapshot.error}"));
+          }
           if (!snapshot.hasData) return const Center(child: CircularProgressIndicator());
 
           final docs = snapshot.data!.docs;
 
+          if (docs.isEmpty) {
+            return Column(
+              children: [
+                _buildWelcomeCard(),
+                const Expanded(child: Center(child: Text("No tasks assigned to you."))),
+              ],
+            );
+          }
+
           return ListView.builder(
             padding: const EdgeInsets.all(16),
-            itemCount: docs.length + 1, // +1 for the Header
+            itemCount: docs.length + 1,
             itemBuilder: (context, index) {
-              if (index == 0) {
-                return _buildWelcomeCard();
-              }
+              if (index == 0) return _buildWelcomeCard();
 
               final data = docs[index - 1].data() as Map<String, dynamic>;
               return Padding(
@@ -66,17 +110,16 @@ class InvigilatorHome extends StatelessWidget {
       margin: const EdgeInsets.only(bottom: 20),
       padding: const EdgeInsets.all(18),
       decoration: BoxDecoration(color: primaryColor, borderRadius: BorderRadius.circular(16)),
-      child: const Column(
+      child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text('Welcome Back!', style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold)),
-          Text('Tap on a task below to start taking attendance.', style: TextStyle(color: Colors.white70, fontSize: 12)),
+          Text('Hello, $_currentUserName!', style: const TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold)),
+          const Text('Below are the sessions you are assigned to.', style: TextStyle(color: Colors.white70, fontSize: 12)),
         ],
       ),
     );
   }
 }
-
 class _AssignmentCard extends StatelessWidget {
   final String course, venue, date, time, sessionType;
   final VoidCallback onTap;

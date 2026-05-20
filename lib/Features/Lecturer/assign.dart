@@ -31,15 +31,16 @@ class _AssignState extends State<Assign> {
   }
 
   void _addInvigilator() {
-    final name = _invigilatorController.text.trim();
+    final name = _invigilatorController.text.trim(); // Always trim whitespace
     if (name.isNotEmpty) {
       setState(() {
-        _assignedInvigilators.add(name);
+        if (!_assignedInvigilators.contains(name)) {
+          _assignedInvigilators.add(name);
+        }
         _invigilatorController.clear();
       });
     }
   }
-
   Future<void> _submitAssignment() async {
     if (_formKey.currentState!.validate()) {
       if (_assignedInvigilators.isEmpty && _invigilatorController.text.isEmpty) {
@@ -97,6 +98,9 @@ class _AssignState extends State<Assign> {
               _buildReadOnlyField('COURSE', widget.courseCode ?? 'N/A'),
               const SizedBox(height: 16),
 
+              _buildReadOnlyField('SESSION TYPE', widget.sessionType ?? 'N/A'),
+              const SizedBox(height:16),
+
               const Text('ROOM / VENUE',
                   style: TextStyle(
                       fontSize: 12,
@@ -111,9 +115,8 @@ class _AssignState extends State<Assign> {
                     return const LinearProgressIndicator(color: tealPrimary);
                   }
 
-                  // Since the room name IS the Document ID based on your screenshot
                   List<DropdownMenuItem<String>> roomItems = snapshot.data!.docs.map((doc) {
-                    String roomName = doc.id; // <--- Changed from doc['name'] to doc.id
+                    String roomName = doc.id;
                     return DropdownMenuItem(
                       value: roomName,
                       child: Text(roomName),
@@ -147,9 +150,14 @@ class _AssignState extends State<Assign> {
                     child: TextFormField(
                         controller: _invigilatorController,
                         decoration: const InputDecoration(
-                            hintText: 'Name',
+                            hintText: 'Enter Invigilator Name',
                             fillColor: Colors.white,
                             filled: true)),
+                  ),
+                  const SizedBox(width: 8),
+                  IconButton(
+                    onPressed: _addInvigilator,
+                    icon: const Icon(Icons.add_circle, color: tealPrimary, size: 35),
                   ),
                 ],
               ),
@@ -172,7 +180,7 @@ class _AssignState extends State<Assign> {
                   style: ElevatedButton.styleFrom(backgroundColor: tealPrimary),
                   child: _isAssigning
                       ? const CircularProgressIndicator(color: Colors.white)
-                      : const Text('CONFIRM ASSIGNMENT',
+                      : const Text('Confirm Assignment',
                       style: TextStyle(color: Colors.white)),
                 ),
               ),
@@ -182,7 +190,6 @@ class _AssignState extends State<Assign> {
       ),
     );
   }
-
   Widget _buildReadOnlyField(String label, String value) {
     return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
       Text(label,
