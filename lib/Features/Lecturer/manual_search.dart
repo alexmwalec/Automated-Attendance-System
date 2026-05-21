@@ -9,13 +9,13 @@ const Color tealLight = Color(0xFFE0F2F0);
 class ManualSearch extends StatefulWidget {
   final List<Map<String, String>> existingStudents;
   final void Function(Map<String, String>) onStudentAdded;
-  final String courseCode; // Added this
+  final String courseCode;
 
   const ManualSearch({
     super.key,
     required this.existingStudents,
     required this.onStudentAdded,
-    required this.courseCode, // Added this
+    required this.courseCode,
   });
 
   @override
