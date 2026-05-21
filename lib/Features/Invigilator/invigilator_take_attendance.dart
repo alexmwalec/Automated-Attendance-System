@@ -126,10 +126,21 @@ class _InvigilatorTakeAttendanceState extends State<InvigilatorTakeAttendance> {
     }
     setState(() => _scannedStudents.add(student));
   }
-
   Future<void> _submitToFirebase() async {
     setState(() => _isSubmitting = true);
     try {
+      final assignmentQuery = await FirebaseFirestore.instance
+          .collection('exam_assignments')
+          .where('course', isEqualTo: widget.courseCode)
+          .where('date', isEqualTo: widget.date)
+          .limit(1)
+          .get();
+
+      String lecturerId = 'invigilator';
+      if (assignmentQuery.docs.isNotEmpty) {
+        lecturerId = assignmentQuery.docs.first.data()['createdByUid'] ?? 'invigilator';
+      }
+
       final presentRegNos = _scannedStudents.map((s) => s['regNo']).toSet();
       List<Map<String, dynamic>> fullAttendanceList = [];
 
@@ -149,7 +160,8 @@ class _InvigilatorTakeAttendanceState extends State<InvigilatorTakeAttendance> {
         'venue': widget.venue,
         'date': widget.date,
         'timestamp': FieldValue.serverTimestamp(),
-        'lecturerId': 'invigilator',
+        'lecturerId': lecturerId,
+        'submittedBy': _currentUserName,
         'fullAttendanceList': fullAttendanceList,
         'totalPresent': _scannedStudents.length,
         'totalEnrolled': _allEligibleStudents.length,

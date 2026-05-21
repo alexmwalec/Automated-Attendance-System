@@ -1,124 +1,100 @@
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 
-// ─── Shared colours ────────────────────────────────────────────────────────
 const Color tealPrimary = Color(0xFF2E9E8E);
 const Color tealDark = Color(0xFF227A6D);
 const Color tealLight = Color(0xFFDFF2EF);
 
-// ══════════════════════════════════════════════════════════════════════════════
-// InvigilatorAttendanceList
-// Fetches the assigned course from exam_assignments (same source as the home
-// screen) and then streams attendance records for that course from the
-// attendance collection – exactly the same collection SubmitList writes to.
-// ══════════════════════════════════════════════════════════════════════════════
-class InvigilatorAttendanceList extends StatelessWidget {
+class InvigilatorAttendanceList extends StatefulWidget {
   const InvigilatorAttendanceList({super.key});
 
   @override
+  State<InvigilatorAttendanceList> createState() => _InvigilatorAttendanceListState();
+}
+
+class _InvigilatorAttendanceListState extends State<InvigilatorAttendanceList> {
+  String? _currentUserName;
+
+  @override
+  void initState() {
+    super.initState();
+    _fetchCurrentUserName();
+  }
+
+  Future<void> _fetchCurrentUserName() async {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user != null) {
+      final userDoc = await FirebaseFirestore.instance.collection('users').doc(user.uid).get();
+      if (userDoc.exists) {
+        setState(() {
+          _currentUserName = "${userDoc.data()?['name']} ${userDoc.data()?['surname']}".trim();
+        });
+      }
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
-    // Step 1: get the assigned course code
-    return StreamBuilder<QuerySnapshot>(
-      stream: FirebaseFirestore.instance
-          .collection('exam_assignments')
-          .orderBy('createdAt', descending: true)
-          .limit(1)
-          .snapshots(),
-      builder: (context, assignSnap) {
-        if (assignSnap.connectionState == ConnectionState.waiting) {
-          return const Scaffold(
-            backgroundColor: tealLight,
-            body: Center(child: CircularProgressIndicator(color: tealPrimary)),
+    if (_currentUserName == null) {
+      return const Scaffold(
+        backgroundColor: tealLight,
+        body: Center(child: CircularProgressIndicator(color: tealPrimary)),
+      );
+    }
+
+    return Scaffold(
+      backgroundColor: tealLight,
+      appBar: AppBar(
+        backgroundColor: tealPrimary,
+        automaticallyImplyLeading: false,
+        title: const Text('Attendance Records',
+            style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 18)),
+      ),
+      // Query attendance records submitted by this specific invigilator directly
+      body: StreamBuilder<QuerySnapshot>(
+        stream: FirebaseFirestore.instance
+            .collection('attendance')
+            .where('submittedBy', isEqualTo: _currentUserName)
+            .orderBy('timestamp', descending: true)
+            .snapshots(),
+        builder: (context, snapshot) {
+          if (snapshot.connectionState == ConnectionState.waiting) {
+            return const Center(child: CircularProgressIndicator(color: tealPrimary));
+          }
+
+          if (snapshot.hasError) {
+            return Center(child: Text("Error: ${snapshot.error}"));
+          }
+
+          if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
+            return const Center(
+              child: Padding(
+                padding: EdgeInsets.all(32),
+                child: Text(
+                  'No attendance records found yet.\nRecords will appear here once you submit attendance.',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(fontSize: 15, color: tealDark),
+                ),
+              ),
+            );
+          }
+
+          final docs = snapshot.data!.docs;
+
+          return ListView.builder(
+            padding: const EdgeInsets.all(12),
+            itemCount: docs.length,
+            itemBuilder: (context, index) {
+              final data = docs[index].data() as Map<String, dynamic>;
+              return _SessionCard(attendanceData: data);
+            },
           );
-        }
-
-        final String assignedCourse =
-            (assignSnap.hasData && assignSnap.data!.docs.isNotEmpty)
-                ? ((assignSnap.data!.docs.first.data()
-                        as Map<String, dynamic>)['course'] ??
-                    '')
-                : '';
-
-        return Scaffold(
-          backgroundColor: tealLight,
-          appBar: AppBar(
-            backgroundColor: tealPrimary,
-            automaticallyImplyLeading: false,
-            title: const Text(
-              'AAS',
-              style: TextStyle(
-                  color: Colors.white,
-                  fontWeight: FontWeight.bold,
-                  fontSize: 18),
-            ),
-            actions: [
-              IconButton(
-                icon: const Icon(Icons.notifications_none, color: Colors.white),
-                onPressed: () {},
-              ),
-              const Padding(
-                padding: EdgeInsets.only(right: 16),
-                child: CircleAvatar(
-                  backgroundColor: Colors.white24,
-                  radius: 15,
-                  child: Icon(Icons.person, color: Colors.white, size: 18),
-                ),
-              ),
-            ],
-          ),
-          body: assignedCourse.isEmpty
-              ? const Center(
-                  child: Padding(
-                    padding: EdgeInsets.all(32),
-                    child: Text(
-                      'No exam assignment found.\nAttendance records will appear here once you have been assigned an exam.',
-                      textAlign: TextAlign.center,
-                      style: TextStyle(fontSize: 15, color: tealDark),
-                    ),
-                  ),
-                )
-              // Step 2: stream attendance records for this course
-              : StreamBuilder<QuerySnapshot>(
-                  stream: FirebaseFirestore.instance
-                      .collection('attendance')
-                      .where('courseCode', isEqualTo: assignedCourse)
-                      .orderBy('timestamp', descending: true)
-                      .snapshots(),
-                  builder: (context, attSnap) {
-                    if (attSnap.connectionState == ConnectionState.waiting) {
-                      return const Center(
-                          child: CircularProgressIndicator(color: tealPrimary));
-                    }
-
-                    if (!attSnap.hasData || attSnap.data!.docs.isEmpty) {
-                      return const Center(
-                        child: Text(
-                          'No attendance records yet for this course.',
-                          style: TextStyle(color: tealDark, fontSize: 14),
-                        ),
-                      );
-                    }
-
-                    final docs = attSnap.data!.docs;
-
-                    // Show a list of sessions; tap to expand the full list
-                    return ListView.builder(
-                      padding: const EdgeInsets.all(12),
-                      itemCount: docs.length,
-                      itemBuilder: (context, index) {
-                        final data = docs[index].data() as Map<String, dynamic>;
-                        return _SessionCard(attendanceData: data);
-                      },
-                    );
-                  },
-                ),
-        );
-      },
+        },
+      ),
     );
   }
 }
-
-// ── A card for each attendance session ───────────────────────────────────────
 class _SessionCard extends StatelessWidget {
   final Map<String, dynamic> attendanceData;
 
@@ -162,7 +138,6 @@ class _SessionCard extends StatelessWidget {
   }
 }
 
-// ── Full detail view (mirrors ViewList from view_list.dart) ──────────────────
 class _AttendanceDetailPage extends StatelessWidget {
   final Map<String, dynamic> attendanceData;
 
