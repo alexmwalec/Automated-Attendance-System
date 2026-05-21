@@ -27,15 +27,18 @@ class _InvigilatorAttendanceListState extends State<InvigilatorAttendanceList> {
     if (user != null) {
       final userDoc = await FirebaseFirestore.instance.collection('users').doc(user.uid).get();
       if (userDoc.exists) {
-        setState(() {
-          _currentUserName = "${userDoc.data()?['name']} ${userDoc.data()?['surname']}".trim();
-        });
+        if (mounted) {
+          setState(() {
+            _currentUserName = "${userDoc.data()?['name']} ${userDoc.data()?['surname']}".trim();
+          });
+        }
       }
     }
   }
 
   @override
   Widget build(BuildContext context) {
+    // 1. Return a loader while name is being fetched
     if (_currentUserName == null) {
       return const Scaffold(
         backgroundColor: tealLight,
@@ -51,20 +54,30 @@ class _InvigilatorAttendanceListState extends State<InvigilatorAttendanceList> {
         title: const Text('Attendance Records',
             style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 18)),
       ),
-      // Query attendance records submitted by this specific invigilator directly
       body: StreamBuilder<QuerySnapshot>(
+        // 2. Query filtered by the logged-in invigilator's name
         stream: FirebaseFirestore.instance
             .collection('attendance')
             .where('submittedBy', isEqualTo: _currentUserName)
             .orderBy('timestamp', descending: true)
             .snapshots(),
         builder: (context, snapshot) {
-          if (snapshot.connectionState == ConnectionState.waiting) {
-            return const Center(child: CircularProgressIndicator(color: tealPrimary));
+          // 3. Catch Index errors and show them on the screen
+          if (snapshot.hasError) {
+            return Center(
+              child: Padding(
+                padding: const EdgeInsets.all(20.0),
+                child: Text(
+                  "Database Error: Please ensure you clicked the link in your console to create the index.\n\nDetails: ${snapshot.error}",
+                  textAlign: TextAlign.center,
+                  style: const TextStyle(color: Colors.red, fontSize: 12),
+                ),
+              ),
+            );
           }
 
-          if (snapshot.hasError) {
-            return Center(child: Text("Error: ${snapshot.error}"));
+          if (snapshot.connectionState == ConnectionState.waiting) {
+            return const Center(child: CircularProgressIndicator(color: tealPrimary));
           }
 
           if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
@@ -95,6 +108,7 @@ class _InvigilatorAttendanceListState extends State<InvigilatorAttendanceList> {
     );
   }
 }
+
 class _SessionCard extends StatelessWidget {
   final Map<String, dynamic> attendanceData;
 
@@ -112,16 +126,14 @@ class _SessionCard extends StatelessWidget {
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
       elevation: 1,
       child: ListTile(
-        contentPadding:
-            const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
         leading: CircleAvatar(
           backgroundColor: tealPrimary.withOpacity(0.1),
           child: const Icon(Icons.assignment_turned_in, color: tealPrimary),
         ),
         title: Text(
           '$courseCode – $sessionType',
-          style: const TextStyle(
-              fontWeight: FontWeight.bold, fontSize: 14, color: tealDark),
+          style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: tealDark),
         ),
         subtitle: Text('$date  •  $totalPresent present',
             style: const TextStyle(fontSize: 12, color: Colors.black54)),
@@ -129,8 +141,7 @@ class _SessionCard extends StatelessWidget {
         onTap: () => Navigator.push(
           context,
           MaterialPageRoute(
-            builder: (_) =>
-                _AttendanceDetailPage(attendanceData: attendanceData),
+            builder: (_) => _AttendanceDetailPage(attendanceData: attendanceData),
           ),
         ),
       ),
@@ -155,23 +166,8 @@ class _AttendanceDetailPage extends StatelessWidget {
         iconTheme: const IconThemeData(color: Colors.white),
         title: const Text(
           'AAS',
-          style: TextStyle(
-              color: Colors.white, fontWeight: FontWeight.bold, fontSize: 18),
+          style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 18),
         ),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.notifications_none, color: Colors.white),
-            onPressed: () {},
-          ),
-          const Padding(
-            padding: EdgeInsets.only(right: 16),
-            child: CircleAvatar(
-              backgroundColor: Colors.white24,
-              radius: 15,
-              child: Icon(Icons.person, color: Colors.white, size: 18),
-            ),
-          ),
-        ],
       ),
       body: Column(
         children: [
@@ -197,46 +193,28 @@ class _AttendanceDetailPage extends StatelessWidget {
               itemBuilder: (context, index) {
                 final student = fullList[index];
                 final String regNo = student['regNo']?.toString() ?? 'N/A';
-                final String firstName =
-                    student['name']?.toString() ?? 'Unknown';
+                final String firstName = student['name']?.toString() ?? 'Unknown';
                 final String lastName = student['surname']?.toString() ?? '';
                 final String status = student['status']?.toString() ?? 'Absent';
 
-                Widget statusWidget;
-                if (status == 'Present') {
-                  statusWidget = const Text('Present',
-                      style: TextStyle(
-                          fontSize: 10,
-                          color: tealDark,
-                          fontWeight: FontWeight.bold));
-                } else if (status == 'Exit') {
-                  statusWidget = const Text('E',
-                      style: TextStyle(
-                          fontSize: 12,
-                          color: Colors.green,
-                          fontWeight: FontWeight.bold));
-                } else {
-                  statusWidget = const Text('Absent',
-                      style: TextStyle(fontSize: 10, color: Colors.red));
-                }
+                Widget statusWidget = Text(
+                  status,
+                  style: TextStyle(
+                    fontSize: 10,
+                    color: status == 'Present' ? tealDark : Colors.red,
+                    fontWeight: status == 'Present' ? FontWeight.bold : FontWeight.normal,
+                  ),
+                );
 
                 return Container(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                   decoration: const BoxDecoration(
-                    border: Border(
-                        bottom: BorderSide(color: Colors.black12, width: 0.5)),
+                    border: Border(bottom: BorderSide(color: Colors.black12, width: 0.5)),
                   ),
                   child: Row(
                     children: [
-                      Expanded(
-                          flex: 3,
-                          child: Text(regNo,
-                              style: const TextStyle(fontSize: 10))),
-                      Expanded(
-                          flex: 4,
-                          child: Text('$firstName $lastName',
-                              style: const TextStyle(fontSize: 10))),
+                      Expanded(flex: 3, child: Text(regNo, style: const TextStyle(fontSize: 10))),
+                      Expanded(flex: 4, child: Text('$firstName $lastName', style: const TextStyle(fontSize: 10))),
                       Expanded(flex: 2, child: statusWidget),
                     ],
                   ),
@@ -256,8 +234,7 @@ class _AttendanceDetailPage extends StatelessWidget {
                 },
                 style: ElevatedButton.styleFrom(backgroundColor: tealPrimary),
                 icon: const Icon(Icons.download, color: Colors.white),
-                label: const Text('Download CSV',
-                    style: TextStyle(color: Colors.white)),
+                label: const Text('Download CSV', style: TextStyle(color: Colors.white)),
               ),
             ),
           ),
@@ -276,8 +253,7 @@ class _AttendanceDetailPage extends StatelessWidget {
       ),
       child: Text(
         text,
-        style: const TextStyle(
-            fontSize: 10, fontWeight: FontWeight.bold, color: tealDark),
+        style: const TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: tealDark),
       ),
     );
   }
@@ -297,8 +273,6 @@ class _AttendanceDetailPage extends StatelessWidget {
   }
 
   Widget _headerText(String text) {
-    return Text(text,
-        style: const TextStyle(
-            fontWeight: FontWeight.bold, fontSize: 11, color: tealDark));
+    return Text(text, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 11, color: tealDark));
   }
 }

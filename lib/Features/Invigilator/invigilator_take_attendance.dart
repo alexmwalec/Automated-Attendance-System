@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'manual_search.dart';
 
 const Color tealPrimary = Color(0xFF2E9E8E);
@@ -39,10 +40,32 @@ class _InvigilatorTakeAttendanceState extends State<InvigilatorTakeAttendance> {
   Timer? _scanCooldown;
   bool _isSubmitting = false;
 
+  // 1. Define the variable
+  String? _currentUserName;
+
   @override
   void initState() {
     super.initState();
+    _fetchCurrentUserName(); // 2. Fetch the name
     _loadCourseStudents();
+  }
+
+  // 3. Add the fetch method
+  Future<void> _fetchCurrentUserName() async {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user != null) {
+      final userDoc = await FirebaseFirestore.instance.collection('users').doc(user.uid).get();
+      if (userDoc.exists) {
+        final data = userDoc.data();
+        if (mounted) {
+          setState(() {
+            String firstName = data?['name'] ?? '';
+            String lastName = data?['surname'] ?? '';
+            _currentUserName = "$firstName $lastName".trim();
+          });
+        }
+      }
+    }
   }
 
   Future<void> _loadCourseStudents() async {
@@ -126,7 +149,14 @@ class _InvigilatorTakeAttendanceState extends State<InvigilatorTakeAttendance> {
     }
     setState(() => _scannedStudents.add(student));
   }
+
   Future<void> _submitToFirebase() async {
+    // 4. Ensure we don't submit if name is missing
+    if (_currentUserName == null) {
+      _showSnack('User profile not loaded. Please wait.', Colors.orange);
+      return;
+    }
+
     setState(() => _isSubmitting = true);
     try {
       final assignmentQuery = await FirebaseFirestore.instance
@@ -161,10 +191,11 @@ class _InvigilatorTakeAttendanceState extends State<InvigilatorTakeAttendance> {
         'date': widget.date,
         'timestamp': FieldValue.serverTimestamp(),
         'lecturerId': lecturerId,
-        'submittedBy': _currentUserName,
+        'submittedBy': _currentUserName, // Now defined!
         'fullAttendanceList': fullAttendanceList,
         'totalPresent': _scannedStudents.length,
         'totalEnrolled': _allEligibleStudents.length,
+        'status': 'Submitted',
       });
 
       if (mounted) {
