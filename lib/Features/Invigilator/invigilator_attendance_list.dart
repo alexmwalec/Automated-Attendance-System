@@ -1,124 +1,114 @@
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 
-// ─── Shared colours ────────────────────────────────────────────────────────
 const Color tealPrimary = Color(0xFF2E9E8E);
 const Color tealDark = Color(0xFF227A6D);
 const Color tealLight = Color(0xFFDFF2EF);
 
-// ══════════════════════════════════════════════════════════════════════════════
-// InvigilatorAttendanceList
-// Fetches the assigned course from exam_assignments (same source as the home
-// screen) and then streams attendance records for that course from the
-// attendance collection – exactly the same collection SubmitList writes to.
-// ══════════════════════════════════════════════════════════════════════════════
-class InvigilatorAttendanceList extends StatelessWidget {
+class InvigilatorAttendanceList extends StatefulWidget {
   const InvigilatorAttendanceList({super.key});
 
   @override
-  Widget build(BuildContext context) {
-    // Step 1: get the assigned course code
-    return StreamBuilder<QuerySnapshot>(
-      stream: FirebaseFirestore.instance
-          .collection('exam_assignments')
-          .orderBy('createdAt', descending: true)
-          .limit(1)
-          .snapshots(),
-      builder: (context, assignSnap) {
-        if (assignSnap.connectionState == ConnectionState.waiting) {
-          return const Scaffold(
-            backgroundColor: tealLight,
-            body: Center(child: CircularProgressIndicator(color: tealPrimary)),
-          );
+  State<InvigilatorAttendanceList> createState() => _InvigilatorAttendanceListState();
+}
+
+class _InvigilatorAttendanceListState extends State<InvigilatorAttendanceList> {
+  String? _currentUserName;
+
+  @override
+  void initState() {
+    super.initState();
+    _fetchCurrentUserName();
+  }
+
+  Future<void> _fetchCurrentUserName() async {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user != null) {
+      final userDoc = await FirebaseFirestore.instance.collection('users').doc(user.uid).get();
+      if (userDoc.exists) {
+        if (mounted) {
+          setState(() {
+            _currentUserName = "${userDoc.data()?['name']} ${userDoc.data()?['surname']}".trim();
+          });
         }
+      }
+    }
+  }
 
-        final String assignedCourse =
-            (assignSnap.hasData && assignSnap.data!.docs.isNotEmpty)
-                ? ((assignSnap.data!.docs.first.data()
-                        as Map<String, dynamic>)['course'] ??
-                    '')
-                : '';
+  @override
+  Widget build(BuildContext context) {
+    // 1. Return a loader while name is being fetched
+    if (_currentUserName == null) {
+      return const Scaffold(
+        backgroundColor: tealLight,
+        body: Center(child: CircularProgressIndicator(color: tealPrimary)),
+      );
+    }
 
-        return Scaffold(
-          backgroundColor: tealLight,
-          appBar: AppBar(
-            backgroundColor: tealPrimary,
-            automaticallyImplyLeading: false,
-            title: const Text(
-              'AAS',
-              style: TextStyle(
-                  color: Colors.white,
-                  fontWeight: FontWeight.bold,
-                  fontSize: 18),
-            ),
-            actions: [
-              IconButton(
-                icon: const Icon(Icons.notifications_none, color: Colors.white),
-                onPressed: () {},
-              ),
-              const Padding(
-                padding: EdgeInsets.only(right: 16),
-                child: CircleAvatar(
-                  backgroundColor: Colors.white24,
-                  radius: 15,
-                  child: Icon(Icons.person, color: Colors.white, size: 18),
+    return Scaffold(
+      backgroundColor: tealLight,
+      appBar: AppBar(
+        backgroundColor: tealPrimary,
+        automaticallyImplyLeading: false,
+        title: const Text('Attendance Records',
+            style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 18)),
+      ),
+      body: StreamBuilder<QuerySnapshot>(
+        // 2. Query filtered by the logged-in invigilator's name
+        stream: FirebaseFirestore.instance
+            .collection('attendance')
+            .where('submittedBy', isEqualTo: _currentUserName)
+            .orderBy('timestamp', descending: true)
+            .snapshots(),
+        builder: (context, snapshot) {
+          // 3. Catch Index errors and show them on the screen
+          if (snapshot.hasError) {
+            return Center(
+              child: Padding(
+                padding: const EdgeInsets.all(20.0),
+                child: Text(
+                  "Database Error: Please ensure you clicked the link in your console to create the index.\n\nDetails: ${snapshot.error}",
+                  textAlign: TextAlign.center,
+                  style: const TextStyle(color: Colors.red, fontSize: 12),
                 ),
               ),
-            ],
-          ),
-          body: assignedCourse.isEmpty
-              ? const Center(
-                  child: Padding(
-                    padding: EdgeInsets.all(32),
-                    child: Text(
-                      'No exam assignment found.\nAttendance records will appear here once you have been assigned an exam.',
-                      textAlign: TextAlign.center,
-                      style: TextStyle(fontSize: 15, color: tealDark),
-                    ),
-                  ),
-                )
-              // Step 2: stream attendance records for this course
-              : StreamBuilder<QuerySnapshot>(
-                  stream: FirebaseFirestore.instance
-                      .collection('attendance')
-                      .where('courseCode', isEqualTo: assignedCourse)
-                      .orderBy('timestamp', descending: true)
-                      .snapshots(),
-                  builder: (context, attSnap) {
-                    if (attSnap.connectionState == ConnectionState.waiting) {
-                      return const Center(
-                          child: CircularProgressIndicator(color: tealPrimary));
-                    }
+            );
+          }
 
-                    if (!attSnap.hasData || attSnap.data!.docs.isEmpty) {
-                      return const Center(
-                        child: Text(
-                          'No attendance records yet for this course.',
-                          style: TextStyle(color: tealDark, fontSize: 14),
-                        ),
-                      );
-                    }
+          if (snapshot.connectionState == ConnectionState.waiting) {
+            return const Center(child: CircularProgressIndicator(color: tealPrimary));
+          }
 
-                    final docs = attSnap.data!.docs;
-
-                    // Show a list of sessions; tap to expand the full list
-                    return ListView.builder(
-                      padding: const EdgeInsets.all(12),
-                      itemCount: docs.length,
-                      itemBuilder: (context, index) {
-                        final data = docs[index].data() as Map<String, dynamic>;
-                        return _SessionCard(attendanceData: data);
-                      },
-                    );
-                  },
+          if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
+            return const Center(
+              child: Padding(
+                padding: EdgeInsets.all(32),
+                child: Text(
+                  'No attendance records found yet.\nRecords will appear here once you submit attendance.',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(fontSize: 15, color: tealDark),
                 ),
-        );
-      },
+              ),
+            );
+          }
+
+          final docs = snapshot.data!.docs;
+
+          return ListView.builder(
+            padding: const EdgeInsets.all(12),
+            itemCount: docs.length,
+            itemBuilder: (context, index) {
+              final data = docs[index].data() as Map<String, dynamic>;
+              return _SessionCard(attendanceData: data);
+            },
+          );
+        },
+      ),
     );
   }
 }
 
-// ── A card for each attendance session ───────────────────────────────────────
 class _SessionCard extends StatelessWidget {
   final Map<String, dynamic> attendanceData;
 
@@ -136,16 +126,14 @@ class _SessionCard extends StatelessWidget {
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
       elevation: 1,
       child: ListTile(
-        contentPadding:
-            const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
         leading: CircleAvatar(
           backgroundColor: tealPrimary.withOpacity(0.1),
           child: const Icon(Icons.assignment_turned_in, color: tealPrimary),
         ),
         title: Text(
           '$courseCode – $sessionType',
-          style: const TextStyle(
-              fontWeight: FontWeight.bold, fontSize: 14, color: tealDark),
+          style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: tealDark),
         ),
         subtitle: Text('$date  •  $totalPresent present',
             style: const TextStyle(fontSize: 12, color: Colors.black54)),
@@ -153,8 +141,7 @@ class _SessionCard extends StatelessWidget {
         onTap: () => Navigator.push(
           context,
           MaterialPageRoute(
-            builder: (_) =>
-                _AttendanceDetailPage(attendanceData: attendanceData),
+            builder: (_) => _AttendanceDetailPage(attendanceData: attendanceData),
           ),
         ),
       ),
@@ -162,7 +149,6 @@ class _SessionCard extends StatelessWidget {
   }
 }
 
-// ── Full detail view (mirrors ViewList from view_list.dart) ──────────────────
 class _AttendanceDetailPage extends StatelessWidget {
   final Map<String, dynamic> attendanceData;
 
@@ -180,23 +166,8 @@ class _AttendanceDetailPage extends StatelessWidget {
         iconTheme: const IconThemeData(color: Colors.white),
         title: const Text(
           'AAS',
-          style: TextStyle(
-              color: Colors.white, fontWeight: FontWeight.bold, fontSize: 18),
+          style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 18),
         ),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.notifications_none, color: Colors.white),
-            onPressed: () {},
-          ),
-          const Padding(
-            padding: EdgeInsets.only(right: 16),
-            child: CircleAvatar(
-              backgroundColor: Colors.white24,
-              radius: 15,
-              child: Icon(Icons.person, color: Colors.white, size: 18),
-            ),
-          ),
-        ],
       ),
       body: Column(
         children: [
@@ -222,46 +193,28 @@ class _AttendanceDetailPage extends StatelessWidget {
               itemBuilder: (context, index) {
                 final student = fullList[index];
                 final String regNo = student['regNo']?.toString() ?? 'N/A';
-                final String firstName =
-                    student['name']?.toString() ?? 'Unknown';
+                final String firstName = student['name']?.toString() ?? 'Unknown';
                 final String lastName = student['surname']?.toString() ?? '';
                 final String status = student['status']?.toString() ?? 'Absent';
 
-                Widget statusWidget;
-                if (status == 'Present') {
-                  statusWidget = const Text('Present',
-                      style: TextStyle(
-                          fontSize: 10,
-                          color: tealDark,
-                          fontWeight: FontWeight.bold));
-                } else if (status == 'Exit') {
-                  statusWidget = const Text('E',
-                      style: TextStyle(
-                          fontSize: 12,
-                          color: Colors.green,
-                          fontWeight: FontWeight.bold));
-                } else {
-                  statusWidget = const Text('Absent',
-                      style: TextStyle(fontSize: 10, color: Colors.red));
-                }
+                Widget statusWidget = Text(
+                  status,
+                  style: TextStyle(
+                    fontSize: 10,
+                    color: status == 'Present' ? tealDark : Colors.red,
+                    fontWeight: status == 'Present' ? FontWeight.bold : FontWeight.normal,
+                  ),
+                );
 
                 return Container(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                   decoration: const BoxDecoration(
-                    border: Border(
-                        bottom: BorderSide(color: Colors.black12, width: 0.5)),
+                    border: Border(bottom: BorderSide(color: Colors.black12, width: 0.5)),
                   ),
                   child: Row(
                     children: [
-                      Expanded(
-                          flex: 3,
-                          child: Text(regNo,
-                              style: const TextStyle(fontSize: 10))),
-                      Expanded(
-                          flex: 4,
-                          child: Text('$firstName $lastName',
-                              style: const TextStyle(fontSize: 10))),
+                      Expanded(flex: 3, child: Text(regNo, style: const TextStyle(fontSize: 10))),
+                      Expanded(flex: 4, child: Text('$firstName $lastName', style: const TextStyle(fontSize: 10))),
                       Expanded(flex: 2, child: statusWidget),
                     ],
                   ),
@@ -281,8 +234,7 @@ class _AttendanceDetailPage extends StatelessWidget {
                 },
                 style: ElevatedButton.styleFrom(backgroundColor: tealPrimary),
                 icon: const Icon(Icons.download, color: Colors.white),
-                label: const Text('Download CSV',
-                    style: TextStyle(color: Colors.white)),
+                label: const Text('Download CSV', style: TextStyle(color: Colors.white)),
               ),
             ),
           ),
@@ -301,8 +253,7 @@ class _AttendanceDetailPage extends StatelessWidget {
       ),
       child: Text(
         text,
-        style: const TextStyle(
-            fontSize: 10, fontWeight: FontWeight.bold, color: tealDark),
+        style: const TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: tealDark),
       ),
     );
   }
@@ -322,8 +273,6 @@ class _AttendanceDetailPage extends StatelessWidget {
   }
 
   Widget _headerText(String text) {
-    return Text(text,
-        style: const TextStyle(
-            fontWeight: FontWeight.bold, fontSize: 11, color: tealDark));
+    return Text(text, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 11, color: tealDark));
   }
 }
