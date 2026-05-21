@@ -33,13 +33,18 @@ class _AttendanceHistoryState extends State<AttendanceHistory> with SingleTicker
   Future<void> _fetchAssignedCourses() async {
     final uid = FirebaseAuth.instance.currentUser?.uid;
     if (uid == null) return;
-    var doc = await FirebaseFirestore.instance.collection('lecturers').doc(uid).get();
+    var doc = await FirebaseFirestore.instance
+        .collection('lecturers')
+        .doc(uid)
+        .get();
     if (doc.exists) {
       List<dynamic> rawList = doc.data()?['assignedCourses'] ?? [];
       List<String> codes = [];
       for (var item in rawList) {
         String val = item.toString();
-        val.contains(',') ? codes.addAll(val.split(',').map((e) => e.trim())) : codes.add(val.trim());
+        val.contains(',')
+            ? codes.addAll(val.split(',').map((e) => e.trim()))
+            : codes.add(val.trim());
       }
       setState(() => assignedCourses = codes);
     }
@@ -73,74 +78,93 @@ class _AttendanceHistoryState extends State<AttendanceHistory> with SingleTicker
 
     showDialog(
       context: context,
-      builder: (context) => StatefulBuilder(
-        builder: (context, setDialogState) => AlertDialog(
-          title: Text(docId == null ? "Create Active Session" : "Edit Active Session",
-              style: const TextStyle(color: tealPrimary)),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              DropdownButton<String>(
-                isExpanded: true,
-                hint: const Text("Select Course"),
-                value: selCourse,
-                items: assignedCourses.map((e) => DropdownMenuItem(value: e, child: Text(e))).toList(),
-                onChanged: (v) => setDialogState(() => selCourse = v),
-              ),
-              DropdownButton<String>(
-                isExpanded: true,
-                hint: const Text("Session Type"),
-                value: selType,
-                items: ["Class", "Lab", "Exam"].map((e) => DropdownMenuItem(value: e, child: Text(e))).toList(),
-                onChanged: (v) => setDialogState(() => selType = v),
-              ),
-              ListTile(
-                title: Text("Start: ${startTime.format(context)}"),
-                trailing: const Icon(Icons.access_time, size: 20),
-                onTap: () async {
-                  final t = await showTimePicker(context: context, initialTime: startTime);
-                  if (t != null) setDialogState(() => startTime = t);
-                },
-              ),
-              ListTile(
-                title: Text("End: ${endTime.format(context)}"),
-                trailing: const Icon(Icons.access_time, size: 20),
-                onTap: () async {
-                  final t = await showTimePicker(context: context, initialTime: endTime);
-                  if (t != null) setDialogState(() => endTime = t);
-                },
-              ),
-            ],
+      builder: (context) =>
+          StatefulBuilder(
+            builder: (context, setDialogState) =>
+                AlertDialog(
+                  title: Text(docId == null
+                      ? "Create Active Session"
+                      : "Edit Active Session",
+                      style: const TextStyle(color: tealPrimary)),
+                  content: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      DropdownButton<String>(
+                        isExpanded: true,
+                        hint: const Text("Select Course"),
+                        value: selCourse,
+                        items: assignedCourses
+                            .map((e) =>
+                            DropdownMenuItem(value: e, child: Text(e)))
+                            .toList(),
+                        onChanged: (v) => setDialogState(() => selCourse = v),
+                      ),
+                      DropdownButton<String>(
+                        isExpanded: true,
+                        hint: const Text("Session Type"),
+                        value: selType,
+                        items: ["Class", "Lab", "Exam"]
+                            .map((e) =>
+                            DropdownMenuItem(value: e, child: Text(e)))
+                            .toList(),
+                        onChanged: (v) => setDialogState(() => selType = v),
+                      ),
+                      ListTile(
+                        title: Text("Start: ${startTime.format(context)}"),
+                        trailing: const Icon(Icons.access_time, size: 20),
+                        onTap: () async {
+                          final t = await showTimePicker(
+                              context: context, initialTime: startTime);
+                          if (t != null) setDialogState(() => startTime = t);
+                        },
+                      ),
+                      ListTile(
+                        title: Text("End: ${endTime.format(context)}"),
+                        trailing: const Icon(Icons.access_time, size: 20),
+                        onTap: () async {
+                          final t = await showTimePicker(
+                              context: context, initialTime: endTime);
+                          if (t != null) setDialogState(() => endTime = t);
+                        },
+                      ),
+                    ],
+                  ),
+                  actions: [
+                    TextButton(onPressed: () => Navigator.pop(context),
+                        child: const Text("Cancel")),
+                    ElevatedButton(
+                      style: ElevatedButton.styleFrom(
+                          backgroundColor: tealPrimary),
+                      onPressed: (selCourse == null || selType == null)
+                          ? null
+                          : () async {
+                        final uid = FirebaseAuth.instance.currentUser?.uid;
+                        final data = {
+                          'lecturerId': uid,
+                          'courseCode': selCourse,
+                          'sessionType': selType,
+                          'startTime': startTime.format(context),
+                          'endTime': endTime.format(context),
+                          'updatedAt': FieldValue.serverTimestamp(),
+                        };
+
+                        if (docId == null) {
+                          data['createdAt'] = FieldValue.serverTimestamp();
+                          await FirebaseFirestore.instance.collection(
+                              'active_sessions').add(data);
+                        } else {
+                          await FirebaseFirestore.instance.collection(
+                              'active_sessions').doc(docId).update(data);
+                        }
+
+                        if (context.mounted) Navigator.pop(context);
+                      },
+                      child: Text(docId == null ? "Create" : "Update",
+                          style: const TextStyle(color: Colors.white)),
+                    )
+                  ],
+                ),
           ),
-          actions: [
-            TextButton(onPressed: () => Navigator.pop(context), child: const Text("Cancel")),
-            ElevatedButton(
-              style: ElevatedButton.styleFrom(backgroundColor: tealPrimary),
-              onPressed: (selCourse == null || selType == null) ? null : () async {
-                final uid = FirebaseAuth.instance.currentUser?.uid;
-                final data = {
-                  'lecturerId': uid,
-                  'courseCode': selCourse,
-                  'sessionType': selType,
-                  'startTime': startTime.format(context),
-                  'endTime': endTime.format(context),
-                  'updatedAt': FieldValue.serverTimestamp(),
-                };
-
-                if (docId == null) {
-                  data['createdAt'] = FieldValue.serverTimestamp();
-                  await FirebaseFirestore.instance.collection('active_sessions').add(data);
-                } else {
-                  await FirebaseFirestore.instance.collection('active_sessions').doc(docId).update(data);
-                }
-
-                if (context.mounted) Navigator.pop(context);
-              },
-              child: Text(docId == null ? "Create" : "Update", style: const TextStyle(color: Colors.white)),
-            )
-          ],
-        ),
-      ),
     );
   }
 
@@ -151,7 +175,8 @@ class _AttendanceHistoryState extends State<AttendanceHistory> with SingleTicker
       appBar: AppBar(
         backgroundColor: tealPrimary,
         automaticallyImplyLeading: false,
-        title: const Text('Session Manager', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+        title: const Text('Session Manager',
+            style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
         bottom: TabBar(
           controller: _tabController,
           indicatorColor: Colors.white,
@@ -172,8 +197,12 @@ class _AttendanceHistoryState extends State<AttendanceHistory> with SingleTicker
       bottomNavigationBar: BottomNavigationBar(
         currentIndex: _currentIndex,
         onTap: (i) {
-          if (i == 0 || i == 1) Navigator.pushAndRemoveUntil(context, MaterialPageRoute(builder: (_) => LecturerDashboard(initialIndex: i)), (r) => false);
-          if (i == 3) Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) => const Assign()));
+          if (i == 0 || i == 1) Navigator.pushAndRemoveUntil(context,
+              MaterialPageRoute(
+                  builder: (_) => LecturerDashboard(initialIndex: i)), (
+                  r) => false);
+          if (i == 3) Navigator.pushReplacement(
+              context, MaterialPageRoute(builder: (_) => const Assign()));
         },
         type: BottomNavigationBarType.fixed,
         backgroundColor: tealPrimary,
@@ -181,8 +210,10 @@ class _AttendanceHistoryState extends State<AttendanceHistory> with SingleTicker
         unselectedItemColor: Colors.white70,
         items: const [
           BottomNavigationBarItem(icon: Icon(Icons.home), label: 'Home'),
-          BottomNavigationBarItem(icon: Icon(Icons.qr_code_scanner), label: 'Attendance'),
-          BottomNavigationBarItem(icon: Icon(Icons.manage_accounts), label: 'Manager'),
+          BottomNavigationBarItem(
+              icon: Icon(Icons.qr_code_scanner), label: 'Attendance'),
+          BottomNavigationBarItem(
+              icon: Icon(Icons.manage_accounts), label: 'Manager'),
         ],
       ),
     );
@@ -191,11 +222,14 @@ class _AttendanceHistoryState extends State<AttendanceHistory> with SingleTicker
   Widget _buildManageTab() {
     final uid = FirebaseAuth.instance.currentUser?.uid ?? "";
     return StreamBuilder<QuerySnapshot>(
-      stream: FirebaseFirestore.instance.collection('active_sessions').where('lecturerId', isEqualTo: uid).snapshots(),
+      stream: FirebaseFirestore.instance.collection('active_sessions').where(
+          'lecturerId', isEqualTo: uid).snapshots(),
       builder: (context, snapshot) {
-        if (!snapshot.hasData) return const Center(child: CircularProgressIndicator());
+        if (!snapshot.hasData)
+          return const Center(child: CircularProgressIndicator());
         final docs = snapshot.data!.docs;
-        if (docs.isEmpty) return const Center(child: Text("No active sessions."));
+        if (docs.isEmpty)
+          return const Center(child: Text("No active sessions."));
 
         return ListView.builder(
           itemCount: docs.length,
@@ -205,18 +239,26 @@ class _AttendanceHistoryState extends State<AttendanceHistory> with SingleTicker
             return Card(
               child: ListTile(
                 leading: const Icon(Icons.timer, color: tealPrimary),
-                title: Text("${data['courseCode']} (${data['sessionType']})", style: const TextStyle(fontWeight: FontWeight.bold)),
-                subtitle: Text("Time: ${data['startTime']} - ${data['endTime']}"),
+                title: Text("${data['courseCode']} (${data['sessionType']})",
+                    style: const TextStyle(fontWeight: FontWeight.bold)),
+                subtitle: Text(
+                    "Time: ${data['startTime']} - ${data['endTime']}"),
                 trailing: Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
                     IconButton(
-                      icon: const Icon(Icons.edit, color: tealPrimary, size: 20),
-                      onPressed: () => _showSessionDialog(docId: docs[i].id, existingData: data),
+                      icon: const Icon(
+                          Icons.edit, color: tealPrimary, size: 20),
+                      onPressed: () =>
+                          _showSessionDialog(docId: docs[i].id,
+                              existingData: data),
                     ),
                     IconButton(
-                      icon: const Icon(Icons.delete_outline, color: Colors.red, size: 20),
-                      onPressed: () => FirebaseFirestore.instance.collection('active_sessions').doc(docs[i].id).delete(),
+                      icon: const Icon(
+                          Icons.delete_outline, color: Colors.red, size: 20),
+                      onPressed: () =>
+                          FirebaseFirestore.instance.collection(
+                              'active_sessions').doc(docs[i].id).delete(),
                     ),
                   ],
                 ),
@@ -231,10 +273,27 @@ class _AttendanceHistoryState extends State<AttendanceHistory> with SingleTicker
   Widget _buildHistoryTab() {
     final uid = FirebaseAuth.instance.currentUser?.uid ?? "";
     return StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
-      stream: FirebaseFirestore.instance.collection('attendance').where('lecturerId', isEqualTo: uid).orderBy('timestamp', descending: true).snapshots(),
+      stream: FirebaseFirestore.instance
+          .collection('attendance')
+          .where('lecturerId', isEqualTo: uid)
+          .orderBy('timestamp', descending: true)
+          .snapshots(),
       builder: (context, snapshot) {
-        if (!snapshot.hasData) return const Center(child: CircularProgressIndicator());
-        final docs = snapshot.data!.docs;
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return const Center(
+              child: CircularProgressIndicator(color: tealPrimary));
+        }
+
+        if (snapshot.hasError) {
+          return Center(
+              child: Text("Error loading history: ${snapshot.error}"));
+        }
+
+        final docs = snapshot.data?.docs ?? [];
+        if (docs.isEmpty) {
+          return const Center(child: Text("No attendance history found."));
+        }
+
         return ListView.builder(
           itemCount: docs.length,
           itemBuilder: (context, i) {
@@ -242,10 +301,23 @@ class _AttendanceHistoryState extends State<AttendanceHistory> with SingleTicker
             return Card(
               margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
               child: ListTile(
-                title: Text("${d['courseCode']} - ${d['sessionType']}"),
-                subtitle: Text("Date: ${d['date']}"),
+                leading: const CircleAvatar(
+                  backgroundColor: tealLight,
+                  child: Icon(Icons.history, color: tealPrimary),
+                ),
+                title: Text(
+                  "${d['courseCode']} - ${d['sessionType']}",
+                  style: const TextStyle(fontWeight: FontWeight.bold),
+                ),
+                subtitle: Text(
+                    "Date: ${d['date']} | Present: ${d['totalPresent'] ?? 0}"),
                 trailing: const Icon(Icons.visibility, color: tealPrimary),
-                onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => ViewList(attendanceData: d))),
+                onTap: () =>
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                          builder: (_) => ViewList(attendanceData: d)),
+                    ),
               ),
             );
           },

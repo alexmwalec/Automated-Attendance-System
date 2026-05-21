@@ -1,7 +1,7 @@
-import 'package:firebase_auth/firebase_auth.dart'; // Add this
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import '../Lecturer/take_attendance.dart';
+import 'invigilator_take_attendance.dart';
 
 class InvigilatorHome extends StatefulWidget {
   const InvigilatorHome({super.key});
@@ -89,9 +89,11 @@ class _InvigilatorHomeState extends State<InvigilatorHome> {
                     Navigator.push(
                       context,
                       MaterialPageRoute(
-                        builder: (_) => AttendancePage(
-                          courseCode: data['course'],
-                          sessionType: data['sessionType'],
+                        builder: (_) => InvigilatorTakeAttendance(
+                          courseCode: data['course'] ?? 'N/A',
+                          sessionType: data['sessionType'] ?? 'N/A',
+                          venue: data['room'] ?? 'N/A',
+                          date: data['date'] ?? 'N/A',
                         ),
                       ),
                     );
@@ -120,11 +122,20 @@ class _InvigilatorHomeState extends State<InvigilatorHome> {
     );
   }
 }
+
+// ── Assignment Card UI Component ──────────────────────────────────────────────
 class _AssignmentCard extends StatelessWidget {
   final String course, venue, date, time, sessionType;
   final VoidCallback onTap;
 
-  const _AssignmentCard({required this.course, required this.venue, required this.date, required this.time, required this.sessionType, required this.onTap});
+  const _AssignmentCard({
+    required this.course,
+    required this.venue,
+    required this.date,
+    required this.time,
+    required this.sessionType,
+    required this.onTap,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -132,7 +143,11 @@ class _AssignmentCard extends StatelessWidget {
       onTap: onTap,
       child: Container(
         padding: const EdgeInsets.all(16),
-        decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(16), border: Border.all(color: Colors.black12)),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: Colors.black12),
+        ),
         child: Column(
           children: [
             Row(children: [
@@ -143,11 +158,14 @@ class _AssignmentCard extends StatelessWidget {
               const Icon(Icons.arrow_forward_ios, size: 14, color: Colors.grey),
             ]),
             const Divider(),
-            Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
-              _info('Venue', venue),
-              _info('Date', date),
-              _info('Time', time),
-            ])
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                _info('Venue', venue),
+                _info('Date', date),
+                _info('Time', time),
+              ],
+            )
           ],
         ),
       ),
@@ -155,9 +173,12 @@ class _AssignmentCard extends StatelessWidget {
   }
 
   Widget _info(String label, String val) {
-    return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-      Text(label, style: const TextStyle(fontSize: 10, color: Colors.grey)),
-      Text(val, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
-    ]);
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(label, style: const TextStyle(fontSize: 10, color: Colors.grey)),
+        Text(val, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
+      ],
+    );
   }
 }
