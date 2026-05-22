@@ -28,10 +28,8 @@ class _AttendancePageState extends State<AttendancePage> {
   final List<Map<String, String>> _scannedStudents = [];
   bool _isProcessing = false;
 
-  // --- NEW: failure tracking ---
   int _failedScanCount = 0;
   String? _lastFailedCode;
-  // -----------------------------
 
   late String _selectedSessionType;
   final List<String> _sessionTypes = ['Class', 'Lab', 'Exam'];
@@ -48,7 +46,6 @@ class _AttendancePageState extends State<AttendancePage> {
     super.dispose();
   }
 
-  // --- NEW: handle failed scan attempts ---
   void _handleFailedScan(String code) {
     if (_lastFailedCode != code) {
       _lastFailedCode = code;
@@ -73,7 +70,6 @@ class _AttendancePageState extends State<AttendancePage> {
       );
     }
   }
-  // ----------------------------------------
 
   void _onDetect(BarcodeCapture capture) async {
     if (_isProcessing) return;
@@ -107,19 +103,18 @@ class _AttendancePageState extends State<AttendancePage> {
             } else {
               setState(() {
                 _scannedStudents.add(student);
-                // Reset fail counter on success
                 _failedScanCount = 0;
                 _lastFailedCode = null;
               });
               _showSnack('Captured: ${student['name']}', tealDark);
             }
           } else {
-            _handleFailedScan(code); // --- CHANGED ---
+            _handleFailedScan(code);
             _showSnack(
                 'Student not registered for ${widget.courseCode}', Colors.red);
           }
         } else {
-          _handleFailedScan(code); // --- CHANGED ---
+          _handleFailedScan(code);
           _showSnack('Student $code not found', Colors.red);
         }
       } catch (e) {
@@ -151,7 +146,6 @@ class _AttendancePageState extends State<AttendancePage> {
           existingStudents: _scannedStudents,
           onStudentAdded: (student) {
             setState(() {
-              // Avoid adding duplicates if they closed and reopened search
               if (!_scannedStudents
                   .any((s) => s['regNo'] == student['regNo'])) {
                 _scannedStudents.add(student);
@@ -189,23 +183,30 @@ class _AttendancePageState extends State<AttendancePage> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Displaying the specific course being scanned for
+            // ── NEW: single info bar replacing the old recording card + count card ──
             Container(
               width: double.infinity,
-              padding: const EdgeInsets.all(12),
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
               decoration: BoxDecoration(
-                color: tealPrimary.withOpacity(0.1),
+                color: tealPrimary,
                 borderRadius: BorderRadius.circular(8),
-                border: Border.all(color: tealPrimary.withOpacity(0.3)),
               ),
               child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  const Icon(Icons.book, color: tealPrimary),
-                  const SizedBox(width: 10),
                   Text(
-                    "Recording for: ${widget.courseCode}",
+                    'COURSE : ${widget.courseCode}',
                     style: const TextStyle(
-                        fontWeight: FontWeight.bold, color: tealDark),
+                        color: Colors.white,
+                        fontWeight: FontWeight.bold,
+                        fontSize: 13),
+                  ),
+                  Text(
+                    'SESSION TYPE : $_selectedSessionType',
+                    style: const TextStyle(
+                        color: Colors.white,
+                        fontWeight: FontWeight.bold,
+                        fontSize: 13),
                   ),
                 ],
               ),
@@ -268,24 +269,7 @@ class _AttendancePageState extends State<AttendancePage> {
                     style: TextStyle(color: tealPrimary)),
               ),
             ),
-            const SizedBox(height: 16),
-
-            // Dynamic Session Count Card
-            Card(
-              elevation: 2,
-              shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(10)),
-              child: ListTile(
-                tileColor: Colors.white,
-                leading: const Icon(Icons.group, color: tealPrimary),
-                title: Text("${_scannedStudents.length} Students Scanned",
-                    style: const TextStyle(fontWeight: FontWeight.bold)),
-                subtitle: Text("Selected Course: ${widget.courseCode}"),
-                trailing: Text(_selectedSessionType,
-                    style: const TextStyle(
-                        color: tealPrimary, fontWeight: FontWeight.bold)),
-              ),
-            )
+            // ── REMOVED: the scanned count card is gone ──
           ],
         ),
       ),
