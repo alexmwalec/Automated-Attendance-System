@@ -230,8 +230,7 @@ class _AttendanceHistoryState extends State<AttendanceHistory> with SingleTicker
       },
     );
   }
-
-  Widget _buildHistoryTab() {
+ Widget _buildHistoryTab() {
     final uid = FirebaseAuth.instance.currentUser?.uid ?? "";
     return StreamBuilder<QuerySnapshot>(
       stream: FirebaseFirestore.instance
@@ -271,7 +270,6 @@ class _AttendanceHistoryState extends State<AttendanceHistory> with SingleTicker
                     style: const TextStyle(fontWeight: FontWeight.bold, color: tealPrimary)),
                 isThreeLine: true,
                 onTap: () {
-                  // Reuse the existing ViewList or detail page logic here if needed
                 },
               ),
             );

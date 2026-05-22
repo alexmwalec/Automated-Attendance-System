@@ -52,8 +52,6 @@ class _ManualSearchState extends State<ManualSearch> {
     setState(() => _isLoading = true);
 
     try {
-      // Since 'courses' is a string and regNo is likely the Document ID,
-      // we fetch students whose ID starts with the query.
       final studentSnapshot = await FirebaseFirestore.instance
           .collection('students')
           .where(FieldPath.documentId, isGreaterThanOrEqualTo: q)
@@ -119,7 +117,7 @@ class _ManualSearchState extends State<ManualSearch> {
               decoration: InputDecoration(
                 filled: true,
                 fillColor: Colors.white,
-                hintText: "Enter Reg Number (e.g. bed-com...)",
+                hintText: "Enter Reg Number (e.g.  bed-com-32-21)",
                 prefixIcon: const Icon(Icons.search, color: tealPrimary),
                 suffixIcon: _ctrl.text.isNotEmpty
                     ? IconButton(icon: const Icon(Icons.clear), onPressed: () { _ctrl.clear(); _onSearchChanged(''); })
@@ -146,7 +144,6 @@ class _ManualSearchState extends State<ManualSearch> {
                 String name = s['name']!;
                 String surname = s['surname']!;
 
-                // Check if already in the scanned list
                 bool alreadyAdded = widget.existingStudents.any(
                         (e) => e['regNo']?.toLowerCase() == reg.toLowerCase());
 
