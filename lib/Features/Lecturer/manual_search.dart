@@ -52,52 +52,34 @@ class _ManualSearchState extends State<ManualSearch> {
     setState(() => _isLoading = true);
 
     try {
-      //  Get the course document to find enrolled students
-      DocumentSnapshot courseDoc = await FirebaseFirestore.instance
-          .collection('courses')
-          .doc(widget.courseCode)
-          .get();
-
-      if (!courseDoc.exists) {
-        setState(() => _isLoading = false);
-        return;
-      }
-
-      //  Extract the comma-separated string from the array [0]
-      List<dynamic> enrolledArray = courseDoc.get('enrolledStudents') ?? [];
-      if (enrolledArray.isEmpty) {
-        setState(() { _results = []; _isLoading = false; });
-        return;
-      }
-
-      String allRegStr = enrolledArray[0].toString();
-
-      //  Split and filter the list by the user's input
-      List<String> matches = allRegStr
-          .split(',')
-          .map((e) => e.trim().toLowerCase())
-          .where((e) => e.contains(q))
-          .toList();
-
-      if (matches.isEmpty) {
-        setState(() { _results = []; _isLoading = false; });
-        return;
-      }
-
-      //  Fetch full student details for the matching registration numbers
+      // Since 'courses' is a string and regNo is likely the Document ID,
+      // we fetch students whose ID starts with the query.
       final studentSnapshot = await FirebaseFirestore.instance
           .collection('students')
-          .where('regNo', whereIn: matches.take(30).toList())
+          .where(FieldPath.documentId, isGreaterThanOrEqualTo: q)
+          .where(FieldPath.documentId, isLessThanOrEqualTo: '$q\uf8ff')
+          .limit(40)
           .get();
 
-      final List<Map<String, String>> searchResults = studentSnapshot.docs.map((doc) {
+      final List<Map<String, String>> searchResults = [];
+
+      for (var doc in studentSnapshot.docs) {
         final data = doc.data();
-        return {
-          'regNo': data['regNo']?.toString() ?? 'N/A',
-          'name': data['name']?.toString() ?? 'Unknown',
-          'surname': data['surname']?.toString() ?? '',
-        };
-      }).toList();
+        final String coursesString = data['courses']?.toString() ?? '';
+
+        final List<String> courseList = coursesString
+            .split(',')
+            .map((e) => e.trim().toUpperCase())
+            .toList();
+
+        if (courseList.contains(widget.courseCode.trim().toUpperCase())) {
+          searchResults.add({
+            'regNo': doc.id, // The document ID is the Reg No
+            'name': data['name']?.toString() ?? 'Unknown',
+            'surname': data['surname']?.toString() ?? '',
+          });
+        }
+      }
 
       if (mounted) {
         setState(() {
@@ -117,53 +99,75 @@ class _ManualSearchState extends State<ManualSearch> {
       backgroundColor: tealLight,
       appBar: AppBar(
         backgroundColor: tealPrimary,
+        elevation: 0,
         iconTheme: const IconThemeData(color: Colors.white),
-        title: Text('Search Students (${widget.courseCode})',
-            style: const TextStyle(color: Colors.white, fontSize: 18)),
+        title: Text('Search ${widget.courseCode}',
+            style: const TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold)),
       ),
       body: Column(
         children: [
-          Padding(
+          // Search Input
+          Container(
             padding: const EdgeInsets.all(16.0),
+            color: tealPrimary,
             child: TextField(
               controller: _ctrl,
               onChanged: _onSearchChanged,
+              style: const TextStyle(color: Colors.black),
               decoration: InputDecoration(
                 filled: true,
                 fillColor: Colors.white,
-                hintText: "Enter Reg Number...",
+                hintText: "Enter Reg Number (e.g. bed-com-32-21)",
                 prefixIcon: const Icon(Icons.search, color: tealPrimary),
-                border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+                suffixIcon: _ctrl.text.isNotEmpty
+                    ? IconButton(icon: const Icon(Icons.clear), onPressed: () { _ctrl.clear(); _onSearchChanged(''); })
+                    : null,
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  borderSide: BorderSide.none,
+                ),
               ),
             ),
           ),
-          if (_isLoading) const LinearProgressIndicator(color: tealPrimary),
+
+          if (_isLoading) const LinearProgressIndicator(color: tealDark),
+
           Expanded(
-            child: ListView.builder(
+            child: _results.isEmpty && _ctrl.text.isNotEmpty && !_isLoading
+                ? const Center(child: Text("No matching students found in this course."))
+                : ListView.builder(
+              padding: const EdgeInsets.symmetric(vertical: 10),
               itemCount: _results.length,
               itemBuilder: (context, i) {
                 final s = _results[i];
-                // SAFETY: Provide fallback if strings are null
-                String reg = s['regNo'] ?? 'N/A';
-                String name = s['name'] ?? 'Unknown';
-                String surname = s['surname'] ?? '';
+                String reg = s['regNo']!;
+                String name = s['name']!;
+                String surname = s['surname']!;
 
-                bool added = widget.existingStudents.any((e) => e['regNo'] == reg);
+                // Check if already in the scanned list
+                bool alreadyAdded = widget.existingStudents.any(
+                        (e) => e['regNo']?.toLowerCase() == reg.toLowerCase());
 
-                return ListTile(
-                  leading: CircleAvatar(
-                    backgroundColor: tealPrimary,
-                    child: Text(name.isNotEmpty ? name[0].toUpperCase() : "?",
-                        style: const TextStyle(color: Colors.white)),
+                return Card(
+                  margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                  child: ListTile(
+                    leading: CircleAvatar(
+                      backgroundColor: tealLight,
+                      child: Text(name[0], style: const TextStyle(color: tealDark, fontWeight: FontWeight.bold)),
+                    ),
+                    title: Text(reg, style: const TextStyle(fontWeight: FontWeight.bold)),
+                    subtitle: Text("$name $surname"),
+                    trailing: alreadyAdded
+                        ? const Icon(Icons.check_circle, color: Colors.green)
+                        : const Icon(Icons.add_circle_outline, color: tealPrimary),
+                    onTap: alreadyAdded
+                        ? null
+                        : () {
+                      widget.onStudentAdded(s);
+                      Navigator.pop(context);
+                    },
                   ),
-                  title: Text(reg, style: const TextStyle(fontWeight: FontWeight.bold)),
-                  subtitle: Text("$name $surname"),
-                  trailing: Icon(added ? Icons.check_circle : Icons.add_circle_outline,
-                      color: added ? tealPrimary : tealDark),
-                  onTap: added ? null : () {
-                    widget.onStudentAdded(s);
-                    Navigator.pop(context);
-                  },
                 );
               },
             ),
