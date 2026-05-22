@@ -2,12 +2,9 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:automated_attendance_system/constants.dart';
 import 'manual_search.dart';
 import 'submit_list.dart';
-
-const Color tealPrimary = Color(0xFF2E9E8E);
-const Color tealDark = Color(0xFF227A6D);
-const Color tealLight = Color(0xFFE0F2F0);
 
 class AttendancePage extends StatefulWidget {
   final String courseCode;
@@ -31,10 +28,13 @@ class _AttendancePageState extends State<AttendancePage> {
   late String _selectedSessionType;
   final List<String> _sessionTypes = ['Class', 'Lab', 'Exam'];
 
+  // ── Failed scan tracking ─────────────────────────────────────────────────
+  // Maps a scanned code → how many times it has failed
+  final Map<String, int> _failedScanCount = {};
+
   @override
   void initState() {
     super.initState();
-
     _selectedSessionType = widget.sessionType;
   }
 
@@ -60,16 +60,18 @@ class _AttendancePageState extends State<AttendancePage> {
 
         if (studentDoc.exists) {
           final data = studentDoc.data()!;
-          List<dynamic> enrolledCourses =
-              data['courses'] ?? []; // Array of strings in Firestore
+          List<dynamic> enrolledCourses = data['courses'] ?? [];
 
-          // VALIDATION: Is student registered for THIS course?
           if (enrolledCourses.contains(widget.courseCode)) {
+            // ── SUCCESS: student is enrolled ──────────────────────────────
             final student = {
               'regNo': data['regNo'].toString(),
               'name': data['name'].toString(),
               'surname': data['surname'].toString(),
             };
+
+            // Clear any previous failure count for this code on success
+            _failedScanCount.remove(code);
 
             if (_scannedStudents.any((s) => s['regNo'] == student['regNo'])) {
               _showSnack('${student['regNo']} already marked!', Colors.orange);
@@ -78,11 +80,15 @@ class _AttendancePageState extends State<AttendancePage> {
               _showSnack('Captured: ${student['name']}', tealDark);
             }
           } else {
-            _showSnack(
-                'Student not registered for ${widget.courseCode}', Colors.red);
+            // ── FAIL: student not enrolled in this course ─────────────────
+            _recordFailedScan(
+              code,
+              'Student not registered for ${widget.courseCode}',
+            );
           }
         } else {
-          _showSnack('Student $code not found', Colors.red);
+          // ── FAIL: student document not found ─────────────────────────────
+          _recordFailedScan(code, 'Student $code not found');
         }
       } catch (e) {
         _showSnack('Error: $e', Colors.red);
@@ -91,6 +97,28 @@ class _AttendancePageState extends State<AttendancePage> {
       await Future.delayed(const Duration(seconds: 1));
       if (mounted) setState(() => _isProcessing = false);
       break;
+    }
+  }
+
+  /// Records a failed scan for [code]. On the 3rd failure, automatically
+  /// opens the manual search page and resets the counter for that code.
+  void _recordFailedScan(String code, String snackMessage) {
+    final count = (_failedScanCount[code] ?? 0) + 1;
+    _failedScanCount[code] = count;
+
+    if (count >= 3) {
+      // Reset counter so repeated scan attempts start fresh
+      _failedScanCount.remove(code);
+      _showSnack(
+        'Scan failed 3 times for "$code". Opening manual search...',
+        Colors.orange,
+      );
+      // Small delay so the snackbar is visible before navigation
+      Future.delayed(const Duration(milliseconds: 800), () {
+        if (mounted) _goManual(prefillCode: code);
+      });
+    } else {
+      _showSnack('$snackMessage (attempt $count/3)', Colors.red);
     }
   }
 
@@ -105,7 +133,9 @@ class _AttendancePageState extends State<AttendancePage> {
     );
   }
 
-  void _goManual() {
+  /// Opens the manual search page. If [prefillCode] is supplied it is passed
+  /// through so ManualSearch can pre-populate the search field if it supports it.
+  void _goManual({String? prefillCode}) {
     Navigator.push(
       context,
       MaterialPageRoute(
@@ -113,7 +143,6 @@ class _AttendancePageState extends State<AttendancePage> {
           existingStudents: _scannedStudents,
           onStudentAdded: (student) {
             setState(() {
-              // Avoid adding duplicates if they closed and reopened search
               if (!_scannedStudents
                   .any((s) => s['regNo'] == student['regNo'])) {
                 _scannedStudents.add(student);
@@ -151,7 +180,7 @@ class _AttendancePageState extends State<AttendancePage> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Displaying the specific course being scanned for
+            // Course info banner
             Container(
               width: double.infinity,
               padding: const EdgeInsets.all(12),
@@ -174,7 +203,7 @@ class _AttendancePageState extends State<AttendancePage> {
             ),
             const SizedBox(height: 16),
 
-            // Session Type Selector (Class/Lab/Exam)
+            // Session Type Selector
             const Text("Session Type",
                 style: TextStyle(fontWeight: FontWeight.bold, color: tealDark)),
             const SizedBox(height: 8),
@@ -216,15 +245,37 @@ class _AttendancePageState extends State<AttendancePage> {
                             child:
                                 CircularProgressIndicator(color: tealPrimary)),
                       ),
+                    // ── Failed scan counter badge ─────────────────────────
+                    if (_failedScanCount.isNotEmpty)
+                      Positioned(
+                        top: 10,
+                        left: 10,
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 10, vertical: 5),
+                          decoration: BoxDecoration(
+                            color: Colors.red.withOpacity(0.85),
+                            borderRadius: BorderRadius.circular(20),
+                          ),
+                          child: Text(
+                            'Failed: ${_failedScanCount.values.fold(0, (a, b) => a + b)}/3',
+                            style: const TextStyle(
+                                color: Colors.white,
+                                fontSize: 11,
+                                fontWeight: FontWeight.bold),
+                          ),
+                        ),
+                      ),
                   ],
                 ),
               ),
             ),
             const SizedBox(height: 16),
+
             SizedBox(
               width: double.infinity,
               child: OutlinedButton.icon(
-                onPressed: _goManual,
+                onPressed: () => _goManual(),
                 icon: const Icon(Icons.person_search, color: tealPrimary),
                 label: const Text('Add Student Manually',
                     style: TextStyle(color: tealPrimary)),
@@ -232,7 +283,7 @@ class _AttendancePageState extends State<AttendancePage> {
             ),
             const SizedBox(height: 16),
 
-            // Dynamic Session Count Card
+            // Session Count Card
             Card(
               elevation: 2,
               shape: RoundedRectangleBorder(
@@ -247,7 +298,7 @@ class _AttendancePageState extends State<AttendancePage> {
                     style: const TextStyle(
                         color: tealPrimary, fontWeight: FontWeight.bold)),
               ),
-            )
+            ),
           ],
         ),
       ),
