@@ -1,19 +1,11 @@
 import 'package:automated_attendance_system/Features/Lecturer/take_attendance.dart';
+import 'package:automated_attendance_system/Features/Lecturer/assign.dart';
 import 'package:flutter/material.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 
 const Color tealPrimary = Color(0xFF2E9E8E);
 const Color tealDark = Color(0xFF227A6D);
-const Color tealLight = Color(0xFFE0F2F0);
-const Color tealAccent = Color(0xFF26A69A);
-
-class Course extends StatelessWidget {
-  const Course({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    return const CourseSelectionScreen();
-  }
-}
 
 class CourseSelectionScreen extends StatefulWidget {
   const CourseSelectionScreen({super.key});
@@ -23,226 +15,160 @@ class CourseSelectionScreen extends StatefulWidget {
 }
 
 class _CourseSelectionScreenState extends State<CourseSelectionScreen> {
-  String? selectedSessionType;
-  String? selectedCourse;
-
-  final List<String> sessionTypes = ['Class', 'Lab', 'Exam'];
-
-  final List<Map<String, String>> courses = [
-    {'code': 'COM 421', 'year': '4 Year'},
-    {'code': 'COM 424', 'year': '4 Year'},
-    {'code': 'INF 423', 'year': '4 Year'},
-    {'code': 'COM 423', 'year': '4 Year'},
-  ];
-
   @override
   Widget build(BuildContext context) {
-    return SingleChildScrollView(
-      padding: const EdgeInsets.all(16),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Container(
-            width: double.infinity,
-            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-            decoration: BoxDecoration(
-              color: Colors.white.withOpacity(0.85),
-              border: Border.all(color: tealPrimary.withOpacity(0.4)),
-              borderRadius: BorderRadius.circular(10),
+    return Scaffold(
+      body: SingleChildScrollView(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            _buildInfoBox(),
+            const SizedBox(height: 24),
+            const Text(
+              'ACTIVE SESSIONS',
+              style: TextStyle(
+                  fontSize: 13, fontWeight: FontWeight.bold, color: tealDark),
             ),
-            child: RichText(
-              text: const TextSpan(
-                style: TextStyle(fontSize: 13, color: Colors.black87),
-                children: [
-                  TextSpan(text: 'Select '),
-                  TextSpan(
-                    text: 'course',
-                    style: TextStyle(
-                      color: Colors.blue,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                  TextSpan(text: ' and '),
-                  TextSpan(
-                    text: 'session type',
-                    style: TextStyle(
-                      color: Colors.red,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                  TextSpan(
-                    text: ' before proceeding to recording attendance',
-                  ),
-                ],
+            const SizedBox(height: 10),
+            _buildCourseGrid(),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildInfoBox() {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        border: Border.all(color: tealPrimary.withOpacity(0.4)),
+        borderRadius: BorderRadius.circular(10),
+      ),
+      child: const Text(
+          'Select an active session to start recording attendance or assign an invigilator.',
+          style: TextStyle(fontSize: 13, color: Colors.black87)),
+    );
+  }
+
+  Widget _buildCourseGrid() {
+    final uid = FirebaseAuth.instance.currentUser?.uid ?? "";
+    return StreamBuilder<QuerySnapshot>(
+      stream: FirebaseFirestore.instance
+          .collection('active_sessions')
+          .where('lecturerId', isEqualTo: uid)
+          .snapshots(),
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return const Center(
+              child: CircularProgressIndicator(color: tealPrimary));
+        }
+        if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
+          return const Center(
+            child: Padding(
+              padding: EdgeInsets.only(top: 40),
+              child: Text(
+                "No active sessions found.\nCreate active sessions first.",
+                textAlign: TextAlign.center,
+                style: TextStyle(color: Colors.grey),
               ),
             ),
+          );
+        }
+
+        final docs = snapshot.data!.docs;
+
+        return GridView.builder(
+          shrinkWrap: true,
+          physics: const NeverScrollableScrollPhysics(),
+          gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+            crossAxisCount: 2,
+            childAspectRatio: 2.0,
+            crossAxisSpacing: 10,
+            mainAxisSpacing: 10,
           ),
-
-          const SizedBox(height: 24),
-
-          // SESSION TYPE Label
-          const Text(
-            'SESSION TYPE',
-            style: TextStyle(
-              fontSize: 13,
-              fontWeight: FontWeight.bold,
-              color: tealDark,
-              letterSpacing: 0.5,
-            ),
-          ),
-
-          const SizedBox(height: 10),
-
-          // Session Type Buttons Row
-          Row(
-            children: sessionTypes.map((type) {
-              final isSelected = selectedSessionType == type;
-              return Padding(
-                padding: const EdgeInsets.only(right: 8),
-                child: GestureDetector(
-                  onTap: () {
-                    setState(() {
-                      selectedSessionType = type;
-                    });
-                  },
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 20,
-                      vertical: 9,
-                    ),
-                    decoration: BoxDecoration(
-                      color: isSelected ? tealPrimary : Colors.white,
-                      borderRadius: BorderRadius.circular(6),
-                      border: Border.all(
-                        color: isSelected ? tealPrimary : Colors.grey.shade400,
-                        width: 1.2,
-                      ),
-                    ),
-                    child: Text(
-                      type,
-                      style: TextStyle(
-                        fontSize: 13,
-                        color: isSelected ? Colors.white : Colors.black87,
-                        fontWeight:
-                        isSelected ? FontWeight.bold : FontWeight.normal,
-                      ),
-                    ),
-                  ),
+          itemCount: docs.length,
+          itemBuilder: (context, index) {
+            final session = docs[index].data() as Map<String, dynamic>;
+            return GestureDetector(
+              onTap: () => _showChoiceDialog(session),
+              child: Container(
+                decoration: BoxDecoration(
+                  color: tealPrimary.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(10),
+                  border: Border.all(color: tealPrimary),
                 ),
-              );
-            }).toList(),
-          ),
-
-          const SizedBox(height: 24),
-
-          // Course Grid (3 columns)
-          GridView.builder(
-            shrinkWrap: true,
-            physics: const NeverScrollableScrollPhysics(),
-            gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-              crossAxisCount: 3,
-              crossAxisSpacing: 10,
-              mainAxisSpacing: 10,
-              childAspectRatio: 1.4,
-            ),
-            itemCount: courses.length,
-            itemBuilder: (context, index) {
-              final course = courses[index];
-              final isSelected = selectedCourse == course['code'];
-
-              return GestureDetector(
-                onTap: () {
-                  setState(() {
-                    selectedCourse = course['code'];
-                  });
-                },
-                child: Container(
-                  decoration: BoxDecoration(
-                    color: isSelected
-                        ? tealPrimary.withOpacity(0.15)
-                        : Colors.white,
-                    borderRadius: BorderRadius.circular(8),
-                    border: Border.all(
-                      color: isSelected ? tealPrimary : Colors.grey.shade300,
-                      width: isSelected ? 1.8 : 1,
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Text(
+                      session['courseCode'],
+                      style: const TextStyle(fontWeight: FontWeight.bold),
                     ),
-                  ),
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
+                    Text(
+                      session['sessionType'],
+                      style: const TextStyle(fontSize: 12, color: tealDark),
+                    ),
+                    if (session['startTime'] != null)
                       Text(
-                        course['code']!,
-                        style: TextStyle(
-                          fontSize: 13,
-                          fontWeight: FontWeight.bold,
-                          color: isSelected ? tealPrimary : Colors.black87,
-                        ),
+                        "${session['startTime']} - ${session['endTime']}",
+                        style:
+                        const TextStyle(fontSize: 10, color: Colors.grey),
                       ),
-                      const SizedBox(height: 4),
-                      Text(
-                        course['year']!,
-                        style: TextStyle(
-                          fontSize: 11,
-                          color:
-                          isSelected ? tealPrimary : Colors.grey.shade600,
-                        ),
-                      ),
-                    ],
+                  ],
+                ),
+              ),
+            );
+          },
+        );
+      },
+    );
+  }
+
+  void _showChoiceDialog(Map<String, dynamic> session) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        title: Text("Session: ${session['courseCode']}"),
+        content: const Text(
+            "Would you like to take attendance yourself or assign an invigilator for this session?"),
+        actions: [
+          TextButton(
+            onPressed: () {
+              Navigator.pop(context);
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (_) => AttendancePage(
+                    courseCode: session['courseCode'],
+                    sessionType: session['sessionType'],
                   ),
                 ),
               );
             },
+            child: const Text("Take Attendance",
+                style: TextStyle(color: tealPrimary)),
           ),
-
-          const SizedBox(height: 28),
-
-
-          Align(
-            alignment: Alignment.centerRight,
-            child: SizedBox(
-              width: 160,
-              child: ElevatedButton(
-                onPressed: () {
-                  if (selectedSessionType != null && selectedCourse != null) {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (context) => AttendancePage(
-                          courseCode: selectedCourse!,
-                          sessionType: selectedSessionType!,
-                        ),
-                      ),
-                    );
-                  } else {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(
-                        content: Text(
-                          'Please select both session type and course',
-                        ),
-                        backgroundColor: Colors.red,
-                        duration: Duration(seconds: 2),
-                      ),
-                    );
-                  }
-                },
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: tealPrimary,
-                  foregroundColor: Colors.white,
-                  padding: const EdgeInsets.symmetric(vertical: 9),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(30),
+          // UPDATED: Navigates to Assign page with pre-filled session data
+          TextButton(
+            onPressed: () {
+              Navigator.pop(context);
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (_) => Assign(
+                    courseCode: session['courseCode'],
+                    sessionType: session['sessionType'],
                   ),
-                  elevation: 2,
                 ),
-                child: const Text(
-                  'Proceed to scanning',
-                  style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
-                ),
-              ),
-            ),
+              );
+            },
+            child: const Text("Assign Invigilator",
+                style: TextStyle(color: tealDark)),
           ),
-
-          const SizedBox(height: 20),
         ],
       ),
     );

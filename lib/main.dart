@@ -47,7 +47,7 @@ class AttendanceApp extends StatelessWidget {
         },
 
         "/profile": (context) => const Profile(),
-        "/course": (context) => const Course(),
+        "/course": (context) => const CourseSelectionScreen(),
         "/report": (context) => const Report(),
         "/attendance_history": (context) => const AttendanceHistory(),
       },

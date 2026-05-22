@@ -1,9 +1,8 @@
 import 'package:flutter/material.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
 
 const Color tealPrimary = Color(0xFF2E9E8E);
 const Color tealDark = Color(0xFF227A6D);
-const Color tealLight = Color(0xFFDFF2EF);
+const Color tealLight = Color(0xFFF4F9F8);
 
 class ViewList extends StatelessWidget {
   final Map<String, dynamic> attendanceData;
@@ -12,7 +11,6 @@ class ViewList extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // UPDATED: Using fullAttendanceList which contains Present, Absent, and Exit records
     final List fullList = attendanceData['fullAttendanceList'] ?? [];
 
     return Scaffold(
@@ -20,142 +18,104 @@ class ViewList extends StatelessWidget {
       appBar: AppBar(
         backgroundColor: tealPrimary,
         elevation: 0,
+        centerTitle: true,
         iconTheme: const IconThemeData(color: Colors.white),
-        title: const Text(
-          'Attendance Details',
-          style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+        title: const Text('Attendance Details',
+          style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 18),
         ),
       ),
       body: Column(
         children: [
-          const SizedBox(height: 16),
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16.0),
+          // Header Stats
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.all(16),
+            decoration: const BoxDecoration(
+              color: tealPrimary,
+            ),
             child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              mainAxisAlignment: MainAxisAlignment.spaceAround,
               children: [
-                _buildDetailBox(attendanceData['sessionType'] ?? 'N/A'),
-                _buildDetailBox(attendanceData['courseCode'] ?? 'N/A'),
-                _buildDetailBox(attendanceData['date'] ?? 'N/A'),
-                _buildDetailBox('${attendanceData['totalPresent'] ?? 0} Present'),
+                _buildStat(attendanceData['courseCode'] ?? 'N/A', 'Course'),
+                _buildStat(attendanceData['sessionType'] ?? 'N/A', 'Type'),
+                _buildStat('${attendanceData['totalPresent'] ?? 0}', 'Present'),
               ],
             ),
           ),
-          const SizedBox(height: 16),
-          const Divider(color: tealPrimary, thickness: 4),
 
-          _buildTableHeader(["REG NO", "FULL NAME", "STATUS"]),
+          const SizedBox(height: 3),
 
+          // Table Header
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+            child: Row(
+              children: const [
+                Expanded(flex: 3, child: Text("REG NO", style: TextStyle(fontWeight: FontWeight.bold, color: tealDark, fontSize: 12))),
+                Expanded(flex: 4, child: Text("NAME & SURNAME", style: TextStyle(fontWeight: FontWeight.bold, color: tealDark, fontSize: 12))),
+                Expanded(flex: 2, child: Text("STATUS", style: TextStyle(fontWeight: FontWeight.bold, color: tealDark, fontSize: 12))),
+              ],
+            ),
+          ),
+          const Divider(indent: 20, endIndent: 20),
+
+          // Student List
           Expanded(
             child: ListView.builder(
               itemCount: fullList.length,
+              padding: const EdgeInsets.symmetric(horizontal: 10),
               itemBuilder: (context, index) {
                 final student = fullList[index];
-
-                // Ensure keys match exactly what was saved in submit_list.dart
-                String regNo = student['regNo']?.toString() ?? 'N/A';
-                String firstName = student['name']?.toString() ?? 'Unknown';
-                String lastName = student['surname']?.toString() ?? '';
-                String status = student['status']?.toString() ?? 'Absent';
-
-                // Logic for Status Widget Styling
-                Widget statusWidget;
-                if (status == 'Present') {
-                  statusWidget = const Text('Present',
-                      style: TextStyle(fontSize: 10, color: tealDark, fontWeight: FontWeight.bold));
-                } else if (status == 'Exit') {
-                  statusWidget = const Text('E',
-                      style: TextStyle(fontSize: 12, color: Colors.green, fontWeight: FontWeight.bold));
-                } else {
-                  statusWidget = const Text('Absent',
-                      style: TextStyle(fontSize: 10, color: Colors.red));
-                }
+                String status = student['status'] ?? 'Absent';
 
                 return Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 12.0),
-                  decoration: const BoxDecoration(
-                    border: Border(bottom: BorderSide(color: Colors.black12, width: 0.5)),
+                  margin: const EdgeInsets.symmetric(vertical: 4, horizontal: 10),
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(12),
+                    boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.02), blurRadius: 5)],
                   ),
                   child: Row(
                     children: [
-                      Expanded(
-                          flex: 3,
-                          child: Text(regNo, style: const TextStyle(fontSize: 10))
-                      ),
-                      Expanded(
-                          flex: 4,
-                          child: Text('$firstName $lastName', style: const TextStyle(fontSize: 10))
-                      ),
-                      Expanded(
-                          flex: 2,
-                          child: statusWidget
-                      ),
+                      // REG NO
+                      Expanded(flex: 3, child: Text(student['regNo'] ?? 'N/A', style: const TextStyle(fontSize: 11))),
+                      // NAME + SURNAME
+                      Expanded(flex: 4, child: Text('${student['name']} ${student['surname']}', style: const TextStyle(fontSize: 11))),
+                      // STATUS CHIP
+                      Expanded(flex: 2, child: _statusChip(status)),
                     ],
                   ),
                 );
               },
             ),
           ),
-
-          Padding(
-            padding: const EdgeInsets.all(20.0),
-            child: Align(
-              alignment: Alignment.centerRight,
-              child: ElevatedButton.icon(
-                onPressed: () {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('Generating PDF Report...')),
-                  );
-                },
-                style: ElevatedButton.styleFrom(backgroundColor: tealPrimary),
-                icon: const Icon(Icons.download, color: Colors.white),
-                label: const Text("Download CSV",
-                    style: TextStyle(color: Colors.white)),
-              ),
-            ),
-          ),
         ],
       ),
     );
   }
 
-  Widget _buildDetailBox(String text) {
+  Widget _buildStat(String value, String label) {
+    return Column(
+      children: [
+        Text(value, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16)),
+        Text(label, style: const TextStyle(color: Colors.white70, fontSize: 10)),
+      ],
+    );
+  }
+
+  Widget _statusChip(String status) {
+    Color color = status == 'Present' ? tealPrimary : Colors.red;
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
       decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(4),
-        border: Border.all(color: tealPrimary.withOpacity(0.3)),
+        color: color.withOpacity(0.1),
+        borderRadius: BorderRadius.circular(8),
       ),
       child: Text(
-        text,
-        style: const TextStyle(
-            fontSize: 10, fontWeight: FontWeight.bold, color: tealDark),
+        status,
+        textAlign: TextAlign.center,
+        style: TextStyle(color: color, fontSize: 10, fontWeight: FontWeight.bold),
       ),
-    );
-  }
-
-  Widget _buildTableHeader(List<String> headers) {
-    return Container(
-      color: Colors.teal.withOpacity(0.1),
-      padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 10.0),
-      child: Row(
-        children: [
-          Expanded(flex: 3, child: _headerText(headers[0])),
-          Expanded(flex: 4, child: _headerText(headers[1])),
-          Expanded(flex: 2, child: _headerText(headers[2])),
-        ],
-      ),
-    );
-  }
-
-  Widget _headerText(String text) {
-    return Text(
-      text,
-      style: const TextStyle(
-          fontWeight: FontWeight.bold,
-          fontSize: 11,
-          color: tealDark),
     );
   }
 }

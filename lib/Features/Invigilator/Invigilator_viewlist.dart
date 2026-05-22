@@ -11,7 +11,6 @@ class ViewList extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // UPDATED: Using fullAttendanceList which contains Present, Absent, and Exit records
     final List fullList = attendanceData['fullAttendanceList'] ?? [];
 
     return Scaffold(
