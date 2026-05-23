@@ -43,18 +43,27 @@ class _AttendancePageState extends State<AttendancePage> {
     _fetchEnrolledCount();
   }
 
-  // Counts directly from students collection using the same
-  // arrayContains logic that _onDetect uses for validation
+  // Mirrors the exact same filtering logic used in ManualSearch
+  // since courses is a comma-separated string, not a Firestore array
   Future<void> _fetchEnrolledCount() async {
     try {
-      final snapshot = await FirebaseFirestore.instance
-          .collection('students')
-          .where('courses', arrayContains: widget.courseCode)
-          .get();
+      final snapshot =
+          await FirebaseFirestore.instance.collection('students').get();
 
-      if (mounted) {
-        setState(() => _totalEnrolled = snapshot.docs.length);
+      int count = 0;
+      for (var doc in snapshot.docs) {
+        final String coursesString = doc.data()['courses']?.toString() ?? '';
+        final List<String> courseList = coursesString
+            .split(',')
+            .map((e) => e.trim().toUpperCase())
+            .toList();
+
+        if (courseList.contains(widget.courseCode.trim().toUpperCase())) {
+          count++;
+        }
       }
+
+      if (mounted) setState(() => _totalEnrolled = count);
     } catch (e) {
       debugPrint('Error fetching enrolled count: $e');
     }
@@ -382,7 +391,7 @@ class _AttendancePageState extends State<AttendancePage> {
                           borderRadius: BorderRadius.circular(20),
                         ),
                         child: Text(
-                          '${_scannedStudents.length}/$_totalEnrolled  scanned',
+                          '${_scannedStudents.length}/$_totalEnrolled scanned',
                           style: const TextStyle(
                             color: Colors.white,
                             fontSize: 12,
