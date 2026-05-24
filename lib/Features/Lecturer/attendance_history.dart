@@ -45,6 +45,22 @@ class _AttendanceHistoryState extends State<AttendanceHistory> with SingleTicker
     }
   }
 
+  // Helper to determine if a session is currently active
+  bool _isSessionLive(String startTimeStr, String endTimeStr) {
+    try {
+      final now = DateTime.now();
+      final start = _parseTime(startTimeStr);
+      final end = _parseTime(endTimeStr);
+
+      final startDt = DateTime(now.year, now.month, now.day, start.hour, start.minute);
+      final endDt = DateTime(now.year, now.month, now.day, end.hour, end.minute);
+
+      return now.isAfter(startDt) && now.isBefore(endDt);
+    } catch (e) {
+      return false;
+    }
+  }
+
   // Helper to convert Firestore string "08:30 AM" back to TimeOfDay for editing
   TimeOfDay _parseTime(String timeStr) {
     try {
@@ -191,35 +207,138 @@ class _AttendanceHistoryState extends State<AttendanceHistory> with SingleTicker
   Widget _buildManageTab() {
     final uid = FirebaseAuth.instance.currentUser?.uid ?? "";
     return StreamBuilder<QuerySnapshot>(
-      stream: FirebaseFirestore.instance.collection('active_sessions').where('lecturerId', isEqualTo: uid).snapshots(),
+      stream: FirebaseFirestore.instance
+          .collection('active_sessions')
+          .where('lecturerId', isEqualTo: uid)
+          .snapshots(),
       builder: (context, snapshot) {
         if (!snapshot.hasData) return const Center(child: CircularProgressIndicator());
         final docs = snapshot.data!.docs;
-        if (docs.isEmpty) return const Center(child: Text("No active sessions."));
+        if (docs.isEmpty) {
+          return Center(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(Icons.timer_off_outlined, size: 64, color: tealPrimary.withOpacity(0.5)),
+                const SizedBox(height: 16),
+                const Text("No active sessions created.", style: TextStyle(color: Colors.grey)),
+              ],
+            ),
+          );
+        }
 
         return ListView.builder(
           itemCount: docs.length,
-          padding: const EdgeInsets.all(12),
+          padding: const EdgeInsets.all(16),
           itemBuilder: (context, i) {
             final data = docs[i].data() as Map<String, dynamic>;
-            return Card(
-              child: ListTile(
-                leading: const Icon(Icons.timer, color: tealPrimary),
-                title: Text("${data['courseCode']} (${data['sessionType']})", style: const TextStyle(fontWeight: FontWeight.bold)),
-                subtitle: Text("Time: ${data['startTime']} - ${data['endTime']}"),
-                trailing: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    IconButton(
-                      icon: const Icon(Icons.edit, color: tealPrimary, size: 20),
-                      onPressed: () => _showSessionDialog(docId: docs[i].id, existingData: data),
+            final bool isLive = _isSessionLive(data['startTime'], data['endTime']);
+
+            return Container(
+              margin: const EdgeInsets.only(bottom: 16),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(16),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(0.05),
+                    blurRadius: 10,
+                    offset: const Offset(0, 4),
+                  ),
+                ],
+              ),
+              child: Column(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                    decoration: BoxDecoration(
+                      color: isLive ? tealPrimary.withOpacity(0.1) : Colors.grey[100],
+                      borderRadius: const BorderRadius.vertical(top: Radius.circular(16)),
                     ),
-                    IconButton(
-                      icon: const Icon(Icons.delete_outline, color: Colors.red, size: 20),
-                      onPressed: () => FirebaseFirestore.instance.collection('active_sessions').doc(docs[i].id).delete(),
+                    child: Row(
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.all(8),
+                          decoration: BoxDecoration(
+                            color: isLive ? tealPrimary : Colors.grey,
+                            shape: BoxShape.circle,
+                          ),
+                          child: Icon(
+                            isLive ? Icons.sensors : Icons.timer_outlined,
+                            color: Colors.white,
+                            size: 18,
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Text(
+                            data['courseCode'],
+                            style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                          ),
+                        ),
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                          decoration: BoxDecoration(
+                            color: isLive ? Colors.green[600] : Colors.grey[600],
+                            borderRadius: BorderRadius.circular(20),
+                          ),
+                          child: Text(
+                            isLive ? "LIVE" : "SCHEDULED",
+                            style: const TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold),
+                          ),
+                        ),
+                      ],
                     ),
-                  ],
-                ),
+                  ),
+                  Padding(
+                    padding: const EdgeInsets.all(16),
+                    child: Row(
+                      children: [
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text("Session Type", style: TextStyle(color: Colors.grey[600], fontSize: 12)),
+                              Text(data['sessionType'], style: const TextStyle(fontWeight: FontWeight.w600)),
+                            ],
+                          ),
+                        ),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text("Duration", style: TextStyle(color: Colors.grey[600], fontSize: 12)),
+                              Text("${data['startTime']} - ${data['endTime']}",
+                                  style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13)),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const Divider(height: 1),
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.end,
+                      children: [
+                        TextButton.icon(
+                          onPressed: () => _showSessionDialog(docId: docs[i].id, existingData: data),
+                          icon: const Icon(Icons.edit_outlined, size: 18),
+                          label: const Text("Edit"),
+                          style: TextButton.styleFrom(foregroundColor: tealPrimary),
+                        ),
+                        const SizedBox(width: 8),
+                        TextButton.icon(
+                          onPressed: () => FirebaseFirestore.instance.collection('active_sessions').doc(docs[i].id).delete(),
+                          icon: const Icon(Icons.delete_outline, size: 18),
+                          label: const Text("Delete"),
+                          style: TextButton.styleFrom(foregroundColor: Colors.redAccent),
+                        ),
+                      ],
+                    ),
+                  )
+                ],
               ),
             );
           },
