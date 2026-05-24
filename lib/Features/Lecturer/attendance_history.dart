@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'lecturer_dashboard.dart';
 import 'assign.dart';
+import 'viewlist.dart';
 
 const Color tealPrimary = Color(0xFF2E9E8E);
 const Color tealDark = Color(0xFF227A6D);
@@ -175,9 +176,6 @@ class _AttendanceHistoryState extends State<AttendanceHistory>
 
     return Scaffold(
       backgroundColor: tealLight,
-
-      // ── HEADER: teal bar with AAS PORTAL left, SESSION MANAGER right ──
-      // Tab bar is NOT here — it lives in the body so they are visually separated
       appBar: AppBar(
         automaticallyImplyLeading: false,
         backgroundColor: tealPrimary,
@@ -210,12 +208,9 @@ class _AttendanceHistoryState extends State<AttendanceHistory>
             ],
           ),
         ),
-        // NO bottom: here — tab bar is in the body below
       ),
-
       body: Column(
         children: [
-          // ── TAB BAR: separate white strip below the header ──
           Container(
             color: Colors.white,
             child: TabBar(
@@ -225,7 +220,6 @@ class _AttendanceHistoryState extends State<AttendanceHistory>
               dividerColor: Colors.transparent,
               labelPadding: EdgeInsets.zero,
               tabs: [
-                // Manage Sessions — bold when active
                 Tab(
                   child: AnimatedDefaultTextStyle(
                     duration: const Duration(milliseconds: 200),
@@ -238,7 +232,6 @@ class _AttendanceHistoryState extends State<AttendanceHistory>
                     child: const Text('Manage Sessions'),
                   ),
                 ),
-                // History — bold when active
                 Tab(
                   child: AnimatedDefaultTextStyle(
                     duration: const Duration(milliseconds: 200),
@@ -254,8 +247,6 @@ class _AttendanceHistoryState extends State<AttendanceHistory>
               ],
             ),
           ),
-
-          // ── TAB CONTENT ──
           Expanded(
             child: TabBarView(
               controller: _tabController,
@@ -264,18 +255,14 @@ class _AttendanceHistoryState extends State<AttendanceHistory>
           ),
         ],
       ),
-
-      // ── FAB: perfectly round circle with + icon ──
       floatingActionButton: isManageTab
           ? FloatingActionButton(
               backgroundColor: tealPrimary,
-              shape: const CircleBorder(), // forces a perfect circle
+              shape: const CircleBorder(),
               onPressed: () => _showSessionDialog(),
               child: const Icon(Icons.add, color: Colors.white, size: 28),
             )
           : null,
-
-      // ── FOOTER (unchanged) ──
       bottomNavigationBar: BottomNavigationBar(
         currentIndex: _currentIndex,
         onTap: (i) {
@@ -320,39 +307,68 @@ class _AttendanceHistoryState extends State<AttendanceHistory>
         }
         final docs = snapshot.data!.docs;
         if (docs.isEmpty) {
-          return const Center(child: Text("No active sessions."));
+          return const Center(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(Icons.event_note, size: 64, color: Colors.grey),
+                SizedBox(height: 16),
+                Text("No active sessions.", style: TextStyle(color: Colors.grey, fontSize: 16)),
+              ],
+            ),
+          );
         }
 
         return ListView.builder(
           itemCount: docs.length,
-          padding: const EdgeInsets.all(12),
+          padding: const EdgeInsets.all(16),
           itemBuilder: (context, i) {
             final data = docs[i].data() as Map<String, dynamic>;
-            return Card(
+            return Container(
+              margin: const EdgeInsets.only(bottom: 12),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(16),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(0.05),
+                    blurRadius: 10,
+                    offset: const Offset(0, 4),
+                  )
+                ],
+              ),
               child: ListTile(
-                leading: const Icon(Icons.timer, color: tealPrimary),
-                title: Text(
-                  "${data['courseCode']} (${data['sessionType']})",
-                  style: const TextStyle(fontWeight: FontWeight.bold),
+                contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                leading: Container(
+                  padding: const EdgeInsets.all(10),
+                  decoration: BoxDecoration(
+                    color: tealPrimary.withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: const Icon(Icons.timer_outlined, color: tealPrimary),
                 ),
-                subtitle:
-                    Text("Time: ${data['startTime']} - ${data['endTime']}"),
+                title: Text(
+                  data['courseCode'] ?? 'Unknown',
+                  style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                ),
+                subtitle: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(data['sessionType'] ?? 'Class', style: const TextStyle(color: tealDark, fontWeight: FontWeight.w600)),
+                    const SizedBox(height: 4),
+                    Text("${data['startTime']} - ${data['endTime']}", style: TextStyle(color: Colors.grey.shade600, fontSize: 13)),
+                  ],
+                ),
                 trailing: Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
                     IconButton(
-                      icon:
-                          const Icon(Icons.edit, color: tealPrimary, size: 20),
-                      onPressed: () => _showSessionDialog(
-                          docId: docs[i].id, existingData: data),
+                      icon: const Icon(Icons.edit_note, color: tealPrimary),
+                      onPressed: () => _showSessionDialog(docId: docs[i].id, existingData: data),
                     ),
                     IconButton(
-                      icon: const Icon(Icons.delete_outline,
-                          color: Colors.red, size: 20),
-                      onPressed: () => FirebaseFirestore.instance
-                          .collection('active_sessions')
-                          .doc(docs[i].id)
-                          .delete(),
+                      icon: const Icon(Icons.delete_sweep_outlined, color: Colors.redAccent),
+                      onPressed: () => FirebaseFirestore.instance.collection('active_sessions').doc(docs[i].id).delete(),
                     ),
                   ],
                 ),
@@ -374,45 +390,79 @@ class _AttendanceHistoryState extends State<AttendanceHistory>
           .snapshots(),
       builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.waiting) {
-          return const Center(
-              child: CircularProgressIndicator(color: tealPrimary));
+          return const Center(child: CircularProgressIndicator(color: tealPrimary));
         }
         if (snapshot.hasError) {
           return Center(child: Text("Error: ${snapshot.error}"));
         }
         final docs = snapshot.data?.docs ?? [];
         if (docs.isEmpty) {
-          return const Center(child: Text("No attendance history found."));
+          return const Center(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(Icons.history, size: 64, color: Colors.grey),
+                SizedBox(height: 16),
+                Text("No attendance history found.", style: TextStyle(color: Colors.grey, fontSize: 16)),
+              ],
+            ),
+          );
         }
 
         return ListView.builder(
-          padding: const EdgeInsets.all(12),
+          padding: const EdgeInsets.all(16),
           itemCount: docs.length,
           itemBuilder: (context, i) {
             final data = docs[i].data() as Map<String, dynamic>;
-            return Card(
-              margin: const EdgeInsets.only(bottom: 10),
+            return Container(
+              margin: const EdgeInsets.only(bottom: 12),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(16),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(0.05),
+                    blurRadius: 10,
+                    offset: const Offset(0, 4),
+                  )
+                ],
+              ),
               child: ListTile(
-                leading: CircleAvatar(
-                  backgroundColor: tealPrimary.withOpacity(0.1),
-                  child: const Icon(Icons.history, color: tealPrimary),
+                onTap: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (_) => ViewList(attendanceData: data)),
+                  );
+                },
+                contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                leading: Container(
+                  padding: const EdgeInsets.all(10),
+                  decoration: BoxDecoration(
+                    color: tealPrimary.withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: const Icon(Icons.history_edu, color: tealPrimary),
                 ),
                 title: Text(
                   "${data['courseCode']} - ${data['sessionType']}",
-                  style: const TextStyle(
-                      fontWeight: FontWeight.bold, color: tealDark),
+                  style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
                 ),
                 subtitle: Text(
-                  "Date: ${data['date']}\nSubmitted by: ${data['submittedBy'] ?? 'N/A'}",
-                  style: const TextStyle(fontSize: 12),
+                  "Date: ${data['date']}\nBy: ${data['submittedBy'] ?? 'N/A'}",
+                  style: TextStyle(color: Colors.grey.shade600, fontSize: 13),
                 ),
-                trailing: Text(
-                  "${data['totalPresent']} / ${data['totalEnrolled'] ?? '?'}",
-                  style: const TextStyle(
-                      fontWeight: FontWeight.bold, color: tealPrimary),
+                trailing: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  crossAxisAlignment: CrossAxisAlignment.end,
+                  children: [
+                    Text(
+                      "${data['totalPresent']} Present",
+                      style: const TextStyle(fontWeight: FontWeight.bold, color: tealPrimary),
+                    ),
+                    const Icon(Icons.chevron_right, color: Colors.grey, size: 20),
+                  ],
                 ),
                 isThreeLine: true,
-                onTap: () {},
               ),
             );
           },
