@@ -27,6 +27,7 @@ class _InvigilatorHomeState extends State<InvigilatorHome> {
       if (userDoc.exists) {
         final data = userDoc.data();
         setState(() {
+          // Using 'name' and 'surname' to match your Firestore schema
           String firstName = data?['name'] ?? '';
           String lastName = data?['surname'] ?? '';
           _currentUserName = "$firstName $lastName".trim();
@@ -37,27 +38,37 @@ class _InvigilatorHomeState extends State<InvigilatorHome> {
 
   @override
   Widget build(BuildContext context) {
+    // Get the current user's UID directly for the query
+    final String currentUid = FirebaseAuth.instance.currentUser?.uid ?? "";
+
     if (_currentUserName == null) {
-      return const Scaffold(body: Center(child: CircularProgressIndicator(color: primaryColor)));
+      return const Scaffold(
+        body: Center(
+          child: CircularProgressIndicator(color: primaryColor),
+        ),
+      );
     }
 
     return Scaffold(
       backgroundColor: const Color(0xFFF5F7F9),
       appBar: AppBar(
         backgroundColor: primaryColor,
-        title: const Text('Home', style: TextStyle(color: Colors.white)),
+        elevation: 0,
+        title: const Text('Home', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
       ),
       body: StreamBuilder<QuerySnapshot>(
         stream: FirebaseFirestore.instance
             .collection('exam_assignments')
-            .where('invigilators', arrayContains: _currentUserName)
-            .orderBy('createdAt', descending: true)
+        // Query by the unique ID assigned from the Web dashboard
+            .where('invigilatorId', isEqualTo: currentUid)
             .snapshots(),
         builder: (context, snapshot) {
           if (snapshot.hasError) {
             return Center(child: Text("Error: ${snapshot.error}"));
           }
-          if (!snapshot.hasData) return const Center(child: CircularProgressIndicator());
+          if (!snapshot.hasData) {
+            return const Center(child: CircularProgressIndicator(color: primaryColor));
+          }
 
           final docs = snapshot.data!.docs;
 
@@ -65,7 +76,14 @@ class _InvigilatorHomeState extends State<InvigilatorHome> {
             return Column(
               children: [
                 _buildWelcomeCard(),
-                const Expanded(child: Center(child: Text("No tasks assigned to you."))),
+                const Expanded(
+                  child: Center(
+                    child: Text(
+                      "No tasks assigned to you.",
+                      style: TextStyle(color: Colors.grey, fontSize: 16),
+                    ),
+                  ),
+                ),
               ],
             );
           }
@@ -77,6 +95,7 @@ class _InvigilatorHomeState extends State<InvigilatorHome> {
               if (index == 0) return _buildWelcomeCard();
 
               final data = docs[index - 1].data() as Map<String, dynamic>;
+
               return Padding(
                 padding: const EdgeInsets.only(bottom: 12),
                 child: _AssignmentCard(
@@ -111,12 +130,29 @@ class _InvigilatorHomeState extends State<InvigilatorHome> {
     return Container(
       margin: const EdgeInsets.only(bottom: 20),
       padding: const EdgeInsets.all(18),
-      decoration: BoxDecoration(color: primaryColor, borderRadius: BorderRadius.circular(16)),
+      decoration: BoxDecoration(
+        color: primaryColor,
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: primaryColor.withOpacity(0.3),
+            blurRadius: 8,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text('Hello, $_currentUserName!', style: const TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold)),
-          const Text('Below are the sessions you are assigned to.', style: TextStyle(color: Colors.white70, fontSize: 12)),
+          Text(
+            'Hello, $_currentUserName!',
+            style: const TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold),
+          ),
+          const SizedBox(height: 4),
+          const Text(
+            'Below are the sessions you are assigned to.',
+            style: TextStyle(color: Colors.white70, fontSize: 12),
+          ),
         ],
       ),
     );
@@ -141,23 +177,39 @@ class _AssignmentCard extends StatelessWidget {
   Widget build(BuildContext context) {
     return InkWell(
       onTap: onTap,
+      borderRadius: BorderRadius.circular(16),
       child: Container(
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
           color: Colors.white,
           borderRadius: BorderRadius.circular(16),
           border: Border.all(color: Colors.black12),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.02),
+              blurRadius: 4,
+              offset: const Offset(0, 2),
+            ),
+          ],
         ),
         child: Column(
           children: [
-            Row(children: [
-              const Icon(Icons.assignment, color: Color(0xFF2E9E8E)),
-              const SizedBox(width: 10),
-              Text(course, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
-              const Spacer(),
-              const Icon(Icons.arrow_forward_ios, size: 14, color: Colors.grey),
-            ]),
-            const Divider(),
+            Row(
+              children: [
+                const Icon(Icons.assignment_turned_in, color: Color(0xFF2E9E8E)),
+                const SizedBox(width: 10),
+                Text(
+                  course,
+                  style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: Colors.black87),
+                ),
+                const Spacer(),
+                const Icon(Icons.arrow_forward_ios, size: 14, color: Colors.grey),
+              ],
+            ),
+            const Padding(
+              padding: EdgeInsets.symmetric(vertical: 12),
+              child: Divider(height: 1),
+            ),
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
@@ -176,8 +228,15 @@ class _AssignmentCard extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(label, style: const TextStyle(fontSize: 10, color: Colors.grey)),
-        Text(val, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
+        Text(
+          label,
+          style: const TextStyle(fontSize: 10, color: Colors.grey, fontWeight: FontWeight.w500),
+        ),
+        const SizedBox(height: 2),
+        Text(
+          val,
+          style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.black87),
+        ),
       ],
     );
   }
