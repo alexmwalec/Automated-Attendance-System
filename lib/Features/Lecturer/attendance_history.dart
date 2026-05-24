@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'lecturer_dashboard.dart';
 import 'assign.dart';
+import 'viewlist.dart';
 
 const Color tealPrimary = Color(0xFF2E9E8E);
 const Color tealDark = Color(0xFF227A6D);
@@ -14,8 +15,7 @@ class AttendanceHistory extends StatefulWidget {
   State<AttendanceHistory> createState() => _AttendanceHistoryState();
 }
 
-class _AttendanceHistoryState extends State<AttendanceHistory>
-    with SingleTickerProviderStateMixin {
+class _AttendanceHistoryState extends State<AttendanceHistory> with SingleTickerProviderStateMixin {
   late TabController _tabController;
   final int _currentIndex = 2;
   List<String> assignedCourses = [];
@@ -25,35 +25,27 @@ class _AttendanceHistoryState extends State<AttendanceHistory>
     super.initState();
     _tabController = TabController(length: 2, vsync: this);
     _tabController.addListener(() {
-      setState(() {});
+      setState(() {}); // Rebuild to show/hide FAB based on tab index
     });
     _fetchAssignedCourses();
-  }
-
-  @override
-  void dispose() {
-    _tabController.dispose();
-    super.dispose();
   }
 
   Future<void> _fetchAssignedCourses() async {
     final uid = FirebaseAuth.instance.currentUser?.uid;
     if (uid == null) return;
-    var doc =
-        await FirebaseFirestore.instance.collection('lecturers').doc(uid).get();
+    var doc = await FirebaseFirestore.instance.collection('lecturers').doc(uid).get();
     if (doc.exists) {
       List<dynamic> rawList = doc.data()?['assignedCourses'] ?? [];
       List<String> codes = [];
       for (var item in rawList) {
         String val = item.toString();
-        val.contains(',')
-            ? codes.addAll(val.split(',').map((e) => e.trim()))
-            : codes.add(val.trim());
+        val.contains(',') ? codes.addAll(val.split(',').map((e) => e.trim())) : codes.add(val.trim());
       }
       setState(() => assignedCourses = codes);
     }
   }
 
+  // Helper to convert Firestore string "08:30 AM" back to TimeOfDay for editing
   TimeOfDay _parseTime(String timeStr) {
     try {
       final parts = timeStr.split(' ');
@@ -83,10 +75,7 @@ class _AttendanceHistoryState extends State<AttendanceHistory>
       context: context,
       builder: (context) => StatefulBuilder(
         builder: (context, setDialogState) => AlertDialog(
-          shape:
-              RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-          title: Text(
-              docId == null ? "Create Active Session" : "Edit Active Session",
+          title: Text(docId == null ? "Create Active Session" : "Edit Active Session",
               style: const TextStyle(color: tealPrimary)),
           content: Column(
             mainAxisSize: MainAxisSize.min,
@@ -95,26 +84,21 @@ class _AttendanceHistoryState extends State<AttendanceHistory>
                 isExpanded: true,
                 hint: const Text("Select Course"),
                 value: selCourse,
-                items: assignedCourses
-                    .map((e) => DropdownMenuItem(value: e, child: Text(e)))
-                    .toList(),
+                items: assignedCourses.map((e) => DropdownMenuItem(value: e, child: Text(e))).toList(),
                 onChanged: (v) => setDialogState(() => selCourse = v),
               ),
               DropdownButton<String>(
                 isExpanded: true,
                 hint: const Text("Session Type"),
                 value: selType,
-                items: ["Class", "Lab", "Exam"]
-                    .map((e) => DropdownMenuItem(value: e, child: Text(e)))
-                    .toList(),
+                items: ["Class", "Lab", "Exam"].map((e) => DropdownMenuItem(value: e, child: Text(e))).toList(),
                 onChanged: (v) => setDialogState(() => selType = v),
               ),
               ListTile(
                 title: Text("Start: ${startTime.format(context)}"),
                 trailing: const Icon(Icons.access_time, size: 20),
                 onTap: () async {
-                  final t = await showTimePicker(
-                      context: context, initialTime: startTime);
+                  final t = await showTimePicker(context: context, initialTime: startTime);
                   if (t != null) setDialogState(() => startTime = t);
                 },
               ),
@@ -122,47 +106,38 @@ class _AttendanceHistoryState extends State<AttendanceHistory>
                 title: Text("End: ${endTime.format(context)}"),
                 trailing: const Icon(Icons.access_time, size: 20),
                 onTap: () async {
-                  final t = await showTimePicker(
-                      context: context, initialTime: endTime);
+                  final t = await showTimePicker(context: context, initialTime: endTime);
                   if (t != null) setDialogState(() => endTime = t);
                 },
               ),
             ],
           ),
           actions: [
-            TextButton(
-                onPressed: () => Navigator.pop(context),
-                child: const Text("Cancel")),
+            TextButton(onPressed: () => Navigator.pop(context), child: const Text("Cancel")),
             ElevatedButton(
               style: ElevatedButton.styleFrom(backgroundColor: tealPrimary),
-              onPressed: (selCourse == null || selType == null)
-                  ? null
-                  : () async {
-                      final uid = FirebaseAuth.instance.currentUser?.uid;
-                      final data = {
-                        'lecturerId': uid,
-                        'courseCode': selCourse,
-                        'sessionType': selType,
-                        'startTime': startTime.format(context),
-                        'endTime': endTime.format(context),
-                        'updatedAt': FieldValue.serverTimestamp(),
-                      };
-                      if (docId == null) {
-                        data['createdAt'] = FieldValue.serverTimestamp();
-                        await FirebaseFirestore.instance
-                            .collection('active_sessions')
-                            .add(data);
-                      } else {
-                        await FirebaseFirestore.instance
-                            .collection('active_sessions')
-                            .doc(docId)
-                            .update(data);
-                      }
-                      if (context.mounted) Navigator.pop(context);
-                    },
-              child: Text(docId == null ? "Create" : "Update",
-                  style: const TextStyle(color: Colors.white)),
-            ),
+              onPressed: (selCourse == null || selType == null) ? null : () async {
+                final uid = FirebaseAuth.instance.currentUser?.uid;
+                final data = {
+                  'lecturerId': uid,
+                  'courseCode': selCourse,
+                  'sessionType': selType,
+                  'startTime': startTime.format(context),
+                  'endTime': endTime.format(context),
+                  'updatedAt': FieldValue.serverTimestamp(),
+                };
+
+                if (docId == null) {
+                  data['createdAt'] = FieldValue.serverTimestamp();
+                  await FirebaseFirestore.instance.collection('active_sessions').add(data);
+                } else {
+                  await FirebaseFirestore.instance.collection('active_sessions').doc(docId).update(data);
+                }
+
+                if (context.mounted) Navigator.pop(context);
+              },
+              child: Text(docId == null ? "Create" : "Update", style: const TextStyle(color: Colors.white)),
+            )
           ],
         ),
       ),
@@ -171,125 +146,34 @@ class _AttendanceHistoryState extends State<AttendanceHistory>
 
   @override
   Widget build(BuildContext context) {
-    final bool isManageTab = _tabController.index == 0;
-
     return Scaffold(
       backgroundColor: tealLight,
-
-      // ── HEADER: teal bar with AAS PORTAL left, SESSION MANAGER right ──
-      // Tab bar is NOT here — it lives in the body so they are visually separated
       appBar: AppBar(
-        automaticallyImplyLeading: false,
         backgroundColor: tealPrimary,
-        elevation: 2,
-        shadowColor: tealDark.withOpacity(0.4),
-        titleSpacing: 0,
-        title: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: const [
-              Text(
-                'AAS PORTAL',
-                style: TextStyle(
-                  color: Colors.white,
-                  fontSize: 16,
-                  fontWeight: FontWeight.w800,
-                  letterSpacing: 1.0,
-                ),
-              ),
-              Text(
-                'SESSION MANAGER',
-                style: TextStyle(
-                  color: Colors.white,
-                  fontSize: 15,
-                  fontWeight: FontWeight.w800,
-                  letterSpacing: 0.8,
-                ),
-              ),
-            ],
-          ),
+        automaticallyImplyLeading: false,
+        title: const Text('Session Manager', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+        bottom: TabBar(
+          controller: _tabController,
+          indicatorColor: Colors.white,
+          tabs: const [Tab(text: "Manage Sessions"), Tab(text: "History")],
         ),
-        // NO bottom: here — tab bar is in the body below
       ),
-
-      body: Column(
-        children: [
-          // ── TAB BAR: separate white strip below the header ──
-          Container(
-            color: Colors.white,
-            child: TabBar(
-              controller: _tabController,
-              indicatorColor: tealPrimary,
-              indicatorWeight: 3,
-              dividerColor: Colors.transparent,
-              labelPadding: EdgeInsets.zero,
-              tabs: [
-                // Manage Sessions — bold when active
-                Tab(
-                  child: AnimatedDefaultTextStyle(
-                    duration: const Duration(milliseconds: 200),
-                    style: TextStyle(
-                      fontSize: 13,
-                      fontWeight:
-                          isManageTab ? FontWeight.w800 : FontWeight.w400,
-                      color: isManageTab ? tealPrimary : Colors.black45,
-                    ),
-                    child: const Text('Manage Sessions'),
-                  ),
-                ),
-                // History — bold when active
-                Tab(
-                  child: AnimatedDefaultTextStyle(
-                    duration: const Duration(milliseconds: 200),
-                    style: TextStyle(
-                      fontSize: 13,
-                      fontWeight:
-                          !isManageTab ? FontWeight.w800 : FontWeight.w400,
-                      color: !isManageTab ? tealPrimary : Colors.black45,
-                    ),
-                    child: const Text('History'),
-                  ),
-                ),
-              ],
-            ),
-          ),
-
-          // ── TAB CONTENT ──
-          Expanded(
-            child: TabBarView(
-              controller: _tabController,
-              children: [_buildManageTab(), _buildHistoryTab()],
-            ),
-          ),
-        ],
+      body: TabBarView(
+        controller: _tabController,
+        children: [_buildManageTab(), _buildHistoryTab()],
       ),
-
-      // ── FAB: perfectly round circle with + icon ──
-      floatingActionButton: isManageTab
+      floatingActionButton: _tabController.index == 0
           ? FloatingActionButton(
-              backgroundColor: tealPrimary,
-              shape: const CircleBorder(), // forces a perfect circle
-              onPressed: () => _showSessionDialog(),
-              child: const Icon(Icons.add, color: Colors.white, size: 28),
-            )
+        backgroundColor: tealPrimary,
+        onPressed: () => _showSessionDialog(),
+        child: const Icon(Icons.add, color: Colors.white),
+      )
           : null,
-
-      // ── FOOTER (unchanged) ──
       bottomNavigationBar: BottomNavigationBar(
         currentIndex: _currentIndex,
         onTap: (i) {
-          if (i == 0 || i == 1) {
-            Navigator.pushAndRemoveUntil(
-                context,
-                MaterialPageRoute(
-                    builder: (_) => LecturerDashboard(initialIndex: i)),
-                (r) => false);
-          }
-          if (i == 3) {
-            Navigator.pushReplacement(
-                context, MaterialPageRoute(builder: (_) => const Assign()));
-          }
+          if (i == 0 || i == 1) Navigator.pushAndRemoveUntil(context, MaterialPageRoute(builder: (_) => LecturerDashboard(initialIndex: i)), (r) => false);
+          if (i == 3) Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) => const Assign()));
         },
         type: BottomNavigationBarType.fixed,
         backgroundColor: tealPrimary,
@@ -297,10 +181,8 @@ class _AttendanceHistoryState extends State<AttendanceHistory>
         unselectedItemColor: Colors.white70,
         items: const [
           BottomNavigationBarItem(icon: Icon(Icons.home), label: 'Home'),
-          BottomNavigationBarItem(
-              icon: Icon(Icons.qr_code_scanner), label: 'Attendance'),
-          BottomNavigationBarItem(
-              icon: Icon(Icons.manage_accounts), label: 'Manager'),
+          BottomNavigationBarItem(icon: Icon(Icons.qr_code_scanner), label: 'Attendance'),
+          BottomNavigationBarItem(icon: Icon(Icons.manage_accounts), label: 'Manager'),
         ],
       ),
     );
@@ -309,19 +191,11 @@ class _AttendanceHistoryState extends State<AttendanceHistory>
   Widget _buildManageTab() {
     final uid = FirebaseAuth.instance.currentUser?.uid ?? "";
     return StreamBuilder<QuerySnapshot>(
-      stream: FirebaseFirestore.instance
-          .collection('active_sessions')
-          .where('lecturerId', isEqualTo: uid)
-          .snapshots(),
+      stream: FirebaseFirestore.instance.collection('active_sessions').where('lecturerId', isEqualTo: uid).snapshots(),
       builder: (context, snapshot) {
-        if (!snapshot.hasData) {
-          return const Center(
-              child: CircularProgressIndicator(color: tealPrimary));
-        }
+        if (!snapshot.hasData) return const Center(child: CircularProgressIndicator());
         final docs = snapshot.data!.docs;
-        if (docs.isEmpty) {
-          return const Center(child: Text("No active sessions."));
-        }
+        if (docs.isEmpty) return const Center(child: Text("No active sessions."));
 
         return ListView.builder(
           itemCount: docs.length,
@@ -331,28 +205,18 @@ class _AttendanceHistoryState extends State<AttendanceHistory>
             return Card(
               child: ListTile(
                 leading: const Icon(Icons.timer, color: tealPrimary),
-                title: Text(
-                  "${data['courseCode']} (${data['sessionType']})",
-                  style: const TextStyle(fontWeight: FontWeight.bold),
-                ),
-                subtitle:
-                    Text("Time: ${data['startTime']} - ${data['endTime']}"),
+                title: Text("${data['courseCode']} (${data['sessionType']})", style: const TextStyle(fontWeight: FontWeight.bold)),
+                subtitle: Text("Time: ${data['startTime']} - ${data['endTime']}"),
                 trailing: Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
                     IconButton(
-                      icon:
-                          const Icon(Icons.edit, color: tealPrimary, size: 20),
-                      onPressed: () => _showSessionDialog(
-                          docId: docs[i].id, existingData: data),
+                      icon: const Icon(Icons.edit, color: tealPrimary, size: 20),
+                      onPressed: () => _showSessionDialog(docId: docs[i].id, existingData: data),
                     ),
                     IconButton(
-                      icon: const Icon(Icons.delete_outline,
-                          color: Colors.red, size: 20),
-                      onPressed: () => FirebaseFirestore.instance
-                          .collection('active_sessions')
-                          .doc(docs[i].id)
-                          .delete(),
+                      icon: const Icon(Icons.delete_outline, color: Colors.red, size: 20),
+                      onPressed: () => FirebaseFirestore.instance.collection('active_sessions').doc(docs[i].id).delete(),
                     ),
                   ],
                 ),
@@ -366,53 +230,22 @@ class _AttendanceHistoryState extends State<AttendanceHistory>
 
   Widget _buildHistoryTab() {
     final uid = FirebaseAuth.instance.currentUser?.uid ?? "";
-    return StreamBuilder<QuerySnapshot>(
-      stream: FirebaseFirestore.instance
-          .collection('attendance')
-          .where('lecturerId', isEqualTo: uid)
-          .orderBy('timestamp', descending: true)
-          .snapshots(),
+    return StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
+      stream: FirebaseFirestore.instance.collection('attendance').where('lecturerId', isEqualTo: uid).orderBy('timestamp', descending: true).snapshots(),
       builder: (context, snapshot) {
-        if (snapshot.connectionState == ConnectionState.waiting) {
-          return const Center(
-              child: CircularProgressIndicator(color: tealPrimary));
-        }
-        if (snapshot.hasError) {
-          return Center(child: Text("Error: ${snapshot.error}"));
-        }
-        final docs = snapshot.data?.docs ?? [];
-        if (docs.isEmpty) {
-          return const Center(child: Text("No attendance history found."));
-        }
-
+        if (!snapshot.hasData) return const Center(child: CircularProgressIndicator());
+        final docs = snapshot.data!.docs;
         return ListView.builder(
-          padding: const EdgeInsets.all(12),
           itemCount: docs.length,
           itemBuilder: (context, i) {
-            final data = docs[i].data() as Map<String, dynamic>;
+            final d = docs[i].data();
             return Card(
-              margin: const EdgeInsets.only(bottom: 10),
+              margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
               child: ListTile(
-                leading: CircleAvatar(
-                  backgroundColor: tealPrimary.withOpacity(0.1),
-                  child: const Icon(Icons.history, color: tealPrimary),
-                ),
-                title: Text(
-                  "${data['courseCode']} - ${data['sessionType']}",
-                  style: const TextStyle(
-                      fontWeight: FontWeight.bold, color: tealDark),
-                ),
-                subtitle: Text(
-                  "Date: ${data['date']}\nSubmitted by: ${data['submittedBy'] ?? 'N/A'}",
-                  style: const TextStyle(fontSize: 12),
-                ),
-                trailing: Text(
-                  "${data['totalPresent']} / ${data['totalEnrolled'] ?? '?'}",
-                  style: const TextStyle(
-                      fontWeight: FontWeight.bold, color: tealPrimary),
-                ),
-                isThreeLine: true,
-                onTap: () {},
+                title: Text("${d['courseCode']} - ${d['sessionType']}"),
+                subtitle: Text("Date: ${d['date']}"),
+                trailing: const Icon(Icons.visibility, color: tealPrimary),
+                onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => ViewList(attendanceData: d))),
               ),
             );
           },
