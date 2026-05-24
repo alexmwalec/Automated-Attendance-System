@@ -177,7 +177,7 @@ class _AttendanceHistoryState extends State<AttendanceHistory>
     return Scaffold(
       backgroundColor: tealLight,
       appBar: AppBar(
-        automaticallyImplyLeading: false,
+    tealLight automaticallyImplyLeading: false,
         backgroundColor: tealPrimary,
         elevation: 2,
         shadowColor: tealDark.withOpacity(0.4),
