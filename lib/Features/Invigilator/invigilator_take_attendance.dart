@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -14,6 +15,7 @@ class InvigilatorTakeAttendance extends StatefulWidget {
   final String sessionType;
   final String venue;
   final String date;
+  final String lecturerId;
 
   const InvigilatorTakeAttendance({
     super.key,
@@ -21,41 +23,90 @@ class InvigilatorTakeAttendance extends StatefulWidget {
     required this.sessionType,
     required this.venue,
     required this.date,
+    required this.lecturerId,
   });
 
   @override
-  State<InvigilatorTakeAttendance> createState() => _InvigilatorTakeAttendanceState();
+  State<InvigilatorTakeAttendance> createState() =>
+      _InvigilatorTakeAttendanceState();
 }
 
 class _InvigilatorTakeAttendanceState extends State<InvigilatorTakeAttendance> {
-  final MobileScannerController _cameraCtrl = MobileScannerController();
+  final MobileScannerController _cameraController = MobileScannerController();
   final List<Map<String, String>> _scannedStudents = [];
 
   List<Map<String, dynamic>> _allEligibleStudents = [];
-  bool _isProcessing = false;
-  bool _isSubmitting = false;
   bool _isLoadingStudents = true;
-
-  int _failedScanCount = 0;
-  String? _lastFailedCode;
   String? _currentUserName;
+  bool _isSubmitting = false;
+
+  String? _lastScanned;
+  Timer? _scanCooldown;
+
+  // Will hold the resolved lecturer ID (either passed in or looked up)
+  String _resolvedLecturerId = '';
 
   @override
   void initState() {
     super.initState();
     _fetchCurrentUserName();
     _loadCourseStudents();
+    _resolveLecturerId(); // ADDED: ensures we always have a valid lecturer ID
+  }
+
+  // ADDED: If lecturerId was passed as empty, look it up from active_sessions
+  Future<void> _resolveLecturerId() async {
+    if (widget.lecturerId.isNotEmpty) {
+      _resolvedLecturerId = widget.lecturerId;
+      return;
+    }
+
+    // Fallback: find the session in Firestore by courseCode and get its lecturerId
+    try {
+      final sessionSnap = await FirebaseFirestore.instance
+          .collection('active_sessions')
+          .where('courseCode', isEqualTo: widget.courseCode)
+          .limit(1)
+          .get();
+
+      if (sessionSnap.docs.isNotEmpty) {
+        _resolvedLecturerId = sessionSnap.docs.first.data()['lecturerId'] ?? '';
+      }
+
+      // If still empty, try exam_assignments
+      if (_resolvedLecturerId.isEmpty) {
+        final assignSnap = await FirebaseFirestore.instance
+            .collection('exam_assignments')
+            .where('courseCode', isEqualTo: widget.courseCode)
+            .limit(1)
+            .get();
+
+        if (assignSnap.docs.isNotEmpty) {
+          final d = assignSnap.docs.first.data();
+          _resolvedLecturerId = d['lecturerId'] ?? '';
+        }
+      }
+    } catch (e) {
+      debugPrint('Could not resolve lecturerId: $e');
+    }
+
+    debugPrint(
+        'Resolved lecturerId: $_resolvedLecturerId'); // helpful for debugging
   }
 
   Future<void> _fetchCurrentUserName() async {
     final user = FirebaseAuth.instance.currentUser;
     if (user != null) {
-      final userDoc = await FirebaseFirestore.instance.collection('users').doc(user.uid).get();
+      final userDoc = await FirebaseFirestore.instance
+          .collection('users')
+          .doc(user.uid)
+          .get();
       if (userDoc.exists) {
         final data = userDoc.data();
         if (mounted) {
           setState(() {
-            _currentUserName = "${data?['name'] ?? ''} ${data?['surname'] ?? ''}".trim();
+            _currentUserName =
+                "${data?['name'] ?? ''} ${data?['surname'] ?? ''}".trim();
           });
         }
       }
@@ -64,7 +115,8 @@ class _InvigilatorTakeAttendanceState extends State<InvigilatorTakeAttendance> {
 
   Future<void> _loadCourseStudents() async {
     try {
-      final snap = await FirebaseFirestore.instance.collection('students').get();
+      final snap =
+          await FirebaseFirestore.instance.collection('students').get();
       final List<Map<String, dynamic>> filtered = [];
 
       for (var doc in snap.docs) {
@@ -94,142 +146,72 @@ class _InvigilatorTakeAttendanceState extends State<InvigilatorTakeAttendance> {
     }
   }
 
-  @override
-  void dispose() {
-    _cameraCtrl.dispose();
-    super.dispose();
-  }
+  Future<void> _handleScan(String rawValue) async {
+    final regNo = rawValue.trim().toUpperCase();
+    if (_lastScanned == regNo) return;
+    _lastScanned = regNo;
+    _scanCooldown?.cancel();
+    _scanCooldown =
+        Timer(const Duration(seconds: 2), () => _lastScanned = null);
 
-  void _handleFailedScan(String code) {
-    if (_lastFailedCode != code) {
-      _lastFailedCode = code;
-      _failedScanCount = 1;
-    } else {
-      _failedScanCount++;
+    if (_scannedStudents.any((s) => s['regNo']!.toUpperCase() == regNo)) {
+      HapticFeedback.mediumImpact();
+      _showSnack('$regNo already marked present', Colors.orange);
+      return;
     }
 
-    if (_failedScanCount >= 3) {
-      _failedScanCount = 0;
-      _lastFailedCode = null;
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        _showSnack('3 failed attempts — opening manual search...', Colors.orange);
-        Future.delayed(const Duration(milliseconds: 800), _goManual);
-      });
-    } else {
-      int remaining = 3 - _failedScanCount;
+    final studentData = _allEligibleStudents.firstWhere(
+      (s) => s['regNo'].toString().toUpperCase() == regNo,
+      orElse: () => {},
+    );
+
+    if (studentData.isEmpty) {
+      HapticFeedback.heavyImpact();
       _showSnack(
-        'Scan failed ($remaining attempt${remaining == 1 ? '' : 's'} left before manual search)',
-        Colors.red,
-      );
+          'Student $regNo not registered for ${widget.courseCode}', Colors.red);
+      return;
     }
-  }
 
-  void _onDetect(BarcodeCapture capture) async {
-    if (_isProcessing || _isLoadingStudents) return;
-    for (final barcode in capture.barcodes) {
-      final code = barcode.rawValue?.trim().toUpperCase();
-      if (code == null || code.isEmpty) continue;
-
-      setState(() => _isProcessing = true);
-
-      // Find student in pre-loaded eligible list
-      final studentData = _allEligibleStudents.firstWhere(
-            (s) => s['regNo'].toString().toUpperCase() == code,
-        orElse: () => {},
-      );
-
-      if (studentData.isNotEmpty) {
-        final student = {
-          'regNo': studentData['regNo'].toString(),
-          'name': studentData['name'].toString(),
-          'surname': studentData['surname'].toString(),
-        };
-
-        if (_scannedStudents.any((s) => s['regNo'] == student['regNo'])) {
-          _showSnack('${student['regNo']} already marked!', Colors.orange);
-        } else {
-          setState(() {
-            _scannedStudents.insert(0, student); // Recent on top
-            _failedScanCount = 0;
-            _lastFailedCode = null;
-          });
-          _showSnack('Captured: ${student['name']}', tealDark);
-        }
-      } else {
-        _handleFailedScan(code);
-        _showSnack('Student $code not registered for ${widget.courseCode}', Colors.red);
-      }
-
-      await Future.delayed(const Duration(seconds: 1));
-      if (mounted) setState(() => _isProcessing = false);
-      break;
-    }
-  }
-
-  void _showSnack(String msg, Color color) {
-    if (!mounted) return;
-    ScaffoldMessenger.of(context).clearSnackBars();
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(msg), backgroundColor: color, duration: const Duration(seconds: 2)),
-    );
-  }
-
-  void _goManual() {
-    Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (_) => ManualSearch(
-          existingStudents: _scannedStudents,
-          onStudentAdded: (student) {
-            setState(() {
-              if (!_scannedStudents.any((s) => s['regNo'] == student['regNo'])) {
-                _scannedStudents.insert(0, student);
-              }
-            });
-          },
-          courseCode: widget.courseCode,
-        ),
-      ),
-    ).then((_) => setState(() => _isProcessing = false));
-  }
-
-  void _showConfirmDialog() {
-    showDialog(
-      context: context,
-      builder: (_) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-        title: const Text('Confirm Attendance', style: TextStyle(color: tealPrimary, fontWeight: FontWeight.bold, fontSize: 16)),
-        content: Text('Submit attendance for ${widget.courseCode}?\n\nPresent: ${_scannedStudents.length}\nExpected: ${_allEligibleStudents.length}'),
-        actions: [
-          TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancel', style: TextStyle(color: Colors.grey))),
-          ElevatedButton(
-            style: ElevatedButton.styleFrom(backgroundColor: tealPrimary, elevation: 0),
-            onPressed: () {
-              Navigator.pop(context);
-              _submitToFirebase();
-            },
-            child: const Text('Confirm', style: TextStyle(color: Colors.white)),
-          ),
-        ],
-      ),
-    );
+    HapticFeedback.heavyImpact();
+    setState(() {
+      _scannedStudents.add({
+        'regNo': studentData['regNo'].toString(),
+        'name': studentData['name']?.toString() ?? 'Unknown',
+        'surname': studentData['surname']?.toString() ?? '',
+      });
+    });
+    _showSnack('✓ ${studentData['name']} marked present', tealDark);
   }
 
   Future<void> _submitToFirebase() async {
     if (_currentUserName == null || _isSubmitting) return;
-    setState(() => _isSubmitting = true);
 
+    // Wait for lecturer ID to be resolved before submitting
+    if (_resolvedLecturerId.isEmpty) {
+      await _resolveLecturerId();
+    }
+
+    // Final guard: if we still have no lecturer ID, warn but don't block
+    if (_resolvedLecturerId.isEmpty) {
+      debugPrint('WARNING: submitting attendance with no lecturerId');
+    }
+
+    setState(() => _isSubmitting = true);
     try {
-      final Set<String> presentRegNos = _scannedStudents.map((s) => s['regNo']!.toUpperCase()).toSet();
+      final Set<String> presentRegNos =
+          _scannedStudents.map((s) => s['regNo']!.trim().toUpperCase()).toSet();
+
       List<Map<String, dynamic>> fullAttendanceList = [];
 
       for (var student in _allEligibleStudents) {
-        final String regNo = student['regNo'].toString();
+        final String dbRegNo = student['regNo'].toString().trim();
+        final bool isPresent = presentRegNos.contains(dbRegNo.toUpperCase());
+
         fullAttendanceList.add({
-          'regNo': regNo,
+          'regNo': dbRegNo,
           'name': student['name'] ?? 'Unknown',
           'surname': student['surname'] ?? '',
-          'status': presentRegNos.contains(regNo.toUpperCase()) ? 'Present' : 'Absent',
+          'status': isPresent ? 'Present' : 'Absent',
         });
       }
 
@@ -241,161 +223,93 @@ class _InvigilatorTakeAttendanceState extends State<InvigilatorTakeAttendance> {
         'venue': widget.venue,
         'date': widget.date,
         'timestamp': FieldValue.serverTimestamp(),
-        'submittedBy': _currentUserName,
+        'submittedBy': _currentUserName, // invigilator's name
+        'lecturerId': _resolvedLecturerId, // FIXED: always the lecturer's UID
+        'invigilatorId':
+            FirebaseAuth.instance.currentUser?.uid, // invigilator's UID
         'fullAttendanceList': fullAttendanceList,
         'totalPresent': _scannedStudents.length,
         'totalEnrolled': _allEligibleStudents.length,
-        'lecturerId': FirebaseAuth.instance.currentUser?.uid,
       });
 
       if (mounted) {
-        _showSnack('Attendance Saved Successfully', tealPrimary);
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+              content: Text('Attendance submitted!'),
+              backgroundColor: Colors.green),
+        );
         Navigator.pop(context);
       }
     } catch (e) {
+      setState(() => _isSubmitting = false);
       _showSnack('Error: $e', Colors.red);
-    } finally {
-      if (mounted) setState(() => _isSubmitting = false);
     }
+  }
+
+  void _showSnack(String msg, Color color) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+          content: Text(msg),
+          backgroundColor: color,
+          duration: const Duration(seconds: 1)),
+    );
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.white,
+      backgroundColor: tealLight,
       appBar: AppBar(
         backgroundColor: tealPrimary,
-        elevation: 0,
-        title: const Text('AAS - INVIGILATOR', style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold)),
+        title: const Text('Capture Attendance',
+            style: TextStyle(color: Colors.white)),
         iconTheme: const IconThemeData(color: Colors.white),
       ),
       body: Column(
         children: [
-          // Info Bar
-          Container(
-            width: double.infinity,
-            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-            color: tealLight,
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Text('COURSE : ${widget.courseCode}',
-                    style: const TextStyle(color: tealDark, fontWeight: FontWeight.bold, fontSize: 12)),
-                Text('TYPE : ${widget.sessionType}',
-                    style: const TextStyle(color: tealDark, fontWeight: FontWeight.bold, fontSize: 12)),
-              ],
-            ),
-          ),
-
-          // Scanner Section
-          Padding(
-            padding: const EdgeInsets.fromLTRB(14, 10, 14, 0),
-            child: Container(
-              width: double.infinity,
-              height: MediaQuery.of(context).size.height * 0.32,
-              decoration: BoxDecoration(
-                color: Colors.black,
-                borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: tealPrimary, width: 2.5),
-              ),
-              child: ClipRRect(
-                borderRadius: BorderRadius.circular(10),
-                child: Stack(
-                  children: [
-                    MobileScanner(controller: _cameraCtrl, onDetect: _onDetect),
-                    if (_isProcessing)
-                      Container(color: Colors.black45, child: const Center(child: CircularProgressIndicator(color: Colors.white))),
-
-                    // Scanned Count Badge
-                    Positioned(
-                      top: 10,
-                      right: 10,
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                        decoration: BoxDecoration(color: tealPrimary, borderRadius: BorderRadius.circular(20)),
-                        child: Text('SCANNED: ${_scannedStudents.length} / ${_allEligibleStudents.length}',
-                            style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 12)),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-          ),
-
-          // Recent Scans Header
-          const Padding(
-            padding: EdgeInsets.fromLTRB(16, 15, 16, 8),
-            child: Row(
-                children: [
-                  Text('RECENT SCANS', style: TextStyle(color: Colors.grey, fontWeight: FontWeight.bold, fontSize: 12)),
-                  Spacer()
-                ]
-            ),
-          ),
-
-          // List of Scanned Students
           Expanded(
-            child: _scannedStudents.isEmpty
-                ? Center(child: Text(_isLoadingStudents ? 'Loading Students...' : 'No students scanned yet', style: const TextStyle(color: Colors.grey)))
-                : ListView.builder(
-              padding: const EdgeInsets.symmetric(horizontal: 14),
-              itemCount: _scannedStudents.length,
-              itemBuilder: (context, i) {
-                final s = _scannedStudents[i];
-                return Card(
-                  elevation: 0,
-                  margin: const EdgeInsets.only(bottom: 8),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(8),
-                    side: BorderSide(color: Colors.grey.shade200),
-                  ),
-                  child: ListTile(
-                    leading: const CircleAvatar(
-                      backgroundColor: tealLight,
-                      child: Icon(Icons.person, color: tealPrimary, size: 20),
-                    ),
-                    title: Text("${s['name']} ${s['surname']}", style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
-                    subtitle: Text(s['regNo']!, style: const TextStyle(fontSize: 12)),
-                    trailing: const Icon(Icons.check_circle, color: Colors.green, size: 20),
-                  ),
-                );
+            child: MobileScanner(
+              controller: _cameraController,
+              onDetect: (capture) {
+                for (final barcode in capture.barcodes) {
+                  if (barcode.rawValue != null) _handleScan(barcode.rawValue!);
+                }
               },
             ),
           ),
-
-          // Bottom Action Buttons
-          Padding(
+          Container(
             padding: const EdgeInsets.all(16),
-            child: Row(
+            decoration: const BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+            ),
+            child: Column(
               children: [
-                Expanded(
-                  child: OutlinedButton.icon(
-                    style: OutlinedButton.styleFrom(
-                      side: const BorderSide(color: tealPrimary),
-                      padding: const EdgeInsets.symmetric(vertical: 12),
-                    ),
-                    onPressed: _goManual,
-                    icon: const Icon(Icons.search, color: tealPrimary),
-                    label: const Text('MANUAL SEARCH', style: TextStyle(color: tealPrimary, fontWeight: FontWeight.bold)),
-                  ),
+                Text(
+                  "Scanned: ${_scannedStudents.length} / ${_allEligibleStudents.length}",
+                  style: const TextStyle(
+                      fontWeight: FontWeight.bold,
+                      fontSize: 18,
+                      color: tealDark),
                 ),
-                const SizedBox(width: 12),
-                Expanded(
+                const SizedBox(height: 10),
+                SizedBox(
+                  width: double.infinity,
                   child: ElevatedButton(
                     style: ElevatedButton.styleFrom(
                       backgroundColor: tealPrimary,
-                      padding: const EdgeInsets.symmetric(vertical: 12),
+                      padding: const EdgeInsets.all(15),
                     ),
-                    onPressed: (_isSubmitting || _scannedStudents.isEmpty) ? null : _showConfirmDialog,
+                    onPressed: _isSubmitting ? null : _submitToFirebase,
                     child: _isSubmitting
-                        ? const SizedBox(height: 20, width: 20, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
-                        : const Text('SUBMIT LIST', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+                        ? const CircularProgressIndicator(color: Colors.white)
+                        : const Text("Submit Attendance",
+                            style: TextStyle(color: Colors.white)),
                   ),
-                ),
+                )
               ],
             ),
-          ),
+          )
         ],
       ),
     );
