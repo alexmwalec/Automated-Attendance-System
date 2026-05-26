@@ -234,7 +234,6 @@ class _AttendancePageState extends State<AttendancePage> {
           .get();
       if (!courseDoc.exists) throw Exception("Course not found");
 
-      // Handle comma-separated string in array
       List<dynamic> rawEnrolled = courseDoc.data()?['enrolledStudents'] ?? [];
       List<String> expectedRegNos = [];
 
