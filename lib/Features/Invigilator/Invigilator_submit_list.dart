@@ -99,7 +99,7 @@ class SubmitList extends StatelessWidget {
             style: TextStyle(
                 color: tealPrimary, fontWeight: FontWeight.bold, fontSize: 15)),
         content: Text(
-            'Submit $sessionType attendance for $courseCode? This will automatically mark missing students as Absent or Exit.'),
+            'Submit $sessionType attendance for $courseCode?'),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),

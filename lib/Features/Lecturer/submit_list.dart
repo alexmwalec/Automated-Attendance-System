@@ -89,7 +89,7 @@ class SubmitList extends StatelessWidget {
         title: const Text('Confirm Attendance',
             style: TextStyle(color: tealPrimary, fontWeight: FontWeight.bold, fontSize: 15)),
         content: Text(
-            'Submit $sessionType attendance for $courseCode?\n\nThis will compare scanned students against the official course list and mark missing students as Absent.'),
+            'Submit $sessionType attendance for $courseCode?'),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
