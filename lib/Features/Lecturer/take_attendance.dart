@@ -198,9 +198,7 @@ class _AttendancePageState extends State<AttendancePage> {
               color: tealPrimary, fontWeight: FontWeight.bold, fontSize: 15),
         ),
         content: Text(
-          'Submit $_selectedSessionType attendance for ${widget.courseCode}?\n\n'
-          'This will compare scanned students against the official course list '
-          'and mark missing students as Absent.',
+          'Submit $_selectedSessionType attendance for ${widget.courseCode}?'
         ),
         actions: [
           TextButton(
@@ -230,7 +228,6 @@ class _AttendancePageState extends State<AttendancePage> {
     try {
       final String? uid = FirebaseAuth.instance.currentUser?.uid;
 
-      // 1. Get official enrollment for this course
       final courseDoc = await FirebaseFirestore.instance
           .collection('courses')
           .doc(widget.courseCode)

@@ -238,7 +238,6 @@ class _AttendanceHistoryState extends State<AttendanceHistory> with SingleTicker
           combined.addAll(snap.docs);
         }
 
-        // SORTING FIX: Handles mixed types (Timestamp from Mobile, String from Web)
         combined.sort((a, b) {
           final aData = a.data() as Map<String, dynamic>;
           final bData = b.data() as Map<String, dynamic>;
