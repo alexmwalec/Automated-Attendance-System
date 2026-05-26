@@ -27,11 +27,11 @@ class _InvigilatorDashboardState extends State<InvigilatorDashboard> {
           .limit(1)
           .snapshots(),
       builder: (context, snapshot) {
-        //
         String courseCode = 'N/A';
         String sessionType = 'Exam';
         String date = 'N/A';
         String venue = 'N/A';
+        String lecturerId = ''; // ADDED
 
         if (snapshot.hasData && snapshot.data!.docs.isNotEmpty) {
           final data = snapshot.data!.docs.first.data() as Map<String, dynamic>;
@@ -39,9 +39,9 @@ class _InvigilatorDashboardState extends State<InvigilatorDashboard> {
           sessionType = data['sessionType'] ?? 'Exam';
           date = data['date'] ?? 'N/A';
           venue = data['room'] ?? 'N/A';
+          lecturerId = data['lecturerId'] ?? ''; // ADDED
         }
 
-        // Updated pages list with required arguments
         final List<Widget> pages = [
           const InvigilatorHome(),
           InvigilatorTakeAttendance(
@@ -49,6 +49,7 @@ class _InvigilatorDashboardState extends State<InvigilatorDashboard> {
             sessionType: sessionType,
             venue: venue,
             date: date,
+            lecturerId: lecturerId, // ADDED
           ),
           const InvigilatorAttendanceList(),
           InvigilatorReport(
@@ -71,7 +72,7 @@ class _InvigilatorDashboardState extends State<InvigilatorDashboard> {
             selectedItemColor: Colors.white,
             unselectedItemColor: Colors.white60,
             selectedLabelStyle:
-            const TextStyle(fontWeight: FontWeight.bold, fontSize: 12),
+                const TextStyle(fontWeight: FontWeight.bold, fontSize: 12),
             unselectedLabelStyle: const TextStyle(fontSize: 12),
             items: const [
               BottomNavigationBarItem(

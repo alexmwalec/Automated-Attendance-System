@@ -15,6 +15,7 @@ class InvigilatorTakeAttendance extends StatefulWidget {
   final String sessionType;
   final String venue;
   final String date;
+  final String lecturerId;
 
   const InvigilatorTakeAttendance({
     super.key,
@@ -22,10 +23,12 @@ class InvigilatorTakeAttendance extends StatefulWidget {
     required this.sessionType,
     required this.venue,
     required this.date,
+    required this.lecturerId,
   });
 
   @override
-  State<InvigilatorTakeAttendance> createState() => _InvigilatorTakeAttendanceState();
+  State<InvigilatorTakeAttendance> createState() =>
+      _InvigilatorTakeAttendanceState();
 }
 
 class _InvigilatorTakeAttendanceState extends State<InvigilatorTakeAttendance> {
@@ -40,22 +43,70 @@ class _InvigilatorTakeAttendanceState extends State<InvigilatorTakeAttendance> {
   String? _lastScanned;
   Timer? _scanCooldown;
 
+  // Will hold the resolved lecturer ID (either passed in or looked up)
+  String _resolvedLecturerId = '';
+
   @override
   void initState() {
     super.initState();
     _fetchCurrentUserName();
     _loadCourseStudents();
+    _resolveLecturerId(); // ADDED: ensures we always have a valid lecturer ID
+  }
+
+  // ADDED: If lecturerId was passed as empty, look it up from active_sessions
+  Future<void> _resolveLecturerId() async {
+    if (widget.lecturerId.isNotEmpty) {
+      _resolvedLecturerId = widget.lecturerId;
+      return;
+    }
+
+    // Fallback: find the session in Firestore by courseCode and get its lecturerId
+    try {
+      final sessionSnap = await FirebaseFirestore.instance
+          .collection('active_sessions')
+          .where('courseCode', isEqualTo: widget.courseCode)
+          .limit(1)
+          .get();
+
+      if (sessionSnap.docs.isNotEmpty) {
+        _resolvedLecturerId = sessionSnap.docs.first.data()['lecturerId'] ?? '';
+      }
+
+      // If still empty, try exam_assignments
+      if (_resolvedLecturerId.isEmpty) {
+        final assignSnap = await FirebaseFirestore.instance
+            .collection('exam_assignments')
+            .where('courseCode', isEqualTo: widget.courseCode)
+            .limit(1)
+            .get();
+
+        if (assignSnap.docs.isNotEmpty) {
+          final d = assignSnap.docs.first.data();
+          _resolvedLecturerId = d['lecturerId'] ?? '';
+        }
+      }
+    } catch (e) {
+      debugPrint('Could not resolve lecturerId: $e');
+    }
+
+    debugPrint(
+        'Resolved lecturerId: $_resolvedLecturerId'); // helpful for debugging
   }
 
   Future<void> _fetchCurrentUserName() async {
     final user = FirebaseAuth.instance.currentUser;
     if (user != null) {
-      final userDoc = await FirebaseFirestore.instance.collection('users').doc(user.uid).get();
+      final userDoc = await FirebaseFirestore.instance
+          .collection('users')
+          .doc(user.uid)
+          .get();
       if (userDoc.exists) {
         final data = userDoc.data();
         if (mounted) {
           setState(() {
-            _currentUserName = "${data?['name'] ?? ''} ${data?['surname'] ?? ''}".trim();
+            _currentUserName =
+                "${data?['name'] ?? ''} ${data?['surname'] ?? ''}".trim();
           });
         }
       }
@@ -64,7 +115,8 @@ class _InvigilatorTakeAttendanceState extends State<InvigilatorTakeAttendance> {
 
   Future<void> _loadCourseStudents() async {
     try {
-      final snap = await FirebaseFirestore.instance.collection('students').get();
+      final snap =
+          await FirebaseFirestore.instance.collection('students').get();
       final List<Map<String, dynamic>> filtered = [];
 
       for (var doc in snap.docs) {
@@ -77,7 +129,7 @@ class _InvigilatorTakeAttendanceState extends State<InvigilatorTakeAttendance> {
 
         if (courseList.contains(widget.courseCode.trim().toUpperCase())) {
           filtered.add({
-            'regNo': doc.id.trim(), // Ensure no leading/trailing spaces from DB
+            'regNo': doc.id.trim(),
             ...data,
           });
         }
@@ -99,31 +151,31 @@ class _InvigilatorTakeAttendanceState extends State<InvigilatorTakeAttendance> {
     if (_lastScanned == regNo) return;
     _lastScanned = regNo;
     _scanCooldown?.cancel();
-    _scanCooldown = Timer(const Duration(seconds: 2), () => _lastScanned = null);
+    _scanCooldown =
+        Timer(const Duration(seconds: 2), () => _lastScanned = null);
 
-    // Case-insensitive check against already scanned list
     if (_scannedStudents.any((s) => s['regNo']!.toUpperCase() == regNo)) {
       HapticFeedback.mediumImpact();
       _showSnack('$regNo already marked present', Colors.orange);
       return;
     }
 
-    // Case-insensitive search in eligible list
     final studentData = _allEligibleStudents.firstWhere(
-          (s) => s['regNo'].toString().toUpperCase() == regNo,
+      (s) => s['regNo'].toString().toUpperCase() == regNo,
       orElse: () => {},
     );
 
     if (studentData.isEmpty) {
       HapticFeedback.heavyImpact();
-      _showSnack('Student $regNo not registered for ${widget.courseCode}', Colors.red);
+      _showSnack(
+          'Student $regNo not registered for ${widget.courseCode}', Colors.red);
       return;
     }
 
     HapticFeedback.heavyImpact();
     setState(() {
       _scannedStudents.add({
-        'regNo': studentData['regNo'].toString(), // Use the RegNo from DB for consistency
+        'regNo': studentData['regNo'].toString(),
         'name': studentData['name']?.toString() ?? 'Unknown',
         'surname': studentData['surname']?.toString() ?? '',
       });
@@ -134,20 +186,25 @@ class _InvigilatorTakeAttendanceState extends State<InvigilatorTakeAttendance> {
   Future<void> _submitToFirebase() async {
     if (_currentUserName == null || _isSubmitting) return;
 
+    // Wait for lecturer ID to be resolved before submitting
+    if (_resolvedLecturerId.isEmpty) {
+      await _resolveLecturerId();
+    }
+
+    // Final guard: if we still have no lecturer ID, warn but don't block
+    if (_resolvedLecturerId.isEmpty) {
+      debugPrint('WARNING: submitting attendance with no lecturerId');
+    }
+
     setState(() => _isSubmitting = true);
     try {
-      // 1. Normalize scanned reg numbers into a set for fast, case-insensitive lookup
-      final Set<String> presentRegNos = _scannedStudents
-          .map((s) => s['regNo']!.trim().toUpperCase())
-          .toSet();
+      final Set<String> presentRegNos =
+          _scannedStudents.map((s) => s['regNo']!.trim().toUpperCase()).toSet();
 
       List<Map<String, dynamic>> fullAttendanceList = [];
 
-      // 2. Iterate through ALL students enrolled in the course
       for (var student in _allEligibleStudents) {
         final String dbRegNo = student['regNo'].toString().trim();
-
-        // Match scanned list against official list (Normalized to Uppercase)
         final bool isPresent = presentRegNos.contains(dbRegNo.toUpperCase());
 
         fullAttendanceList.add({
@@ -158,7 +215,6 @@ class _InvigilatorTakeAttendanceState extends State<InvigilatorTakeAttendance> {
         });
       }
 
-      // 3. Sort list: Present students first
       fullAttendanceList.sort((a, b) => b['status'].compareTo(a['status']));
 
       await FirebaseFirestore.instance.collection('attendance').add({
@@ -167,16 +223,20 @@ class _InvigilatorTakeAttendanceState extends State<InvigilatorTakeAttendance> {
         'venue': widget.venue,
         'date': widget.date,
         'timestamp': FieldValue.serverTimestamp(),
-        'submittedBy': _currentUserName,
+        'submittedBy': _currentUserName, // invigilator's name
+        'lecturerId': _resolvedLecturerId, // FIXED: always the lecturer's UID
+        'invigilatorId':
+            FirebaseAuth.instance.currentUser?.uid, // invigilator's UID
         'fullAttendanceList': fullAttendanceList,
         'totalPresent': _scannedStudents.length,
         'totalEnrolled': _allEligibleStudents.length,
-        'lecturerId': FirebaseAuth.instance.currentUser?.uid, // Added to ensure it appears in history
       });
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Attendance submitted!'), backgroundColor: Colors.green),
+          const SnackBar(
+              content: Text('Attendance submitted!'),
+              backgroundColor: Colors.green),
         );
         Navigator.pop(context);
       }
@@ -188,7 +248,10 @@ class _InvigilatorTakeAttendanceState extends State<InvigilatorTakeAttendance> {
 
   void _showSnack(String msg, Color color) {
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(msg), backgroundColor: color, duration: const Duration(seconds: 1)),
+      SnackBar(
+          content: Text(msg),
+          backgroundColor: color,
+          duration: const Duration(seconds: 1)),
     );
   }
 
@@ -198,7 +261,8 @@ class _InvigilatorTakeAttendanceState extends State<InvigilatorTakeAttendance> {
       backgroundColor: tealLight,
       appBar: AppBar(
         backgroundColor: tealPrimary,
-        title: const Text('Capture Attendance', style: TextStyle(color: Colors.white)),
+        title: const Text('Capture Attendance',
+            style: TextStyle(color: Colors.white)),
         iconTheme: const IconThemeData(color: Colors.white),
       ),
       body: Column(
@@ -215,20 +279,32 @@ class _InvigilatorTakeAttendanceState extends State<InvigilatorTakeAttendance> {
           ),
           Container(
             padding: const EdgeInsets.all(16),
-            decoration: const BoxDecoration(color: Colors.white, borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
+            decoration: const BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+            ),
             child: Column(
               children: [
-                Text("Scanned: ${_scannedStudents.length} / ${_allEligibleStudents.length}",
-                    style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18, color: tealDark)),
+                Text(
+                  "Scanned: ${_scannedStudents.length} / ${_allEligibleStudents.length}",
+                  style: const TextStyle(
+                      fontWeight: FontWeight.bold,
+                      fontSize: 18,
+                      color: tealDark),
+                ),
                 const SizedBox(height: 10),
                 SizedBox(
                   width: double.infinity,
                   child: ElevatedButton(
-                    style: ElevatedButton.styleFrom(backgroundColor: tealPrimary, padding: const EdgeInsets.all(15)),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: tealPrimary,
+                      padding: const EdgeInsets.all(15),
+                    ),
                     onPressed: _isSubmitting ? null : _submitToFirebase,
                     child: _isSubmitting
                         ? const CircularProgressIndicator(color: Colors.white)
-                        : const Text("Submit Attendance", style: TextStyle(color: Colors.white)),
+                        : const Text("Submit Attendance",
+                            style: TextStyle(color: Colors.white)),
                   ),
                 )
               ],
