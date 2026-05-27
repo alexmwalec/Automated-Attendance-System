@@ -77,7 +77,9 @@ class _SubmitListState extends State<SubmitList> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: tealLight,
-      appBar: AppBar(backgroundColor: tealPrimary, iconTheme: const IconThemeData(color: Colors.white), title: const Text('REVIEW LIST', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold))),
+      appBar: AppBar(backgroundColor: tealPrimary, iconTheme:
+      const IconThemeData(color: Colors.white),
+          title: const Text('Review', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold))),
       body: Column(
         children: [
           Expanded(
