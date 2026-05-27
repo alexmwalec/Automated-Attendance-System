@@ -25,7 +25,7 @@ class _AttendanceHistoryState extends State<AttendanceHistory>
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 3, vsync: this);
+    _tabController = TabController(length: 2, vsync: this);
     _tabController.addListener(() {
       setState(() {});
     });
@@ -230,12 +230,9 @@ class _AttendanceHistoryState extends State<AttendanceHistory>
           labelColor: Colors.white,
           unselectedLabelColor: Colors.white70,
           labelStyle:
-              const TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
-          isScrollable: true,
-          tabAlignment: TabAlignment.start,
+              const TextStyle(fontSize: 13, fontWeight: FontWeight.bold),
           tabs: const [
             Tab(text: "Manage Sessions"),
-            Tab(text: "Assign Invigilator"),
             Tab(text: "History"),
           ],
         ),
@@ -244,7 +241,6 @@ class _AttendanceHistoryState extends State<AttendanceHistory>
         controller: _tabController,
         children: [
           _buildManageTab(),
-          _buildAssignTab(),
           _buildHistoryTab(),
         ],
       ),
@@ -348,7 +344,6 @@ class _AttendanceHistoryState extends State<AttendanceHistory>
             }
 
             return GestureDetector(
-              // Tapping the card opens Assign page with pre-filled course & session type
               onTap: () => Navigator.push(
                 context,
                 MaterialPageRoute(
@@ -488,10 +483,6 @@ class _AttendanceHistoryState extends State<AttendanceHistory>
         );
       },
     );
-  }
-
-  Widget _buildAssignTab() {
-    return const Assign();
   }
 
   Widget _buildHistoryTab() {
