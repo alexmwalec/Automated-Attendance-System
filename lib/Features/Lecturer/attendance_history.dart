@@ -1,11 +1,11 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:rxdart/rxdart.dart'; // REQUIRED: Add rxdart: ^0.28.0 to pubspec.yaml
+import 'package:rxdart/rxdart.dart';
 import 'lecturer_dashboard.dart';
 import 'assign.dart';
 import 'viewlist.dart';
- 
+
 const Color tealPrimary = Color(0xFF2E9E8E);
 const Color tealDark = Color(0xFF227A6D);
 const Color tealLight = Color(0xFFDFF2EF);
@@ -16,7 +16,8 @@ class AttendanceHistory extends StatefulWidget {
   State<AttendanceHistory> createState() => _AttendanceHistoryState();
 }
 
-class _AttendanceHistoryState extends State<AttendanceHistory> with SingleTickerProviderStateMixin {
+class _AttendanceHistoryState extends State<AttendanceHistory>
+    with SingleTickerProviderStateMixin {
   late TabController _tabController;
   final int _currentIndex = 2;
   List<String> assignedCourses = [];
@@ -24,7 +25,7 @@ class _AttendanceHistoryState extends State<AttendanceHistory> with SingleTicker
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 2, vsync: this);
+    _tabController = TabController(length: 3, vsync: this); // 3 tabs now
     _tabController.addListener(() {
       setState(() {});
     });
@@ -43,13 +44,16 @@ class _AttendanceHistoryState extends State<AttendanceHistory> with SingleTicker
   Future<void> _fetchAssignedCourses() async {
     final uid = FirebaseAuth.instance.currentUser?.uid;
     if (uid == null) return;
-    var doc = await FirebaseFirestore.instance.collection('lecturers').doc(uid).get();
+    var doc =
+        await FirebaseFirestore.instance.collection('lecturers').doc(uid).get();
     if (doc.exists) {
       List<dynamic> rawList = doc.data()?['assignedCourses'] ?? [];
       List<String> codes = [];
       for (var item in rawList) {
         String val = item.toString();
-        val.contains(',') ? codes.addAll(val.split(',').map((e) => e.trim())) : codes.add(val.trim());
+        val.contains(',')
+            ? codes.addAll(val.split(',').map((e) => e.trim()))
+            : codes.add(val.trim());
       }
       setState(() => assignedCourses = codes);
     }
@@ -60,8 +64,10 @@ class _AttendanceHistoryState extends State<AttendanceHistory> with SingleTicker
       final now = DateTime.now();
       final start = _parseTime(startTimeStr);
       final end = _parseTime(endTimeStr);
-      final startDt = DateTime(now.year, now.month, now.day, start.hour, start.minute);
-      final endDt = DateTime(now.year, now.month, now.day, end.hour, end.minute);
+      final startDt =
+          DateTime(now.year, now.month, now.day, start.hour, start.minute);
+      final endDt =
+          DateTime(now.year, now.month, now.day, end.hour, end.minute);
       return now.isAfter(startDt) && now.isBefore(endDt);
     } catch (e) {
       return false;
@@ -83,22 +89,31 @@ class _AttendanceHistoryState extends State<AttendanceHistory> with SingleTicker
     }
   }
 
-  // NEW: Delete functionality
   void _deleteSession(String docId, bool isAssignedTask) {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text("Delete Session", style: TextStyle(fontWeight: FontWeight.bold)),
-        content: Text("Are you sure you want to delete this ${isAssignedTask ? 'assignment' : 'session'}?"),
+        title: const Text("Delete Session",
+            style: TextStyle(fontWeight: FontWeight.bold)),
+        content: Text(
+            "Are you sure you want to delete this ${isAssignedTask ? 'assignment' : 'session'}?"),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(context), child: const Text("Cancel")),
+          TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text("Cancel")),
           TextButton(
             onPressed: () async {
-              final collection = isAssignedTask ? 'exam_assignments' : 'active_sessions';
-              await FirebaseFirestore.instance.collection(collection).doc(docId).delete();
+              final collection =
+                  isAssignedTask ? 'exam_assignments' : 'active_sessions';
+              await FirebaseFirestore.instance
+                  .collection(collection)
+                  .doc(docId)
+                  .delete();
               if (mounted) Navigator.pop(context);
             },
-            child: const Text("Delete", style: TextStyle(color: Colors.red, fontWeight: FontWeight.bold)),
+            child: const Text("Delete",
+                style:
+                    TextStyle(color: Colors.red, fontWeight: FontWeight.bold)),
           ),
         ],
       ),
@@ -119,7 +134,8 @@ class _AttendanceHistoryState extends State<AttendanceHistory> with SingleTicker
       context: context,
       builder: (context) => StatefulBuilder(
         builder: (context, setDialogState) => AlertDialog(
-          title: Text(docId == null ? "Create Active Session" : "Edit Active Session",
+          title: Text(
+              docId == null ? "Create Active Session" : "Edit Active Session",
               style: const TextStyle(color: tealPrimary)),
           content: Column(
             mainAxisSize: MainAxisSize.min,
@@ -128,21 +144,26 @@ class _AttendanceHistoryState extends State<AttendanceHistory> with SingleTicker
                 isExpanded: true,
                 hint: const Text("Select Course"),
                 value: selCourse,
-                items: assignedCourses.map((e) => DropdownMenuItem(value: e, child: Text(e))).toList(),
+                items: assignedCourses
+                    .map((e) => DropdownMenuItem(value: e, child: Text(e)))
+                    .toList(),
                 onChanged: (v) => setDialogState(() => selCourse = v),
               ),
               DropdownButton<String>(
                 isExpanded: true,
                 hint: const Text("Session Type"),
                 value: selType,
-                items: ["Class", "Lab", "Exam"].map((e) => DropdownMenuItem(value: e, child: Text(e))).toList(),
+                items: ["Class", "Lab", "Exam"]
+                    .map((e) => DropdownMenuItem(value: e, child: Text(e)))
+                    .toList(),
                 onChanged: (v) => setDialogState(() => selType = v),
               ),
               ListTile(
                 title: Text("Start: ${startTime.format(context)}"),
                 trailing: const Icon(Icons.access_time, size: 20),
                 onTap: () async {
-                  final t = await showTimePicker(context: context, initialTime: startTime);
+                  final t = await showTimePicker(
+                      context: context, initialTime: startTime);
                   if (t != null) setDialogState(() => startTime = t);
                 },
               ),
@@ -150,37 +171,48 @@ class _AttendanceHistoryState extends State<AttendanceHistory> with SingleTicker
                 title: Text("End: ${endTime.format(context)}"),
                 trailing: const Icon(Icons.access_time, size: 20),
                 onTap: () async {
-                  final t = await showTimePicker(context: context, initialTime: endTime);
+                  final t = await showTimePicker(
+                      context: context, initialTime: endTime);
                   if (t != null) setDialogState(() => endTime = t);
                 },
               ),
             ],
           ),
           actions: [
-            TextButton(onPressed: () => Navigator.pop(context), child: const Text("Cancel")),
+            TextButton(
+                onPressed: () => Navigator.pop(context),
+                child: const Text("Cancel")),
             ElevatedButton(
               style: ElevatedButton.styleFrom(backgroundColor: tealPrimary),
-              onPressed: (selCourse == null || selType == null) ? null : () async {
-                final uid = FirebaseAuth.instance.currentUser?.uid;
-                final data = {
-                  'lecturerId': uid,
-                  'courseCode': selCourse,
-                  'sessionType': selType,
-                  'startTime': startTime.format(context),
-                  'endTime': endTime.format(context),
-                  'updatedAt': FieldValue.serverTimestamp(),
-                };
+              onPressed: (selCourse == null || selType == null)
+                  ? null
+                  : () async {
+                      final uid = FirebaseAuth.instance.currentUser?.uid;
+                      final data = {
+                        'lecturerId': uid,
+                        'courseCode': selCourse,
+                        'sessionType': selType,
+                        'startTime': startTime.format(context),
+                        'endTime': endTime.format(context),
+                        'updatedAt': FieldValue.serverTimestamp(),
+                      };
 
-                if (docId == null) {
-                  data['createdAt'] = FieldValue.serverTimestamp();
-                  await FirebaseFirestore.instance.collection('active_sessions').add(data);
-                } else {
-                  await FirebaseFirestore.instance.collection('active_sessions').doc(docId).update(data);
-                }
+                      if (docId == null) {
+                        data['createdAt'] = FieldValue.serverTimestamp();
+                        await FirebaseFirestore.instance
+                            .collection('active_sessions')
+                            .add(data);
+                      } else {
+                        await FirebaseFirestore.instance
+                            .collection('active_sessions')
+                            .doc(docId)
+                            .update(data);
+                      }
 
-                if (context.mounted) Navigator.pop(context);
-              },
-              child: Text(docId == null ? "Create" : "Update", style: const TextStyle(color: Colors.white)),
+                      if (context.mounted) Navigator.pop(context);
+                    },
+              child: Text(docId == null ? "Create" : "Update",
+                  style: const TextStyle(color: Colors.white)),
             )
           ],
         ),
@@ -195,29 +227,49 @@ class _AttendanceHistoryState extends State<AttendanceHistory> with SingleTicker
       appBar: AppBar(
         backgroundColor: tealPrimary,
         automaticallyImplyLeading: false,
-        title: const Text('Session Manager', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+        title: const Text('Session Manager',
+            style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
         bottom: TabBar(
           controller: _tabController,
           indicatorColor: Colors.white,
-          tabs: const [Tab(text: "Manage Sessions"), Tab(text: "History")],
+          labelColor: Colors.white,
+          unselectedLabelColor: Colors.white70,
+          labelStyle:
+              const TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
+          isScrollable:
+              true, // prevents labels from being hidden on small screens
+          tabAlignment: TabAlignment.start,
+          tabs: const [
+            Tab(text: "Manage Sessions"),
+            Tab(text: "Assign Invigilator"),
+            Tab(text: "History"),
+          ],
         ),
       ),
       body: TabBarView(
         controller: _tabController,
-        children: [_buildManageTab(), _buildHistoryTab()],
+        children: [
+          _buildManageTab(),
+          _buildAssignTab(),
+          _buildHistoryTab(),
+        ],
       ),
       floatingActionButton: _tabController.index == 0
           ? FloatingActionButton(
-        backgroundColor: tealPrimary,
-        onPressed: () => _showSessionDialog(),
-        child: const Icon(Icons.add, color: Colors.white),
-      )
+              backgroundColor: tealPrimary,
+              onPressed: () => _showSessionDialog(),
+              child: const Icon(Icons.add, color: Colors.white),
+            )
           : null,
       bottomNavigationBar: BottomNavigationBar(
         currentIndex: _currentIndex,
         onTap: (i) {
-          if (i == 0 || i == 1) Navigator.pushAndRemoveUntil(context, MaterialPageRoute(builder: (_) => LecturerDashboard(initialIndex: i)), (r) => false);
-          if (i == 3) Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) => const Assign()));
+          if (i == 0 || i == 1)
+            Navigator.pushAndRemoveUntil(
+                context,
+                MaterialPageRoute(
+                    builder: (_) => LecturerDashboard(initialIndex: i)),
+                (r) => false);
         },
         type: BottomNavigationBarType.fixed,
         backgroundColor: tealPrimary,
@@ -225,8 +277,10 @@ class _AttendanceHistoryState extends State<AttendanceHistory> with SingleTicker
         unselectedItemColor: Colors.white70,
         items: const [
           BottomNavigationBarItem(icon: Icon(Icons.home), label: 'Home'),
-          BottomNavigationBarItem(icon: Icon(Icons.qr_code_scanner), label: 'Attendance'),
-          BottomNavigationBarItem(icon: Icon(Icons.manage_accounts), label: 'Manager'),
+          BottomNavigationBarItem(
+              icon: Icon(Icons.qr_code_scanner), label: 'Attendance'),
+          BottomNavigationBarItem(
+              icon: Icon(Icons.manage_accounts), label: 'Manager'),
         ],
       ),
     );
@@ -246,7 +300,8 @@ class _AttendanceHistoryState extends State<AttendanceHistory> with SingleTicker
         .snapshots();
 
     return StreamBuilder<List<QueryDocumentSnapshot>>(
-      stream: CombineLatestStream.list([manualSessions, assignedTasks]).map((snapshots) {
+      stream: CombineLatestStream.list([manualSessions, assignedTasks])
+          .map((snapshots) {
         List<QueryDocumentSnapshot> combined = [];
         for (var snap in snapshots) {
           combined.addAll(snap.docs);
@@ -261,7 +316,8 @@ class _AttendanceHistoryState extends State<AttendanceHistory> with SingleTicker
         return combined;
       }),
       builder: (context, snapshot) {
-        if (!snapshot.hasData) return const Center(child: CircularProgressIndicator());
+        if (!snapshot.hasData)
+          return const Center(child: CircularProgressIndicator());
         final docs = snapshot.data!;
 
         if (docs.isEmpty) {
@@ -269,9 +325,11 @@ class _AttendanceHistoryState extends State<AttendanceHistory> with SingleTicker
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                Icon(Icons.timer_off_outlined, size: 64, color: tealPrimary.withOpacity(0.5)),
+                Icon(Icons.timer_off_outlined,
+                    size: 64, color: tealPrimary.withOpacity(0.5)),
                 const SizedBox(height: 16),
-                const Text("No sessions or assignments found.", style: TextStyle(color: Colors.grey)),
+                const Text("No sessions or assignments found.",
+                    style: TextStyle(color: Colors.grey)),
               ],
             ),
           );
@@ -282,16 +340,20 @@ class _AttendanceHistoryState extends State<AttendanceHistory> with SingleTicker
           padding: const EdgeInsets.all(16),
           itemBuilder: (context, i) {
             final data = docs[i].data() as Map<String, dynamic>;
-            final bool isAssignedTask = docs[i].reference.path.contains('exam_assignments');
+            final bool isAssignedTask =
+                docs[i].reference.path.contains('exam_assignments');
 
-            final String courseCode = data['courseCode'] ?? data['course'] ?? 'N/A';
+            final String courseCode =
+                data['courseCode'] ?? data['course'] ?? 'N/A';
             final String room = data['room'] ?? data['venue'] ?? 'Not Set';
             final String invigilator = data['invigilatorName'] ?? 'Self';
-            final String time = data['time'] ?? "${data['startTime']} - ${data['endTime']}";
+            final String time =
+                data['time'] ?? "${data['startTime']} - ${data['endTime']}";
 
             bool isLive = false;
             if (!isAssignedTask) {
-              isLive = _isSessionLive(data['startTime'] ?? "", data['endTime'] ?? "");
+              isLive = _isSessionLive(
+                  data['startTime'] ?? "", data['endTime'] ?? "");
             }
 
             return Container(
@@ -299,54 +361,83 @@ class _AttendanceHistoryState extends State<AttendanceHistory> with SingleTicker
               decoration: BoxDecoration(
                 color: Colors.white,
                 borderRadius: BorderRadius.circular(16),
-                boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 10, offset: const Offset(0, 4))],
+                boxShadow: [
+                  BoxShadow(
+                      color: Colors.black.withOpacity(0.05),
+                      blurRadius: 10,
+                      offset: const Offset(0, 4))
+                ],
               ),
               child: Column(
                 children: [
                   Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 16, vertical: 12),
                     decoration: BoxDecoration(
-                      color: isAssignedTask ? Colors.blue.withOpacity(0.1) : (isLive ? tealPrimary.withOpacity(0.1) : Colors.grey[100]),
-                      borderRadius: const BorderRadius.vertical(top: Radius.circular(16)),
+                      color: isAssignedTask
+                          ? Colors.blue.withOpacity(0.1)
+                          : (isLive
+                              ? tealPrimary.withOpacity(0.1)
+                              : Colors.grey[100]),
+                      borderRadius:
+                          const BorderRadius.vertical(top: Radius.circular(16)),
                     ),
                     child: Row(
                       children: [
                         Icon(
-                          isAssignedTask ? Icons.assignment_ind : (isLive ? Icons.sensors : Icons.timer_outlined),
-                          color: isAssignedTask ? Colors.blue : (isLive ? tealPrimary : Colors.grey),
+                          isAssignedTask
+                              ? Icons.assignment_ind
+                              : (isLive ? Icons.sensors : Icons.timer_outlined),
+                          color: isAssignedTask
+                              ? Colors.blue
+                              : (isLive ? tealPrimary : Colors.grey),
                           size: 18,
                         ),
                         const SizedBox(width: 12),
                         Expanded(
                           child: Text(
                             courseCode,
-                            style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                            style: const TextStyle(
+                                fontWeight: FontWeight.bold, fontSize: 16),
                           ),
                         ),
-                        // Action Buttons: Edit and Delete
                         if (!isAssignedTask)
                           IconButton(
                             padding: EdgeInsets.zero,
                             constraints: const BoxConstraints(),
-                            icon: const Icon(Icons.edit, size: 18, color: tealPrimary),
-                            onPressed: () => _showSessionDialog(docId: docs[i].id, existingData: data),
+                            icon: const Icon(Icons.edit,
+                                size: 18, color: tealPrimary),
+                            onPressed: () => _showSessionDialog(
+                                docId: docs[i].id, existingData: data),
                           ),
                         IconButton(
                           padding: EdgeInsets.zero,
                           constraints: const BoxConstraints(),
-                          icon: const Icon(Icons.delete_outline, size: 18, color: Colors.redAccent),
-                          onPressed: () => _deleteSession(docs[i].id, isAssignedTask),
+                          icon: const Icon(Icons.delete_outline,
+                              size: 18, color: Colors.redAccent),
+                          onPressed: () =>
+                              _deleteSession(docs[i].id, isAssignedTask),
                         ),
                         const SizedBox(width: 8),
                         Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 10, vertical: 4),
                           decoration: BoxDecoration(
-                            color: isAssignedTask ? Colors.blue : (isLive ? Colors.green[600] : Colors.grey[600]),
+                            color: isAssignedTask
+                                ? Colors.blue
+                                : (isLive
+                                    ? Colors.green[600]
+                                    : Colors.grey[600]),
                             borderRadius: BorderRadius.circular(20),
                           ),
                           child: Text(
-                            isAssignedTask ? "ASSIGNED" : (isLive ? "LIVE" : "SCHEDULED"),
-                            style: const TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold),
+                            isAssignedTask
+                                ? "ASSIGNED"
+                                : (isLive ? "LIVE" : "SCHEDULED"),
+                            style: const TextStyle(
+                                color: Colors.white,
+                                fontSize: 10,
+                                fontWeight: FontWeight.bold),
                           ),
                         ),
                       ],
@@ -358,21 +449,27 @@ class _AttendanceHistoryState extends State<AttendanceHistory> with SingleTicker
                       children: [
                         Row(
                           children: [
-                            const Icon(Icons.person_outline, size: 16, color: Colors.grey),
+                            const Icon(Icons.person_outline,
+                                size: 16, color: Colors.grey),
                             const SizedBox(width: 8),
-                            Text("Staff: $invigilator", style: const TextStyle(color: Colors.black87)),
+                            Text("Staff: $invigilator",
+                                style: const TextStyle(color: Colors.black87)),
                             const Spacer(),
-                            const Icon(Icons.location_on_outlined, size: 16, color: Colors.grey),
+                            const Icon(Icons.location_on_outlined,
+                                size: 16, color: Colors.grey),
                             const SizedBox(width: 4),
-                            Text(room, style: const TextStyle(color: Colors.black87)),
+                            Text(room,
+                                style: const TextStyle(color: Colors.black87)),
                           ],
                         ),
                         const SizedBox(height: 8),
                         Row(
                           children: [
-                            const Icon(Icons.access_time, size: 16, color: Colors.grey),
+                            const Icon(Icons.access_time,
+                                size: 16, color: Colors.grey),
                             const SizedBox(width: 8),
-                            Text(time, style: const TextStyle(color: Colors.black87)),
+                            Text(time,
+                                style: const TextStyle(color: Colors.black87)),
                           ],
                         ),
                       ],
@@ -387,14 +484,27 @@ class _AttendanceHistoryState extends State<AttendanceHistory> with SingleTicker
     );
   }
 
+  // New dedicated Assign Invigilator tab
+  Widget _buildAssignTab() {
+    return const Assign();
+  }
+
   Widget _buildHistoryTab() {
     final uid = FirebaseAuth.instance.currentUser?.uid;
     return StreamBuilder<QuerySnapshot>(
-      stream: FirebaseFirestore.instance.collection('attendance').where('lecturerId', isEqualTo: uid).orderBy('timestamp', descending: true).snapshots(),
+      stream: FirebaseFirestore.instance
+          .collection('attendance')
+          .where('lecturerId', isEqualTo: uid)
+          .orderBy('timestamp', descending: true)
+          .snapshots(),
       builder: (context, snapshot) {
-        if (!snapshot.hasData) return const Center(child: CircularProgressIndicator());
+        if (!snapshot.hasData)
+          return const Center(child: CircularProgressIndicator());
         final docs = snapshot.data!.docs;
-        if (docs.isEmpty) return const Center(child: Text("No records found.", style: TextStyle(color: Colors.grey)));
+        if (docs.isEmpty)
+          return const Center(
+              child: Text("No records found.",
+                  style: TextStyle(color: Colors.grey)));
 
         return ListView.builder(
           itemCount: docs.length,
@@ -403,13 +513,20 @@ class _AttendanceHistoryState extends State<AttendanceHistory> with SingleTicker
             final data = docs[i].data() as Map<String, dynamic>;
             return Card(
               margin: const EdgeInsets.only(bottom: 12),
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12)),
               child: ListTile(
-                leading: const CircleAvatar(backgroundColor: tealLight, child: Icon(Icons.history, color: tealPrimary)),
-                title: Text("${data['courseCode']} - ${data['sessionType']}", style: const TextStyle(fontWeight: FontWeight.bold)),
+                leading: const CircleAvatar(
+                    backgroundColor: tealLight,
+                    child: Icon(Icons.history, color: tealPrimary)),
+                title: Text("${data['courseCode']} - ${data['sessionType']}",
+                    style: const TextStyle(fontWeight: FontWeight.bold)),
                 subtitle: Text("${data['date']}"),
                 trailing: const Icon(Icons.chevron_right),
-                onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => ViewList(attendanceData: data))),
+                onTap: () => Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                        builder: (_) => ViewList(attendanceData: data))),
               ),
             );
           },
