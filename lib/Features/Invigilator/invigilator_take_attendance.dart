@@ -26,7 +26,8 @@ class InvigilatorTakeAttendance extends StatefulWidget {
   });
 
   @override
-  State<InvigilatorTakeAttendance> createState() => _InvigilatorTakeAttendanceState();
+  State<InvigilatorTakeAttendance> createState() =>
+      _InvigilatorTakeAttendanceState();
 }
 
 class _InvigilatorTakeAttendanceState extends State<InvigilatorTakeAttendance> {
@@ -47,13 +48,16 @@ class _InvigilatorTakeAttendanceState extends State<InvigilatorTakeAttendance> {
 
   Future<void> _loadCourseStudents() async {
     try {
-      final snap = await FirebaseFirestore.instance.collection('students').get();
+      final snap =
+          await FirebaseFirestore.instance.collection('students').get();
       final List<Map<String, dynamic>> filtered = [];
       for (var doc in snap.docs) {
         final data = doc.data();
         final String coursesString = data['courses']?.toString() ?? '';
-        final List<String> courseList =
-        coursesString.split(',').map((e) => e.trim().toUpperCase()).toList();
+        final List<String> courseList = coursesString
+            .split(',')
+            .map((e) => e.trim().toUpperCase())
+            .toList();
 
         if (courseList.contains(widget.courseCode.trim().toUpperCase())) {
           filtered.add({'regNo': doc.id.trim(), ...data});
@@ -79,7 +83,7 @@ class _InvigilatorTakeAttendanceState extends State<InvigilatorTakeAttendance> {
 
       setState(() => _isProcessing = true);
       final studentData = _allEligibleStudents.firstWhere(
-            (s) => s['regNo'].toString().toUpperCase() == code,
+        (s) => s['regNo'].toString().toUpperCase() == code,
         orElse: () => {},
       );
 
@@ -129,27 +133,34 @@ class _InvigilatorTakeAttendanceState extends State<InvigilatorTakeAttendance> {
         context,
         MaterialPageRoute(
             builder: (_) => ManualSearch(
-              existingStudents: _scannedStudents,
-              onStudentAdded: (s) => setState(() => _scannedStudents.insert(0, s)),
-              courseCode: widget.courseCode,
-            )));
+                  existingStudents: _scannedStudents,
+                  onStudentAdded: (s) =>
+                      setState(() => _scannedStudents.insert(0, s)),
+                  courseCode: widget.courseCode,
+                )));
   }
 
-  // --- SUBMISSION LOGIC INTEGRATED FROM SUBMIT_LIST ---
   Future<void> _submitAttendance() async {
     setState(() => _isSubmitting = true);
     try {
       final user = FirebaseAuth.instance.currentUser;
-      final userDoc = await FirebaseFirestore.instance.collection('users').doc(user?.uid).get();
-      final String invName = "${userDoc.data()?['name']} ${userDoc.data()?['surname']}".trim();
+      final userDoc = await FirebaseFirestore.instance
+          .collection('users')
+          .doc(user?.uid)
+          .get();
+      final String invName =
+          "${userDoc.data()?['name']} ${userDoc.data()?['surname']}".trim();
 
-      // Get enrollment from course doc to build full report (Present/Absent)
-      final courseDoc = await FirebaseFirestore.instance.collection('courses').doc(widget.courseCode).get();
+      final courseDoc = await FirebaseFirestore.instance
+          .collection('courses')
+          .doc(widget.courseCode)
+          .get();
       List<String> expectedRegNos = [];
       if (courseDoc.exists) {
         List<dynamic> raw = courseDoc.data()?['enrolledStudents'] ?? [];
         if (raw.isNotEmpty) {
-          expectedRegNos = raw[0].toString().split(',').map((e) => e.trim()).toList();
+          expectedRegNos =
+              raw[0].toString().split(',').map((e) => e.trim()).toList();
         }
       }
 
@@ -158,7 +169,10 @@ class _InvigilatorTakeAttendanceState extends State<InvigilatorTakeAttendance> {
 
       for (String reg in expectedRegNos) {
         if (reg.isEmpty) continue;
-        var sDoc = await FirebaseFirestore.instance.collection('students').doc(reg).get();
+        var sDoc = await FirebaseFirestore.instance
+            .collection('students')
+            .doc(reg)
+            .get();
         fullReport.add({
           'regNo': reg,
           'name': sDoc.data()?['name'] ?? 'Unknown',
@@ -200,7 +214,10 @@ class _InvigilatorTakeAttendanceState extends State<InvigilatorTakeAttendance> {
           elevation: 0,
           iconTheme: const IconThemeData(color: Colors.white),
           title: const Text('CAPTURE ATTENDANCE',
-              style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold))),
+              style: TextStyle(
+                  color: Colors.white,
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold))),
       body: Column(
         children: [
           // Info bar
@@ -208,17 +225,25 @@ class _InvigilatorTakeAttendanceState extends State<InvigilatorTakeAttendance> {
             width: double.infinity,
             padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
             color: tealLight,
-            child: Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
-              Text('COURSE: ${widget.courseCode}',
-                  style: const TextStyle(color: tealDark, fontWeight: FontWeight.bold, fontSize: 12)),
-              Text('VENUE: ${widget.venue}',
-                  style: const TextStyle(color: tealDark, fontWeight: FontWeight.bold, fontSize: 12)),
-            ]),
+            child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text('COURSE: ${widget.courseCode}',
+                      style: const TextStyle(
+                          color: tealDark,
+                          fontWeight: FontWeight.bold,
+                          fontSize: 12)),
+                  Text('VENUE: ${widget.venue}',
+                      style: const TextStyle(
+                          color: tealDark,
+                          fontWeight: FontWeight.bold,
+                          fontSize: 12)),
+                ]),
           ),
 
           // Scanner Area
           Padding(
-            padding: const EdgeInsets.all(14),
+            padding: const EdgeInsets.fromLTRB(14, 14, 14, 8),
             child: Container(
               height: MediaQuery.of(context).size.height * 0.28,
               width: double.infinity,
@@ -231,46 +256,91 @@ class _InvigilatorTakeAttendanceState extends State<InvigilatorTakeAttendance> {
                 child: Stack(children: [
                   MobileScanner(controller: _cameraCtrl, onDetect: _onDetect),
                   if (_isProcessing)
-                    const Center(child: CircularProgressIndicator(color: tealPrimary)),
+                    const Center(
+                        child: CircularProgressIndicator(color: tealPrimary)),
                   Positioned(
                       top: 10,
                       right: 10,
                       child: Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 10, vertical: 5),
                           decoration: BoxDecoration(
-                              color: tealPrimary, borderRadius: BorderRadius.circular(20)),
-                          child: Text('${_scannedStudents.length} / $_totalEnrolled',
+                              color: tealPrimary,
+                              borderRadius: BorderRadius.circular(20)),
+                          child: Text(
+                              '${_scannedStudents.length} / $_totalEnrolled',
                               style: const TextStyle(
-                                  color: Colors.white, fontSize: 12, fontWeight: FontWeight.bold)))),
+                                  color: Colors.white,
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.bold)))),
                 ]),
               ),
             ),
           ),
 
-          // Review list integrated directly
+          // Search bar below camera
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 4),
+            child: GestureDetector(
+              onTap: _goManual,
+              child: Container(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(30),
+                    border: Border.all(color: Colors.black12)),
+                child: const Row(children: [
+                  Icon(Icons.search, color: Colors.grey, size: 18),
+                  SizedBox(width: 8),
+                  Text('Add student by searching reg number',
+                      style: TextStyle(color: Colors.grey, fontSize: 13)),
+                ]),
+              ),
+            ),
+          ),
+
+          // Review list header
           const Padding(
               padding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
               child: Align(
                   alignment: Alignment.centerLeft,
                   child: Text('REVIEW SCANNED LIST',
-                      style: TextStyle(color: Colors.grey, fontWeight: FontWeight.bold, fontSize: 12)))),
+                      style: TextStyle(
+                          color: Colors.grey,
+                          fontWeight: FontWeight.bold,
+                          fontSize: 12)))),
 
-          // Header for the table
+          // Table header
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 14),
             child: Container(
               padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 8),
-              decoration: BoxDecoration(color: tealLight, borderRadius: BorderRadius.circular(4)),
+              decoration: BoxDecoration(
+                  color: tealLight, borderRadius: BorderRadius.circular(4)),
               child: const Row(
                 children: [
-                  Expanded(flex: 3, child: Text('REG NO', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 11))),
-                  Expanded(flex: 4, child: Text('NAME', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 11))),
-                  Expanded(flex: 2, child: Text('STATUS', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 11))),
+                  Expanded(
+                      flex: 3,
+                      child: Text('REG NO',
+                          style: TextStyle(
+                              fontWeight: FontWeight.bold, fontSize: 11))),
+                  Expanded(
+                      flex: 4,
+                      child: Text('NAME',
+                          style: TextStyle(
+                              fontWeight: FontWeight.bold, fontSize: 11))),
+                  Expanded(
+                      flex: 2,
+                      child: Text('STATUS',
+                          style: TextStyle(
+                              fontWeight: FontWeight.bold, fontSize: 11))),
                 ],
               ),
             ),
           ),
 
+          // Scanned students list
           Expanded(
             child: ListView.builder(
               padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 4),
@@ -278,15 +348,29 @@ class _InvigilatorTakeAttendanceState extends State<InvigilatorTakeAttendance> {
               itemBuilder: (context, i) {
                 final s = _scannedStudents[i];
                 return Container(
-                  padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 8),
+                  padding:
+                      const EdgeInsets.symmetric(vertical: 8, horizontal: 8),
                   decoration: const BoxDecoration(
-                    border: Border(bottom: BorderSide(color: Colors.black12, width: 0.5)),
+                    border: Border(
+                        bottom: BorderSide(color: Colors.black12, width: 0.5)),
                   ),
                   child: Row(
                     children: [
-                      Expanded(flex: 3, child: Text(s['regNo']!, style: const TextStyle(fontSize: 11))),
-                      Expanded(flex: 4, child: Text("${s['name']} ${s['surname']}", style: const TextStyle(fontSize: 11))),
-                      const Expanded(flex: 2, child: Text('Present', style: TextStyle(color: tealDark, fontWeight: FontWeight.bold, fontSize: 11))),
+                      Expanded(
+                          flex: 3,
+                          child: Text(s['regNo']!,
+                              style: const TextStyle(fontSize: 11))),
+                      Expanded(
+                          flex: 4,
+                          child: Text("${s['name']} ${s['surname']}",
+                              style: const TextStyle(fontSize: 11))),
+                      const Expanded(
+                          flex: 2,
+                          child: Text('Present',
+                              style: TextStyle(
+                                  color: tealDark,
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 11))),
                     ],
                   ),
                 );
@@ -294,30 +378,32 @@ class _InvigilatorTakeAttendanceState extends State<InvigilatorTakeAttendance> {
             ),
           ),
 
-          // Bottom Action Bar
+          // Submit button — small, right-aligned
           Padding(
-            padding: const EdgeInsets.all(16),
-            child: Row(children: [
-              Expanded(
-                child: OutlinedButton(
-                  style: OutlinedButton.styleFrom(side: const BorderSide(color: tealPrimary)),
-                  onPressed: _goManual,
-                  child: const Text('MANUAL SEARCH',
-                      style: TextStyle(color: tealPrimary, fontWeight: FontWeight.bold, fontSize: 12)),
-                ),
+            padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+            child: Align(
+              alignment: Alignment.centerRight,
+              child: ElevatedButton(
+                style: ElevatedButton.styleFrom(
+                    backgroundColor: tealPrimary,
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 24, vertical: 12)),
+                onPressed: (_scannedStudents.isEmpty || _isSubmitting)
+                    ? null
+                    : _submitAttendance,
+                child: _isSubmitting
+                    ? const SizedBox(
+                        height: 20,
+                        width: 20,
+                        child: CircularProgressIndicator(
+                            color: Colors.white, strokeWidth: 2))
+                    : const Text('Submit Attendance',
+                        style: TextStyle(
+                            color: Colors.white,
+                            fontWeight: FontWeight.bold,
+                            fontSize: 13)),
               ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: ElevatedButton(
-                  style: ElevatedButton.styleFrom(backgroundColor: tealPrimary),
-                  onPressed: (_scannedStudents.isEmpty || _isSubmitting) ? null : _submitAttendance,
-                  child: _isSubmitting
-                      ? const SizedBox(height: 20, width: 20, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
-                      : const Text('CONFIRM & SUBMIT',
-                      style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 12)),
-                ),
-              ),
-            ]),
+            ),
           ),
         ],
       ),

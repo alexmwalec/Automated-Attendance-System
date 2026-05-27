@@ -1,5 +1,4 @@
 import 'package:automated_attendance_system/Features/Lecturer/take_attendance.dart';
-import 'package:automated_attendance_system/Features/Lecturer/assign.dart';
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -48,7 +47,7 @@ class _CourseSelectionScreenState extends State<CourseSelectionScreen> {
         borderRadius: BorderRadius.circular(10),
       ),
       child: const Text(
-          'Select an active session to start recording attendance or assign an invigilator.',
+          'Select an active session to start recording attendance.',
           style: TextStyle(fontSize: 13, color: Colors.black87)),
     );
   }
@@ -115,7 +114,7 @@ class _CourseSelectionScreenState extends State<CourseSelectionScreen> {
                       Text(
                         "${session['startTime']} - ${session['endTime']}",
                         style:
-                        const TextStyle(fontSize: 10, color: Colors.grey),
+                            const TextStyle(fontSize: 10, color: Colors.grey),
                       ),
                   ],
                 ),
@@ -133,9 +132,13 @@ class _CourseSelectionScreenState extends State<CourseSelectionScreen> {
       builder: (context) => AlertDialog(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
         title: Text("Session: ${session['courseCode']}"),
-        content: const Text(
-            "Would you like to take attendance yourself or assign an invigilator for this session?"),
+        content:
+            const Text("Would you like to take attendance for this session?"),
         actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text("Cancel", style: TextStyle(color: Colors.grey)),
+          ),
           TextButton(
             onPressed: () {
               Navigator.pop(context);
@@ -151,23 +154,6 @@ class _CourseSelectionScreenState extends State<CourseSelectionScreen> {
             },
             child: const Text("Take Attendance",
                 style: TextStyle(color: tealPrimary)),
-          ),
-          // UPDATED: Navigates to Assign page with pre-filled session data
-          TextButton(
-            onPressed: () {
-              Navigator.pop(context);
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (_) => Assign(
-                    courseCode: session['courseCode'],
-                    sessionType: session['sessionType'],
-                  ),
-                ),
-              );
-            },
-            child: const Text("Assign Invigilator",
-                style: TextStyle(color: tealDark)),
           ),
         ],
       ),

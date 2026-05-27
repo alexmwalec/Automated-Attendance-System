@@ -39,6 +39,33 @@ class _InvigilatorHomeState extends State<InvigilatorHome> {
     }
   }
 
+  Future<void> _logout(BuildContext context) async {
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Logout'),
+        content: const Text('Are you sure you want to log out?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            child: const Text('Logout', style: TextStyle(color: Colors.red)),
+          ),
+        ],
+      ),
+    );
+
+    if (confirm == true) {
+      await FirebaseAuth.instance.signOut();
+      if (context.mounted) {
+        Navigator.of(context).pushNamedAndRemoveUntil('/', (route) => false);
+      }
+    }
+  }
+
   Stream<List<QueryDocumentSnapshot>> _getCombinedSessions(String uid) {
     var webStream = FirebaseFirestore.instance
         .collection('exam_assignments')
@@ -89,8 +116,15 @@ class _InvigilatorHomeState extends State<InvigilatorHome> {
       appBar: AppBar(
         backgroundColor: primaryColor,
         elevation: 0,
-        title: const Text('Invigilator Dashboard',
+        title: const Text('AAS Invigilator',
             style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.logout, color: Colors.white),
+            tooltip: 'Logout',
+            onPressed: () => _logout(context),
+          ),
+        ],
       ),
       body: StreamBuilder<List<QueryDocumentSnapshot>>(
         stream: _getCombinedSessions(currentUid),
@@ -130,7 +164,7 @@ class _InvigilatorHomeState extends State<InvigilatorHome> {
               final venue = data['room'] ?? data['venue'] ?? 'N/A';
               final date = data['date'] ?? 'N/A';
               final sessionType = data['sessionType'] ?? 'Class';
-              final lecturerId = data['lecturerId'] ?? ''; // ADDED
+              final lecturerId = data['lecturerId'] ?? '';
 
               final String timeDisplay;
               if (data.containsKey('time')) {
@@ -158,7 +192,7 @@ class _InvigilatorHomeState extends State<InvigilatorHome> {
                           sessionType: sessionType,
                           venue: venue,
                           date: date,
-                          lecturerId: lecturerId, // ADDED
+                          lecturerId: lecturerId,
                         ),
                       ),
                     );
