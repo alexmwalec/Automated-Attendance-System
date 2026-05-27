@@ -2,6 +2,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'Invigilator_viewlist.dart';
+import 'invigilator_home.dart';
 
 const Color tealPrimary = Color(0xFF2E9E8E);
 const Color tealLight = Color(0xFFDFF2EF);
@@ -15,8 +16,10 @@ class InvigilatorAttendanceList extends StatefulWidget {
 
 class _InvigilatorAttendanceListState extends State<InvigilatorAttendanceList> {
   String? _userName;
-
   DateTime? _selectedDate;
+
+  // Highlighting 'Records' (Index 2)
+  final int _currentIndex = 2;
 
   @override
   void initState() {
@@ -98,7 +101,7 @@ class _InvigilatorAttendanceListState extends State<InvigilatorAttendanceList> {
         elevation: 0,
         automaticallyImplyLeading: false,
         title: const Text(
-          'Attendance List',
+          'Attendance Records', // Updated Title
           style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16),
         ),
         actions: [
@@ -224,6 +227,7 @@ class _InvigilatorAttendanceListState extends State<InvigilatorAttendanceList> {
           ),
         ],
       ),
+
     );
   }
 }
