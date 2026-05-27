@@ -16,13 +16,11 @@ class InvigilatorAttendanceList extends StatefulWidget {
 class _InvigilatorAttendanceListState extends State<InvigilatorAttendanceList> {
   String? _userName;
 
-  // Use a nullable variable for the picker, but initialize it to now
   DateTime? _selectedDate;
 
   @override
   void initState() {
     super.initState();
-    // Initialize date inside initState to ensure it's set before first build
     _selectedDate = DateTime.now();
     _fetchUser();
   }
@@ -45,7 +43,7 @@ class _InvigilatorAttendanceListState extends State<InvigilatorAttendanceList> {
 
   // Helper with an explicit null check to prevent "reading year" error
   String _formatDate(DateTime? dt) {
-    if (dt == null) return ""; // Guard against null
+    if (dt == null) return "";
 
     final year = dt.year;
     final month = dt.month.toString().padLeft(2, '0');
@@ -55,14 +53,13 @@ class _InvigilatorAttendanceListState extends State<InvigilatorAttendanceList> {
 
   Future<void> _pickDate() async {
     final DateTime now = DateTime.now();
-    // Ensure we have a non-null date to start the picker
     final DateTime initial = _selectedDate ?? now;
 
     final DateTime? picked = await showDatePicker(
       context: context,
-      initialDate: initial.isAfter(now) ? now : initial, // Ensure initial isn't in future
+      initialDate: initial.isAfter(now) ? now : initial,
       firstDate: DateTime(2000),
-      lastDate: now, // RESTRICTS SELECTION TO CURRENT DATE AND PREVIOUS ONES
+      lastDate: now,
       builder: (context, child) {
         return Theme(
           data: Theme.of(context).copyWith(
