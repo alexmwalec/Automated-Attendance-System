@@ -41,7 +41,6 @@ class _InvigilatorAttendanceListState extends State<InvigilatorAttendanceList> {
     }
   }
 
-  // Helper with an explicit null check to prevent "reading year" error
   String _formatDate(DateTime? dt) {
     if (dt == null) return "";
 
@@ -83,7 +82,6 @@ class _InvigilatorAttendanceListState extends State<InvigilatorAttendanceList> {
 
   @override
   Widget build(BuildContext context) {
-    // Show loading if user name or date is not yet ready
     if (_userName == null || _selectedDate == null) {
       return const Scaffold(
         backgroundColor: tealLight,
@@ -100,7 +98,7 @@ class _InvigilatorAttendanceListState extends State<InvigilatorAttendanceList> {
         elevation: 0,
         automaticallyImplyLeading: false,
         title: const Text(
-          'My Submissions',
+          'Attendance List',
           style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16),
         ),
         actions: [
