@@ -2,6 +2,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'Invigilator_viewlist.dart';
+import 'invigilator_home.dart';
 
 const Color tealPrimary = Color(0xFF2E9E8E);
 const Color tealLight = Color(0xFFDFF2EF);
@@ -15,14 +16,14 @@ class InvigilatorAttendanceList extends StatefulWidget {
 
 class _InvigilatorAttendanceListState extends State<InvigilatorAttendanceList> {
   String? _userName;
-
-  // Use a nullable variable for the picker, but initialize it to now
   DateTime? _selectedDate;
+
+  // Highlighting 'Records' (Index 2)
+  final int _currentIndex = 2;
 
   @override
   void initState() {
     super.initState();
-    // Initialize date inside initState to ensure it's set before first build
     _selectedDate = DateTime.now();
     _fetchUser();
   }
@@ -43,9 +44,8 @@ class _InvigilatorAttendanceListState extends State<InvigilatorAttendanceList> {
     }
   }
 
-  // Helper with an explicit null check to prevent "reading year" error
   String _formatDate(DateTime? dt) {
-    if (dt == null) return ""; // Guard against null
+    if (dt == null) return "";
 
     final year = dt.year;
     final month = dt.month.toString().padLeft(2, '0');
@@ -55,14 +55,13 @@ class _InvigilatorAttendanceListState extends State<InvigilatorAttendanceList> {
 
   Future<void> _pickDate() async {
     final DateTime now = DateTime.now();
-    // Ensure we have a non-null date to start the picker
     final DateTime initial = _selectedDate ?? now;
 
     final DateTime? picked = await showDatePicker(
       context: context,
-      initialDate: initial.isAfter(now) ? now : initial, // Ensure initial isn't in future
+      initialDate: initial.isAfter(now) ? now : initial,
       firstDate: DateTime(2000),
-      lastDate: now, // RESTRICTS SELECTION TO CURRENT DATE AND PREVIOUS ONES
+      lastDate: now,
       builder: (context, child) {
         return Theme(
           data: Theme.of(context).copyWith(
@@ -86,7 +85,6 @@ class _InvigilatorAttendanceListState extends State<InvigilatorAttendanceList> {
 
   @override
   Widget build(BuildContext context) {
-    // Show loading if user name or date is not yet ready
     if (_userName == null || _selectedDate == null) {
       return const Scaffold(
         backgroundColor: tealLight,
@@ -103,7 +101,7 @@ class _InvigilatorAttendanceListState extends State<InvigilatorAttendanceList> {
         elevation: 0,
         automaticallyImplyLeading: false,
         title: const Text(
-          'My Submissions',
+          'Attendance Records', // Updated Title
           style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16),
         ),
         actions: [
@@ -229,6 +227,7 @@ class _InvigilatorAttendanceListState extends State<InvigilatorAttendanceList> {
           ),
         ],
       ),
+
     );
   }
 }

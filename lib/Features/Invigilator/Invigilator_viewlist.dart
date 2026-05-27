@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'invigilator_attendance_list.dart';
+import 'invigilator_home.dart';
 
 const Color tealPrimary = Color(0xFF2E9E8E);
 const Color tealDark = Color(0xFF227A6D);
@@ -13,7 +15,11 @@ class ViewList extends StatelessWidget {
     final List fullList = attendanceData['fullAttendanceList'] ?? [];
     return Scaffold(
       backgroundColor: tealLight,
-      appBar: AppBar(backgroundColor: tealPrimary, iconTheme: const IconThemeData(color: Colors.white), title: const Text('ATTENDANCE REPORT', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold))),
+      appBar: AppBar(
+          backgroundColor: tealPrimary,
+          iconTheme: const IconThemeData(color: Colors.white),
+          title: const Text('Attendance List',
+              style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold))),
       body: Column(
         children: [
           Container(
@@ -24,7 +30,22 @@ class ViewList extends StatelessWidget {
               _infoBox('${attendanceData['totalPresent'] ?? 0} Present'),
             ]),
           ),
-          const Divider(thickness: 2, color: tealPrimary),
+
+          // --- HEADERS ADDED HERE ---
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+            color: tealPrimary.withOpacity(0.1),
+            child: const Row(
+              children: [
+                Expanded(flex: 3, child: Text('Reg No', style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: tealDark))),
+                Expanded(flex: 4, child: Text('Full Name', style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: tealDark))),
+                SizedBox(width: 40, child: Text('Status', style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: tealDark), textAlign: TextAlign.right)),
+              ],
+            ),
+          ),
+
+          const Divider(height: 1, thickness: 1, color: Colors.black12),
+
           Expanded(
             child: ListView.builder(
               itemCount: fullList.length,
@@ -33,11 +54,21 @@ class ViewList extends StatelessWidget {
                 final bool isPresent = s['status'] == 'Present';
                 return Container(
                   padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                  decoration: const BoxDecoration(color: Colors.white, border: Border(bottom: BorderSide(color: Colors.black12))),
+                  decoration: const BoxDecoration(
+                      color: Colors.white,
+                      border: Border(bottom: BorderSide(color: Colors.black12))),
                   child: Row(children: [
                     Expanded(flex: 3, child: Text(s['regNo'] ?? '', style: const TextStyle(fontSize: 11))),
                     Expanded(flex: 4, child: Text("${s['name']} ${s['surname']}", style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w500))),
-                    Text(s['status'] ?? '', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: isPresent ? tealPrimary : Colors.red)),
+                    SizedBox(
+                      width: 40,
+                      child: Text(s['status'] ?? '',
+                          textAlign: TextAlign.right,
+                          style: TextStyle(
+                              fontSize: 11,
+                              fontWeight: FontWeight.bold,
+                              color: isPresent ? tealPrimary : Colors.red)),
+                    ),
                   ]),
                 );
               },
@@ -48,5 +79,13 @@ class ViewList extends StatelessWidget {
     );
   }
 
-  Widget _infoBox(String text) => Container(padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5), decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(5), border: Border.all(color: tealPrimary)), child: Text(text, style: const TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: tealDark)));
+  Widget _infoBox(String text) => Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+      decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(5),
+          border: Border.all(color: tealPrimary)),
+      child: Text(text,
+          style: const TextStyle(
+              fontSize: 10, fontWeight: FontWeight.bold, color: tealDark)));
 }
