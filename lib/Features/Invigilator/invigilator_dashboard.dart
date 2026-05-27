@@ -20,7 +20,6 @@ class _InvigilatorDashboardState extends State<InvigilatorDashboard> {
 
   @override
   Widget build(BuildContext context) {
-    // Fetch the assignment once at dashboard level so all tabs share the data
     return StreamBuilder<QuerySnapshot>(
       stream: FirebaseFirestore.instance
           .collection('exam_assignments')
@@ -28,22 +27,30 @@ class _InvigilatorDashboardState extends State<InvigilatorDashboard> {
           .limit(1)
           .snapshots(),
       builder: (context, snapshot) {
-        // Extract assignment details — default to empty strings if not yet available
-        String courseCode = '';
-        String date = '';
-        String venue = '';
+        String courseCode = 'N/A';
+        String sessionType = 'Exam';
+        String date = 'N/A';
+        String venue = 'N/A';
+        String lecturerId = ''; // ADDED
 
         if (snapshot.hasData && snapshot.data!.docs.isNotEmpty) {
           final data = snapshot.data!.docs.first.data() as Map<String, dynamic>;
-          courseCode = data['course'] ?? '';
-          date = data['date'] ?? '';
-          venue = data['room'] ?? '';
+          courseCode = data['course'] ?? 'N/A';
+          sessionType = data['sessionType'] ?? 'Exam';
+          date = data['date'] ?? 'N/A';
+          venue = data['room'] ?? 'N/A';
+          lecturerId = data['lecturerId'] ?? ''; // ADDED
         }
 
-        // Build pages with the live assignment data passed in
         final List<Widget> pages = [
           const InvigilatorHome(),
-          const InvigilatorTakeAttendance(),
+          InvigilatorTakeAttendance(
+            courseCode: courseCode,
+            sessionType: sessionType,
+            venue: venue,
+            date: date,
+            lecturerId: lecturerId, // ADDED
+          ),
           const InvigilatorAttendanceList(),
           InvigilatorReport(
             courseCode: courseCode,
@@ -81,7 +88,7 @@ class _InvigilatorDashboardState extends State<InvigilatorDashboard> {
               BottomNavigationBarItem(
                 icon: Icon(Icons.list_alt_outlined),
                 activeIcon: Icon(Icons.list_alt),
-                label: 'Attendance List',
+                label: 'Records',
               ),
               BottomNavigationBarItem(
                 icon: Icon(Icons.edit_document),

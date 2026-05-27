@@ -1,238 +1,211 @@
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:rxdart/rxdart.dart';
+import 'invigilator_take_attendance.dart';
 
-class InvigilatorHome extends StatelessWidget {
+class InvigilatorHome extends StatefulWidget {
   const InvigilatorHome({super.key});
 
+  @override
+  State<InvigilatorHome> createState() => _InvigilatorHomeState();
+}
+
+class _InvigilatorHomeState extends State<InvigilatorHome> {
   static const Color primaryColor = Color(0xFF2E9E8E);
+  String? _currentUserName;
+
+  @override
+  void initState() {
+    super.initState();
+    _fetchCurrentUserName();
+  }
+
+  Future<void> _fetchCurrentUserName() async {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user != null) {
+      final userDoc = await FirebaseFirestore.instance
+          .collection('users')
+          .doc(user.uid)
+          .get();
+      if (userDoc.exists) {
+        final data = userDoc.data();
+        setState(() {
+          String firstName = data?['name'] ?? '';
+          String lastName = data?['surname'] ?? '';
+          _currentUserName = "$firstName $lastName".trim();
+        });
+      }
+    }
+  }
+
+  Stream<List<QueryDocumentSnapshot>> _getCombinedSessions(String uid) {
+    var webStream = FirebaseFirestore.instance
+        .collection('exam_assignments')
+        .where('invigilatorId', isEqualTo: uid)
+        .snapshots();
+
+    var mobileStream = FirebaseFirestore.instance
+        .collection('active_sessions')
+        .where('invigilatorId', isEqualTo: uid)
+        .snapshots();
+
+    return CombineLatestStream.list([webStream, mobileStream]).map((snapshots) {
+      List<QueryDocumentSnapshot> combined = [];
+      for (var snap in snapshots) {
+        combined.addAll(snap.docs);
+      }
+
+      combined.sort((a, b) {
+        DateTime dt1 = _parseDateTime((a.data() as Map)['createdAt']);
+        DateTime dt2 = _parseDateTime((b.data() as Map)['createdAt']);
+        return dt2.compareTo(dt1);
+      });
+
+      return combined;
+    });
+  }
+
+  DateTime _parseDateTime(dynamic value) {
+    if (value is Timestamp) {
+      return value.toDate();
+    } else if (value is String) {
+      return DateTime.tryParse(value) ?? DateTime(2000);
+    }
+    return DateTime(2000);
+  }
 
   @override
   Widget build(BuildContext context) {
+    final String currentUid = FirebaseAuth.instance.currentUser?.uid ?? "";
+
+    if (_currentUserName == null) {
+      return const Scaffold(
+          body: Center(child: CircularProgressIndicator(color: primaryColor)));
+    }
+
     return Scaffold(
       backgroundColor: const Color(0xFFF5F7F9),
       appBar: AppBar(
-        elevation: 0,
         backgroundColor: primaryColor,
-        automaticallyImplyLeading: false,
-        title: const Text(
-          'AAS',
-          style: TextStyle(
-            color: Colors.white,
-            fontWeight: FontWeight.bold,
-            letterSpacing: 1,
-          ),
-        ),
-        actions: [
-          IconButton(
-            icon: const Icon(
-              Icons.notifications_none_rounded,
-              color: Colors.white,
-            ),
-            onPressed: () {},
-          ),
-          const Padding(
-            padding: EdgeInsets.only(right: 16),
-            child: CircleAvatar(
-              radius: 16,
-              backgroundColor: Colors.white24,
-              child: Icon(
-                Icons.person,
-                color: Colors.white,
-                size: 18,
-              ),
-            ),
-          ),
-        ],
+        elevation: 0,
+        title: const Text('Invigilator Dashboard',
+            style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
       ),
-      body: StreamBuilder<QuerySnapshot>(
-        stream: FirebaseFirestore.instance
-            .collection('exam_assignments')
-            .orderBy('createdAt', descending: true)
-            .snapshots(),
+      body: StreamBuilder<List<QueryDocumentSnapshot>>(
+        stream: _getCombinedSessions(currentUid),
         builder: (context, snapshot) {
-          if (snapshot.connectionState == ConnectionState.waiting) {
+          if (snapshot.hasError) {
+            return Center(child: Text("Error: ${snapshot.error}"));
+          }
+          if (!snapshot.hasData) {
             return const Center(
-              child: CircularProgressIndicator(
-                color: primaryColor,
-              ),
+                child: CircularProgressIndicator(color: primaryColor));
+          }
+
+          final docs = snapshot.data!;
+
+          if (docs.isEmpty) {
+            return Column(
+              children: [
+                _buildWelcomeCard(),
+                const Expanded(
+                  child: Center(
+                    child: Text("No assignments found.",
+                        style: TextStyle(color: Colors.grey, fontSize: 16)),
+                  ),
+                ),
+              ],
             );
           }
 
-          final List<Map<String, dynamic>> assignments = [];
+          return ListView.builder(
+            padding: const EdgeInsets.all(16),
+            itemCount: docs.length + 1,
+            itemBuilder: (context, index) {
+              if (index == 0) return _buildWelcomeCard();
 
-          if (snapshot.hasData && snapshot.data!.docs.isNotEmpty) {
-            for (final doc in snapshot.data!.docs) {
-              assignments.add(doc.data() as Map<String, dynamic>);
-            }
-          }
+              final data = docs[index - 1].data() as Map<String, dynamic>;
+              final course = data['courseCode'] ?? data['course'] ?? 'Unknown';
+              final venue = data['room'] ?? data['venue'] ?? 'N/A';
+              final date = data['date'] ?? 'N/A';
+              final sessionType = data['sessionType'] ?? 'Class';
+              final lecturerId = data['lecturerId'] ?? ''; // ADDED
 
-          return SingleChildScrollView(
-            padding: const EdgeInsets.symmetric(
-              horizontal: 16,
-              vertical: 16,
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                // WELCOME CARD
-                Container(
-                  width: double.infinity,
-                  padding: const EdgeInsets.all(18),
-                  decoration: BoxDecoration(
-                    color: primaryColor,
-                    borderRadius: BorderRadius.circular(16),
-                    boxShadow: [
-                      BoxShadow(
-                        color: primaryColor.withOpacity(0.18),
-                        blurRadius: 8,
-                        offset: const Offset(0, 3),
-                      ),
-                    ],
-                  ),
-                  child: const Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        'Welcome Back!',
-                        style: TextStyle(
-                          color: Colors.white,
-                          fontSize: 18,
-                          fontWeight: FontWeight.bold,
+              final String timeDisplay;
+              if (data.containsKey('time')) {
+                timeDisplay = data['time'];
+              } else if (data.containsKey('startTime')) {
+                timeDisplay = "${data['startTime']} - ${data['endTime']}";
+              } else {
+                timeDisplay = "N/A";
+              }
+
+              return Padding(
+                padding: const EdgeInsets.only(bottom: 12),
+                child: _AssignmentCard(
+                  course: course,
+                  venue: venue,
+                  date: date,
+                  time: timeDisplay,
+                  sessionType: sessionType,
+                  onTap: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => InvigilatorTakeAttendance(
+                          courseCode: course,
+                          sessionType: sessionType,
+                          venue: venue,
+                          date: date,
+                          lecturerId: lecturerId, // ADDED
                         ),
                       ),
-                      SizedBox(height: 6),
-                      Text(
-                        'Manage exam attendance and monitor assigned sessions.',
-                        style: TextStyle(
-                          color: Colors.white70,
-                          fontSize: 12,
-                          height: 1.5,
-                        ),
-                      ),
-                    ],
-                  ),
+                    );
+                  },
                 ),
-
-                const SizedBox(height: 20),
-
-                // ASSIGNED TASKS TITLE
-                const Text(
-                  'ASSIGNED TASKS',
-                  style: TextStyle(
-                    color: primaryColor,
-                    fontWeight: FontWeight.bold,
-                    fontSize: 12,
-                    letterSpacing: 1.2,
-                  ),
-                ),
-
-                const SizedBox(height: 12),
-
-                // FIRST CARD
-                _AssignmentCard(
-                  course: assignments.isNotEmpty
-                      ? (assignments[0]['course'] ?? 'N/A')
-                      : 'Not Assigned',
-                  venue: assignments.isNotEmpty
-                      ? (assignments[0]['room'] ?? 'N/A')
-                      : '—',
-                  date: assignments.isNotEmpty
-                      ? (assignments[0]['date'] ?? 'N/A')
-                      : '—',
-                  time: assignments.isNotEmpty
-                      ? (assignments[0]['time'] ?? 'N/A')
-                      : '—',
-                  sessionType: assignments.isNotEmpty
-                      ? (assignments[0]['sessionType'] ?? 'N/A')
-                      : '—',
-                ),
-
-                const SizedBox(height: 10),
-
-                // SECOND CARD
-                _AssignmentCard(
-                  course: assignments.length >= 2
-                      ? (assignments[1]['course'] ?? 'N/A')
-                      : 'Not Assigned',
-                  venue: assignments.length >= 2
-                      ? (assignments[1]['room'] ?? 'N/A')
-                      : '—',
-                  date: assignments.length >= 2
-                      ? (assignments[1]['date'] ?? 'N/A')
-                      : '—',
-                  time: assignments.length >= 2
-                      ? (assignments[1]['time'] ?? 'N/A')
-                      : '—',
-                  sessionType: assignments.length >= 2
-                      ? (assignments[1]['sessionType'] ?? 'N/A')
-                      : '—',
-                ),
-
-                const SizedBox(height: 20),
-
-                // NOTICE TITLE
-                const Text(
-                  'GENERAL NOTICE',
-                  style: TextStyle(
-                    color: primaryColor,
-                    fontWeight: FontWeight.bold,
-                    fontSize: 12,
-                    letterSpacing: 1.2,
-                  ),
-                ),
-
-                const SizedBox(height: 12),
-
-                // NOTICE CARD
-                Container(
-                  padding: const EdgeInsets.all(16),
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(16),
-                    border: Border.all(
-                      color: primaryColor.withOpacity(0.12),
-                    ),
-                  ),
-                  child: const Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      _NoticeItem(
-                        title: 'Authorized Access Only',
-                        subtitle:
-                            'Invigilators must use official credentials. Sharing login details is prohibited.',
-                      ),
-                      _NoticeItem(
-                        title: 'Correct Exam Selection',
-                        subtitle:
-                            'Always confirm the correct exam and course before attendance scanning.',
-                      ),
-                      _NoticeItem(
-                        title: 'Accurate Attendance',
-                        subtitle:
-                            'Scan student IDs carefully and report any discrepancies immediately.',
-                      ),
-                    ],
-                  ),
-                ),
-
-                const SizedBox(height: 20),
-              ],
-            ),
+              );
+            },
           );
         },
       ),
     );
   }
+
+  Widget _buildWelcomeCard() {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 20),
+      padding: const EdgeInsets.all(18),
+      decoration: BoxDecoration(
+        color: primaryColor,
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+              color: primaryColor.withOpacity(0.3),
+              blurRadius: 8,
+              offset: const Offset(0, 4))
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text('Hello, $_currentUserName!',
+              style: const TextStyle(
+                  color: Colors.white,
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold)),
+          const SizedBox(height: 4),
+          const Text('Below are your assigned sessions.',
+              style: TextStyle(color: Colors.white70, fontSize: 12)),
+        ],
+      ),
+    );
+  }
 }
 
-// ASSIGNMENT CARD
-
 class _AssignmentCard extends StatelessWidget {
-  final String course;
-  final String venue;
-  final String date;
-  final String time;
-  final String sessionType;
+  final String course, venue, date, time, sessionType;
+  final VoidCallback onTap;
 
   const _AssignmentCard({
     required this.course,
@@ -240,194 +213,60 @@ class _AssignmentCard extends StatelessWidget {
     required this.date,
     required this.time,
     required this.sessionType,
+    required this.onTap,
   });
-
-  static const Color primaryColor = Color(0xFF2E9E8E);
 
   @override
   Widget build(BuildContext context) {
-    final bool isAssigned = course != 'Not Assigned';
-
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.symmetric(
-        horizontal: 16,
-        vertical: 14,
-      ),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(
-          color: primaryColor.withOpacity(0.12),
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(16),
+      child: Container(
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(color: Colors.black12)),
+        child: Column(
+          children: [
+            Row(
+              children: [
+                Icon(sessionType == 'Exam'
+                    ? Icons.assignment_late
+                    : Icons.class_outlined),
+                const SizedBox(width: 10),
+                Text(course,
+                    style: const TextStyle(
+                        fontWeight: FontWeight.bold, fontSize: 16)),
+                const Spacer(),
+                const Icon(Icons.arrow_forward_ios,
+                    size: 14, color: Colors.grey),
+              ],
+            ),
+            const Divider(height: 24),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                _info('Venue', venue),
+                _info('Date', date),
+                _info('Type', sessionType),
+              ],
+            )
+          ],
         ),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.03),
-            blurRadius: 6,
-            offset: const Offset(0, 2),
-          ),
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // COURSE HEADER
-          Row(
-            children: [
-              Container(
-                padding: const EdgeInsets.all(8),
-                decoration: BoxDecoration(
-                  color: primaryColor.withOpacity(0.1),
-                  borderRadius: BorderRadius.circular(10),
-                ),
-                child: const Icon(
-                  Icons.menu_book_rounded,
-                  color: primaryColor,
-                  size: 18,
-                ),
-              ),
-              const SizedBox(width: 10),
-              Expanded(
-                child: Text(
-                  course,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.bold,
-                    color: isAssigned ? primaryColor : Colors.grey,
-                  ),
-                ),
-              ),
-            ],
-          ),
-
-          const SizedBox(height: 16),
-
-          // FIRST ROW
-          Row(
-            children: [
-              Expanded(
-                child: _CompactDetail(
-                  title: 'Venue',
-                  value: venue,
-                ),
-              ),
-              Expanded(
-                child: _CompactDetail(
-                  title: 'Date',
-                  value: date,
-                ),
-              ),
-            ],
-          ),
-
-          const SizedBox(height: 12),
-
-          // SECOND ROW
-          Row(
-            children: [
-              Expanded(
-                child: _CompactDetail(
-                  title: 'Time',
-                  value: time,
-                ),
-              ),
-              Expanded(
-                child: _CompactDetail(
-                  title: 'Session',
-                  value: sessionType,
-                ),
-              ),
-            ],
-          ),
-        ],
       ),
     );
   }
-}
 
-// COMPACT DETAIL ITEM
-
-class _CompactDetail extends StatelessWidget {
-  final String title;
-  final String value;
-
-  const _CompactDetail({
-    required this.title,
-    required this.value,
-  });
-
-  static const Color primaryColor = Color(0xFF2E9E8E);
-
-  @override
-  Widget build(BuildContext context) {
+  Widget _info(String label, String val) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(
-          title,
-          style: TextStyle(
-            fontSize: 11,
-            fontWeight: FontWeight.w600,
-            color: primaryColor.withOpacity(0.8),
-          ),
-        ),
-        const SizedBox(height: 4),
-        Text(
-          value,
-          maxLines: 1,
-          overflow: TextOverflow.ellipsis,
-          style: const TextStyle(
-            fontSize: 13,
-            fontWeight: FontWeight.w500,
-            color: Colors.black87,
-          ),
-        ),
+        Text(label, style: const TextStyle(fontSize: 10, color: Colors.grey)),
+        const SizedBox(height: 2),
+        Text(val,
+            style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
       ],
-    );
-  }
-}
-
-// NOTICE ITEM
-
-class _NoticeItem extends StatelessWidget {
-  final String title;
-  final String subtitle;
-
-  const _NoticeItem({
-    required this.title,
-    required this.subtitle,
-  });
-
-  static const Color primaryColor = Color(0xFF2E9E8E);
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 14),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            title,
-            style: const TextStyle(
-              fontWeight: FontWeight.bold,
-              fontSize: 13,
-              color: primaryColor,
-            ),
-          ),
-          const SizedBox(height: 4),
-          Text(
-            subtitle,
-            style: TextStyle(
-              color: Colors.grey.shade700,
-              fontSize: 12,
-              height: 1.5,
-            ),
-          ),
-        ],
-      ),
     );
   }
 }

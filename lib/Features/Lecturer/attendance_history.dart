@@ -1,6 +1,7 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:rxdart/rxdart.dart'; // REQUIRED: Add rxdart: ^0.28.0 to pubspec.yaml
 import 'lecturer_dashboard.dart';
 import 'assign.dart';
 import 'viewlist.dart';
@@ -25,9 +26,18 @@ class _AttendanceHistoryState extends State<AttendanceHistory> with SingleTicker
     super.initState();
     _tabController = TabController(length: 2, vsync: this);
     _tabController.addListener(() {
-      setState(() {}); // Rebuild to show/hide FAB based on tab index
+      setState(() {});
     });
     _fetchAssignedCourses();
+  }
+
+  DateTime _parseDateTime(dynamic value) {
+    if (value is Timestamp) {
+      return value.toDate();
+    } else if (value is String) {
+      return DateTime.tryParse(value) ?? DateTime(2000);
+    }
+    return DateTime(2000);
   }
 
   Future<void> _fetchAssignedCourses() async {
@@ -45,7 +55,19 @@ class _AttendanceHistoryState extends State<AttendanceHistory> with SingleTicker
     }
   }
 
-  // Helper to convert Firestore string "08:30 AM" back to TimeOfDay for editing
+  bool _isSessionLive(String startTimeStr, String endTimeStr) {
+    try {
+      final now = DateTime.now();
+      final start = _parseTime(startTimeStr);
+      final end = _parseTime(endTimeStr);
+      final startDt = DateTime(now.year, now.month, now.day, start.hour, start.minute);
+      final endDt = DateTime(now.year, now.month, now.day, end.hour, end.minute);
+      return now.isAfter(startDt) && now.isBefore(endDt);
+    } catch (e) {
+      return false;
+    }
+  }
+
   TimeOfDay _parseTime(String timeStr) {
     try {
       final parts = timeStr.split(' ');
@@ -59,6 +81,28 @@ class _AttendanceHistoryState extends State<AttendanceHistory> with SingleTicker
     } catch (e) {
       return TimeOfDay.now();
     }
+  }
+
+  // NEW: Delete functionality
+  void _deleteSession(String docId, bool isAssignedTask) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text("Delete Session", style: TextStyle(fontWeight: FontWeight.bold)),
+        content: Text("Are you sure you want to delete this ${isAssignedTask ? 'assignment' : 'session'}?"),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(context), child: const Text("Cancel")),
+          TextButton(
+            onPressed: () async {
+              final collection = isAssignedTask ? 'exam_assignments' : 'active_sessions';
+              await FirebaseFirestore.instance.collection(collection).doc(docId).delete();
+              if (mounted) Navigator.pop(context);
+            },
+            child: const Text("Delete", style: TextStyle(color: Colors.red, fontWeight: FontWeight.bold)),
+          ),
+        ],
+      ),
+    );
   }
 
   void _showSessionDialog({String? docId, Map<String, dynamic>? existingData}) {
@@ -190,36 +234,151 @@ class _AttendanceHistoryState extends State<AttendanceHistory> with SingleTicker
 
   Widget _buildManageTab() {
     final uid = FirebaseAuth.instance.currentUser?.uid ?? "";
-    return StreamBuilder<QuerySnapshot>(
-      stream: FirebaseFirestore.instance.collection('active_sessions').where('lecturerId', isEqualTo: uid).snapshots(),
+
+    Stream<QuerySnapshot> manualSessions = FirebaseFirestore.instance
+        .collection('active_sessions')
+        .where('lecturerId', isEqualTo: uid)
+        .snapshots();
+
+    Stream<QuerySnapshot> assignedTasks = FirebaseFirestore.instance
+        .collection('exam_assignments')
+        .where('lecturerId', isEqualTo: uid)
+        .snapshots();
+
+    return StreamBuilder<List<QueryDocumentSnapshot>>(
+      stream: CombineLatestStream.list([manualSessions, assignedTasks]).map((snapshots) {
+        List<QueryDocumentSnapshot> combined = [];
+        for (var snap in snapshots) {
+          combined.addAll(snap.docs);
+        }
+        combined.sort((a, b) {
+          final aData = a.data() as Map<String, dynamic>;
+          final bData = b.data() as Map<String, dynamic>;
+          DateTime dt1 = _parseDateTime(aData['createdAt']);
+          DateTime dt2 = _parseDateTime(bData['createdAt']);
+          return dt2.compareTo(dt1);
+        });
+        return combined;
+      }),
       builder: (context, snapshot) {
         if (!snapshot.hasData) return const Center(child: CircularProgressIndicator());
-        final docs = snapshot.data!.docs;
-        if (docs.isEmpty) return const Center(child: Text("No active sessions."));
+        final docs = snapshot.data!;
+
+        if (docs.isEmpty) {
+          return Center(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(Icons.timer_off_outlined, size: 64, color: tealPrimary.withOpacity(0.5)),
+                const SizedBox(height: 16),
+                const Text("No sessions or assignments found.", style: TextStyle(color: Colors.grey)),
+              ],
+            ),
+          );
+        }
 
         return ListView.builder(
           itemCount: docs.length,
-          padding: const EdgeInsets.all(12),
+          padding: const EdgeInsets.all(16),
           itemBuilder: (context, i) {
             final data = docs[i].data() as Map<String, dynamic>;
-            return Card(
-              child: ListTile(
-                leading: const Icon(Icons.timer, color: tealPrimary),
-                title: Text("${data['courseCode']} (${data['sessionType']})", style: const TextStyle(fontWeight: FontWeight.bold)),
-                subtitle: Text("Time: ${data['startTime']} - ${data['endTime']}"),
-                trailing: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    IconButton(
-                      icon: const Icon(Icons.edit, color: tealPrimary, size: 20),
-                      onPressed: () => _showSessionDialog(docId: docs[i].id, existingData: data),
+            final bool isAssignedTask = docs[i].reference.path.contains('exam_assignments');
+
+            final String courseCode = data['courseCode'] ?? data['course'] ?? 'N/A';
+            final String room = data['room'] ?? data['venue'] ?? 'Not Set';
+            final String invigilator = data['invigilatorName'] ?? 'Self';
+            final String time = data['time'] ?? "${data['startTime']} - ${data['endTime']}";
+
+            bool isLive = false;
+            if (!isAssignedTask) {
+              isLive = _isSessionLive(data['startTime'] ?? "", data['endTime'] ?? "");
+            }
+
+            return Container(
+              margin: const EdgeInsets.only(bottom: 16),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(16),
+                boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 10, offset: const Offset(0, 4))],
+              ),
+              child: Column(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                    decoration: BoxDecoration(
+                      color: isAssignedTask ? Colors.blue.withOpacity(0.1) : (isLive ? tealPrimary.withOpacity(0.1) : Colors.grey[100]),
+                      borderRadius: const BorderRadius.vertical(top: Radius.circular(16)),
                     ),
-                    IconButton(
-                      icon: const Icon(Icons.delete_outline, color: Colors.red, size: 20),
-                      onPressed: () => FirebaseFirestore.instance.collection('active_sessions').doc(docs[i].id).delete(),
+                    child: Row(
+                      children: [
+                        Icon(
+                          isAssignedTask ? Icons.assignment_ind : (isLive ? Icons.sensors : Icons.timer_outlined),
+                          color: isAssignedTask ? Colors.blue : (isLive ? tealPrimary : Colors.grey),
+                          size: 18,
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Text(
+                            courseCode,
+                            style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                          ),
+                        ),
+                        // Action Buttons: Edit and Delete
+                        if (!isAssignedTask)
+                          IconButton(
+                            padding: EdgeInsets.zero,
+                            constraints: const BoxConstraints(),
+                            icon: const Icon(Icons.edit, size: 18, color: tealPrimary),
+                            onPressed: () => _showSessionDialog(docId: docs[i].id, existingData: data),
+                          ),
+                        IconButton(
+                          padding: EdgeInsets.zero,
+                          constraints: const BoxConstraints(),
+                          icon: const Icon(Icons.delete_outline, size: 18, color: Colors.redAccent),
+                          onPressed: () => _deleteSession(docs[i].id, isAssignedTask),
+                        ),
+                        const SizedBox(width: 8),
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                          decoration: BoxDecoration(
+                            color: isAssignedTask ? Colors.blue : (isLive ? Colors.green[600] : Colors.grey[600]),
+                            borderRadius: BorderRadius.circular(20),
+                          ),
+                          child: Text(
+                            isAssignedTask ? "ASSIGNED" : (isLive ? "LIVE" : "SCHEDULED"),
+                            style: const TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold),
+                          ),
+                        ),
+                      ],
                     ),
-                  ],
-                ),
+                  ),
+                  Padding(
+                    padding: const EdgeInsets.all(16),
+                    child: Column(
+                      children: [
+                        Row(
+                          children: [
+                            const Icon(Icons.person_outline, size: 16, color: Colors.grey),
+                            const SizedBox(width: 8),
+                            Text("Staff: $invigilator", style: const TextStyle(color: Colors.black87)),
+                            const Spacer(),
+                            const Icon(Icons.location_on_outlined, size: 16, color: Colors.grey),
+                            const SizedBox(width: 4),
+                            Text(room, style: const TextStyle(color: Colors.black87)),
+                          ],
+                        ),
+                        const SizedBox(height: 8),
+                        Row(
+                          children: [
+                            const Icon(Icons.access_time, size: 16, color: Colors.grey),
+                            const SizedBox(width: 8),
+                            Text(time, style: const TextStyle(color: Colors.black87)),
+                          ],
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
               ),
             );
           },
@@ -229,23 +388,28 @@ class _AttendanceHistoryState extends State<AttendanceHistory> with SingleTicker
   }
 
   Widget _buildHistoryTab() {
-    final uid = FirebaseAuth.instance.currentUser?.uid ?? "";
-    return StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
+    final uid = FirebaseAuth.instance.currentUser?.uid;
+    return StreamBuilder<QuerySnapshot>(
       stream: FirebaseFirestore.instance.collection('attendance').where('lecturerId', isEqualTo: uid).orderBy('timestamp', descending: true).snapshots(),
       builder: (context, snapshot) {
         if (!snapshot.hasData) return const Center(child: CircularProgressIndicator());
         final docs = snapshot.data!.docs;
+        if (docs.isEmpty) return const Center(child: Text("No records found.", style: TextStyle(color: Colors.grey)));
+
         return ListView.builder(
           itemCount: docs.length,
+          padding: const EdgeInsets.all(16),
           itemBuilder: (context, i) {
-            final d = docs[i].data();
+            final data = docs[i].data() as Map<String, dynamic>;
             return Card(
-              margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+              margin: const EdgeInsets.only(bottom: 12),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
               child: ListTile(
-                title: Text("${d['courseCode']} - ${d['sessionType']}"),
-                subtitle: Text("Date: ${d['date']}"),
-                trailing: const Icon(Icons.visibility, color: tealPrimary),
-                onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => ViewList(attendanceData: d))),
+                leading: const CircleAvatar(backgroundColor: tealLight, child: Icon(Icons.history, color: tealPrimary)),
+                title: Text("${data['courseCode']} - ${data['sessionType']}", style: const TextStyle(fontWeight: FontWeight.bold)),
+                subtitle: Text("${data['date']}"),
+                trailing: const Icon(Icons.chevron_right),
+                onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => ViewList(attendanceData: data))),
               ),
             );
           },
