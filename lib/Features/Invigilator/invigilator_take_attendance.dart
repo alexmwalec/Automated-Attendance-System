@@ -378,27 +378,31 @@ class _InvigilatorTakeAttendanceState extends State<InvigilatorTakeAttendance> {
             ),
           ),
 
-          // Submit button only at the bottom
+          // Submit button — small, right-aligned
           Padding(
             padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
-            child: ElevatedButton(
-              style: ElevatedButton.styleFrom(
-                  backgroundColor: tealPrimary,
-                  minimumSize: const Size(double.infinity, 44)),
-              onPressed: (_scannedStudents.isEmpty || _isSubmitting)
-                  ? null
-                  : _submitAttendance,
-              child: _isSubmitting
-                  ? const SizedBox(
-                      height: 20,
-                      width: 20,
-                      child: CircularProgressIndicator(
-                          color: Colors.white, strokeWidth: 2))
-                  : const Text('CONFIRM & SUBMIT',
-                      style: TextStyle(
-                          color: Colors.white,
-                          fontWeight: FontWeight.bold,
-                          fontSize: 12)),
+            child: Align(
+              alignment: Alignment.centerRight,
+              child: ElevatedButton(
+                style: ElevatedButton.styleFrom(
+                    backgroundColor: tealPrimary,
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 24, vertical: 12)),
+                onPressed: (_scannedStudents.isEmpty || _isSubmitting)
+                    ? null
+                    : _submitAttendance,
+                child: _isSubmitting
+                    ? const SizedBox(
+                        height: 20,
+                        width: 20,
+                        child: CircularProgressIndicator(
+                            color: Colors.white, strokeWidth: 2))
+                    : const Text('Submit Attendance',
+                        style: TextStyle(
+                            color: Colors.white,
+                            fontWeight: FontWeight.bold,
+                            fontSize: 13)),
+              ),
             ),
           ),
         ],
