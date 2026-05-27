@@ -25,7 +25,7 @@ class _AttendanceHistoryState extends State<AttendanceHistory>
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 3, vsync: this); // 3 tabs now
+    _tabController = TabController(length: 3, vsync: this);
     _tabController.addListener(() {
       setState(() {});
     });
@@ -33,11 +33,8 @@ class _AttendanceHistoryState extends State<AttendanceHistory>
   }
 
   DateTime _parseDateTime(dynamic value) {
-    if (value is Timestamp) {
-      return value.toDate();
-    } else if (value is String) {
-      return DateTime.tryParse(value) ?? DateTime(2000);
-    }
+    if (value is Timestamp) return value.toDate();
+    if (value is String) return DateTime.tryParse(value) ?? DateTime(2000);
     return DateTime(2000);
   }
 
@@ -196,7 +193,6 @@ class _AttendanceHistoryState extends State<AttendanceHistory>
                         'endTime': endTime.format(context),
                         'updatedAt': FieldValue.serverTimestamp(),
                       };
-
                       if (docId == null) {
                         data['createdAt'] = FieldValue.serverTimestamp();
                         await FirebaseFirestore.instance
@@ -208,7 +204,6 @@ class _AttendanceHistoryState extends State<AttendanceHistory>
                             .doc(docId)
                             .update(data);
                       }
-
                       if (context.mounted) Navigator.pop(context);
                     },
               child: Text(docId == null ? "Create" : "Update",
@@ -236,8 +231,7 @@ class _AttendanceHistoryState extends State<AttendanceHistory>
           unselectedLabelColor: Colors.white70,
           labelStyle:
               const TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
-          isScrollable:
-              true, // prevents labels from being hidden on small screens
+          isScrollable: true,
           tabAlignment: TabAlignment.start,
           tabs: const [
             Tab(text: "Manage Sessions"),
@@ -303,15 +297,12 @@ class _AttendanceHistoryState extends State<AttendanceHistory>
       stream: CombineLatestStream.list([manualSessions, assignedTasks])
           .map((snapshots) {
         List<QueryDocumentSnapshot> combined = [];
-        for (var snap in snapshots) {
-          combined.addAll(snap.docs);
-        }
+        for (var snap in snapshots) combined.addAll(snap.docs);
         combined.sort((a, b) {
           final aData = a.data() as Map<String, dynamic>;
           final bData = b.data() as Map<String, dynamic>;
-          DateTime dt1 = _parseDateTime(aData['createdAt']);
-          DateTime dt2 = _parseDateTime(bData['createdAt']);
-          return dt2.compareTo(dt1);
+          return _parseDateTime(bData['createdAt'])
+              .compareTo(_parseDateTime(aData['createdAt']));
         });
         return combined;
       }),
@@ -356,126 +347,141 @@ class _AttendanceHistoryState extends State<AttendanceHistory>
                   data['startTime'] ?? "", data['endTime'] ?? "");
             }
 
-            return Container(
-              margin: const EdgeInsets.only(bottom: 16),
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(16),
-                boxShadow: [
-                  BoxShadow(
-                      color: Colors.black.withOpacity(0.05),
-                      blurRadius: 10,
-                      offset: const Offset(0, 4))
-                ],
+            return GestureDetector(
+              // Tapping the card opens Assign page with pre-filled course & session type
+              onTap: () => Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (_) => Assign(
+                    courseCode: courseCode,
+                    sessionType: data['sessionType'] ?? '',
+                  ),
+                ),
               ),
-              child: Column(
-                children: [
-                  Container(
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: 16, vertical: 12),
-                    decoration: BoxDecoration(
-                      color: isAssignedTask
-                          ? Colors.blue.withOpacity(0.1)
-                          : (isLive
-                              ? tealPrimary.withOpacity(0.1)
-                              : Colors.grey[100]),
-                      borderRadius:
-                          const BorderRadius.vertical(top: Radius.circular(16)),
-                    ),
-                    child: Row(
-                      children: [
-                        Icon(
-                          isAssignedTask
-                              ? Icons.assignment_ind
-                              : (isLive ? Icons.sensors : Icons.timer_outlined),
-                          color: isAssignedTask
-                              ? Colors.blue
-                              : (isLive ? tealPrimary : Colors.grey),
-                          size: 18,
-                        ),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: Text(
-                            courseCode,
-                            style: const TextStyle(
-                                fontWeight: FontWeight.bold, fontSize: 16),
+              child: Container(
+                margin: const EdgeInsets.only(bottom: 16),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(16),
+                  boxShadow: [
+                    BoxShadow(
+                        color: Colors.black.withOpacity(0.05),
+                        blurRadius: 10,
+                        offset: const Offset(0, 4))
+                  ],
+                ),
+                child: Column(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 16, vertical: 12),
+                      decoration: BoxDecoration(
+                        color: isAssignedTask
+                            ? Colors.blue.withOpacity(0.1)
+                            : (isLive
+                                ? tealPrimary.withOpacity(0.1)
+                                : Colors.grey[100]),
+                        borderRadius: const BorderRadius.vertical(
+                            top: Radius.circular(16)),
+                      ),
+                      child: Row(
+                        children: [
+                          Icon(
+                            isAssignedTask
+                                ? Icons.assignment_ind
+                                : (isLive
+                                    ? Icons.sensors
+                                    : Icons.timer_outlined),
+                            color: isAssignedTask
+                                ? Colors.blue
+                                : (isLive ? tealPrimary : Colors.grey),
+                            size: 18,
                           ),
-                        ),
-                        if (!isAssignedTask)
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: Text(courseCode,
+                                style: const TextStyle(
+                                    fontWeight: FontWeight.bold, fontSize: 16)),
+                          ),
+                          if (!isAssignedTask)
+                            IconButton(
+                              padding: EdgeInsets.zero,
+                              constraints: const BoxConstraints(),
+                              icon: const Icon(Icons.edit,
+                                  size: 18, color: tealPrimary),
+                              onPressed: () => _showSessionDialog(
+                                  docId: docs[i].id, existingData: data),
+                            ),
                           IconButton(
                             padding: EdgeInsets.zero,
                             constraints: const BoxConstraints(),
-                            icon: const Icon(Icons.edit,
-                                size: 18, color: tealPrimary),
-                            onPressed: () => _showSessionDialog(
-                                docId: docs[i].id, existingData: data),
+                            icon: const Icon(Icons.delete_outline,
+                                size: 18, color: Colors.redAccent),
+                            onPressed: () =>
+                                _deleteSession(docs[i].id, isAssignedTask),
                           ),
-                        IconButton(
-                          padding: EdgeInsets.zero,
-                          constraints: const BoxConstraints(),
-                          icon: const Icon(Icons.delete_outline,
-                              size: 18, color: Colors.redAccent),
-                          onPressed: () =>
-                              _deleteSession(docs[i].id, isAssignedTask),
-                        ),
-                        const SizedBox(width: 8),
-                        Container(
-                          padding: const EdgeInsets.symmetric(
-                              horizontal: 10, vertical: 4),
-                          decoration: BoxDecoration(
-                            color: isAssignedTask
-                                ? Colors.blue
-                                : (isLive
-                                    ? Colors.green[600]
-                                    : Colors.grey[600]),
-                            borderRadius: BorderRadius.circular(20),
+                          const SizedBox(width: 8),
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 10, vertical: 4),
+                            decoration: BoxDecoration(
+                              color: isAssignedTask
+                                  ? Colors.blue
+                                  : (isLive
+                                      ? Colors.green[600]
+                                      : Colors.grey[600]),
+                              borderRadius: BorderRadius.circular(20),
+                            ),
+                            child: Text(
+                              isAssignedTask
+                                  ? "ASSIGNED"
+                                  : (isLive ? "LIVE" : "SCHEDULED"),
+                              style: const TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 10,
+                                  fontWeight: FontWeight.bold),
+                            ),
                           ),
-                          child: Text(
-                            isAssignedTask
-                                ? "ASSIGNED"
-                                : (isLive ? "LIVE" : "SCHEDULED"),
-                            style: const TextStyle(
-                                color: Colors.white,
-                                fontSize: 10,
-                                fontWeight: FontWeight.bold),
-                          ),
-                        ),
-                      ],
+                        ],
+                      ),
                     ),
-                  ),
-                  Padding(
-                    padding: const EdgeInsets.all(16),
-                    child: Column(
-                      children: [
-                        Row(
-                          children: [
-                            const Icon(Icons.person_outline,
-                                size: 16, color: Colors.grey),
-                            const SizedBox(width: 8),
-                            Text("Staff: $invigilator",
-                                style: const TextStyle(color: Colors.black87)),
-                            const Spacer(),
-                            const Icon(Icons.location_on_outlined,
-                                size: 16, color: Colors.grey),
-                            const SizedBox(width: 4),
-                            Text(room,
-                                style: const TextStyle(color: Colors.black87)),
-                          ],
-                        ),
-                        const SizedBox(height: 8),
-                        Row(
-                          children: [
-                            const Icon(Icons.access_time,
-                                size: 16, color: Colors.grey),
-                            const SizedBox(width: 8),
-                            Text(time,
-                                style: const TextStyle(color: Colors.black87)),
-                          ],
-                        ),
-                      ],
+                    Padding(
+                      padding: const EdgeInsets.all(16),
+                      child: Column(
+                        children: [
+                          Row(
+                            children: [
+                              const Icon(Icons.person_outline,
+                                  size: 16, color: Colors.grey),
+                              const SizedBox(width: 8),
+                              Text("Staff: $invigilator",
+                                  style:
+                                      const TextStyle(color: Colors.black87)),
+                              const Spacer(),
+                              const Icon(Icons.location_on_outlined,
+                                  size: 16, color: Colors.grey),
+                              const SizedBox(width: 4),
+                              Text(room,
+                                  style:
+                                      const TextStyle(color: Colors.black87)),
+                            ],
+                          ),
+                          const SizedBox(height: 8),
+                          Row(
+                            children: [
+                              const Icon(Icons.access_time,
+                                  size: 16, color: Colors.grey),
+                              const SizedBox(width: 8),
+                              Text(time,
+                                  style:
+                                      const TextStyle(color: Colors.black87)),
+                            ],
+                          ),
+                        ],
+                      ),
                     ),
-                  ),
-                ],
+                  ],
+                ),
               ),
             );
           },
@@ -484,7 +490,6 @@ class _AttendanceHistoryState extends State<AttendanceHistory>
     );
   }
 
-  // New dedicated Assign Invigilator tab
   Widget _buildAssignTab() {
     return const Assign();
   }
@@ -501,10 +506,11 @@ class _AttendanceHistoryState extends State<AttendanceHistory>
         if (!snapshot.hasData)
           return const Center(child: CircularProgressIndicator());
         final docs = snapshot.data!.docs;
-        if (docs.isEmpty)
+        if (docs.isEmpty) {
           return const Center(
               child: Text("No records found.",
                   style: TextStyle(color: Colors.grey)));
+        }
 
         return ListView.builder(
           itemCount: docs.length,
