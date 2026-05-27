@@ -2,7 +2,6 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'Invigilator_viewlist.dart';
-import 'invigilator_home.dart'; // Ensure this is imported
 
 const Color tealPrimary = Color(0xFF2E9E8E);
 const Color tealLight = Color(0xFFDFF2EF);
@@ -16,8 +15,8 @@ class InvigilatorAttendanceList extends StatefulWidget {
 
 class _InvigilatorAttendanceListState extends State<InvigilatorAttendanceList> {
   String? _userName;
+
   DateTime? _selectedDate;
-  final int _currentIndex = 2; // Index for History
 
   @override
   void initState() {
@@ -99,7 +98,7 @@ class _InvigilatorAttendanceListState extends State<InvigilatorAttendanceList> {
         elevation: 0,
         automaticallyImplyLeading: false,
         title: const Text(
-          'Attendance History',
+          'Attendance List',
           style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16),
         ),
         actions: [
@@ -148,6 +147,7 @@ class _InvigilatorAttendanceListState extends State<InvigilatorAttendanceList> {
           ),
           Expanded(
             child: StreamBuilder<QuerySnapshot>(
+              // Optimized query
               stream: FirebaseFirestore.instance
                   .collection('attendance')
                   .where('submittedBy', isEqualTo: _userName)
@@ -222,29 +222,6 @@ class _InvigilatorAttendanceListState extends State<InvigilatorAttendanceList> {
               },
             ),
           ),
-        ],
-      ),
-      bottomNavigationBar: BottomNavigationBar(
-        currentIndex: _currentIndex,
-        onTap: (i) {
-          if (i == 0) {
-            Navigator.pushAndRemoveUntil(
-              context,
-              MaterialPageRoute(builder: (_) => const InvigilatorHome()),
-                  (r) => false,
-            );
-          } else if (i == 2) {
-
-          }
-        },
-        type: BottomNavigationBarType.fixed,
-        backgroundColor: tealPrimary,
-        selectedItemColor: Colors.white,
-        unselectedItemColor: Colors.white70,
-        items: const [
-          BottomNavigationBarItem(icon: Icon(Icons.home), label: 'Home'),
-          BottomNavigationBarItem(icon: Icon(Icons.qr_code_scanner), label: 'Scan'),
-          BottomNavigationBarItem(icon: Icon(Icons.history), label: 'History'),
         ],
       ),
     );

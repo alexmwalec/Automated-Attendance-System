@@ -4,8 +4,6 @@ import 'package:mobile_scanner/mobile_scanner.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'manual_search.dart';
-import 'invigilator_home.dart'; // IMPORTED
-import 'invigilator_attendance_list.dart'; // IMPORTED
 
 const Color tealPrimary = Color(0xFF2E9E8E);
 const Color tealDark = Color(0xFF227A6D);
@@ -40,8 +38,6 @@ class _InvigilatorTakeAttendanceState extends State<InvigilatorTakeAttendance> {
   bool _isSubmitting = false;
   int _totalEnrolled = 0;
   int _failedScanCount = 0;
-
-  final int _currentIndex = 1; // Index for Scan
 
   @override
   void initState() {
@@ -139,15 +135,15 @@ class _InvigilatorTakeAttendanceState extends State<InvigilatorTakeAttendance> {
             )));
   }
 
+  // --- SUBMISSION LOGIC INTEGRATED FROM SUBMIT_LIST ---
   Future<void> _submitAttendance() async {
-    if (_scannedStudents.isEmpty) return;
-
     setState(() => _isSubmitting = true);
     try {
       final user = FirebaseAuth.instance.currentUser;
       final userDoc = await FirebaseFirestore.instance.collection('users').doc(user?.uid).get();
-      final String invName = "${userDoc.data()?['name'] ?? ''} ${userDoc.data()?['surname'] ?? ''}".trim();
+      final String invName = "${userDoc.data()?['name']} ${userDoc.data()?['surname']}".trim();
 
+      // Get enrollment from course doc to build full report (Present/Absent)
       final courseDoc = await FirebaseFirestore.instance.collection('courses').doc(widget.courseCode).get();
       List<String> expectedRegNos = [];
       if (courseDoc.exists) {
@@ -207,6 +203,7 @@ class _InvigilatorTakeAttendanceState extends State<InvigilatorTakeAttendance> {
               style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold))),
       body: Column(
         children: [
+          // Info bar
           Container(
             width: double.infinity,
             padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
@@ -218,6 +215,8 @@ class _InvigilatorTakeAttendanceState extends State<InvigilatorTakeAttendance> {
                   style: const TextStyle(color: tealDark, fontWeight: FontWeight.bold, fontSize: 12)),
             ]),
           ),
+
+          // Scanner Area
           Padding(
             padding: const EdgeInsets.all(14),
             child: Container(
@@ -247,12 +246,16 @@ class _InvigilatorTakeAttendanceState extends State<InvigilatorTakeAttendance> {
               ),
             ),
           ),
+
+          // Review list integrated directly
           const Padding(
               padding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
               child: Align(
                   alignment: Alignment.centerLeft,
                   child: Text('REVIEW SCANNED LIST',
                       style: TextStyle(color: Colors.grey, fontWeight: FontWeight.bold, fontSize: 12)))),
+
+          // Header for the table
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 14),
             child: Container(
@@ -267,6 +270,7 @@ class _InvigilatorTakeAttendanceState extends State<InvigilatorTakeAttendance> {
               ),
             ),
           ),
+
           Expanded(
             child: ListView.builder(
               padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 4),
@@ -289,6 +293,8 @@ class _InvigilatorTakeAttendanceState extends State<InvigilatorTakeAttendance> {
               },
             ),
           ),
+
+          // Bottom Action Bar
           Padding(
             padding: const EdgeInsets.all(16),
             child: Row(children: [
@@ -313,25 +319,6 @@ class _InvigilatorTakeAttendanceState extends State<InvigilatorTakeAttendance> {
               ),
             ]),
           ),
-        ],
-      ),
-      bottomNavigationBar: BottomNavigationBar(
-        currentIndex: _currentIndex,
-        onTap: (i) {
-          if (i == 0) {
-            Navigator.pushAndRemoveUntil(context, MaterialPageRoute(builder: (_) => const InvigilatorHome()), (r) => false);
-          } else if (i == 2) {
-            Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) => const InvigilatorAttendanceList()));
-          }
-        },
-        type: BottomNavigationBarType.fixed,
-        backgroundColor: tealPrimary,
-        selectedItemColor: Colors.white,
-        unselectedItemColor: Colors.white70,
-        items: const [
-          BottomNavigationBarItem(icon: Icon(Icons.home), label: 'Home'),
-          BottomNavigationBarItem(icon: Icon(Icons.qr_code_scanner), label: 'Scan'),
-          BottomNavigationBarItem(icon: Icon(Icons.history), label: 'History'),
         ],
       ),
     );
