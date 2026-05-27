@@ -33,7 +33,7 @@ class _InvigilatorAttendanceListState extends State<InvigilatorAttendanceList> {
 
     return Scaffold(
       backgroundColor: tealLight,
-      appBar: AppBar(backgroundColor: tealPrimary, automaticallyImplyLeading: false, title: const Text('SUBMISSION HISTORY', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16))),
+      appBar: AppBar(backgroundColor: tealPrimary, automaticallyImplyLeading: false, title: const Text('Attendance List', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16))),
       body: StreamBuilder<QuerySnapshot>(
         stream: FirebaseFirestore.instance.collection('attendance').where('submittedBy', isEqualTo: _userName).orderBy('timestamp', descending: true).snapshots(),
         builder: (context, snap) {
