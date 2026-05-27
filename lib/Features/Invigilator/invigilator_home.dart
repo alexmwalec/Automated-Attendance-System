@@ -89,7 +89,7 @@ class _InvigilatorHomeState extends State<InvigilatorHome> {
       appBar: AppBar(
         backgroundColor: primaryColor,
         elevation: 0,
-        title: const Text('Invigilator Dashboard',
+        title: const Text('Invigilator ',
             style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
       ),
       body: StreamBuilder<List<QueryDocumentSnapshot>>(
