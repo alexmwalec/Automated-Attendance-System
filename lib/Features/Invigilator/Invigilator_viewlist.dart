@@ -36,8 +36,8 @@ class ViewList extends StatelessWidget {
             child: const Row(
               children: [
                 Expanded(flex: 3, child: Text('Reg No', style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: tealDark))),
-                Expanded(flex: 4, child: Text('NAME & SURNAME', style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: tealDark))),
-                SizedBox(width: 40, child: Text('STATUS', style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: tealDark), textAlign: TextAlign.right)),
+                Expanded(flex: 4, child: Text('Full Name', style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: tealDark))),
+                SizedBox(width: 40, child: Text('Status', style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: tealDark), textAlign: TextAlign.right)),
               ],
             ),
           ),
