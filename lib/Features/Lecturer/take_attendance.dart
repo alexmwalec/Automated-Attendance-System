@@ -30,6 +30,7 @@ class _AttendancePageState extends State<AttendancePage> {
   final List<Map<String, String>> _scannedStudents = [];
   List<Map<String, dynamic>> _allEligibleStudents = [];
   bool _isProcessing = false;
+  bool _isLoadingStudents = true;
   bool _isSubmitting = false;
   bool _alreadyTaken = false;
 
@@ -43,7 +44,7 @@ class _AttendancePageState extends State<AttendancePage> {
   void initState() {
     super.initState();
     _selectedSessionType = widget.sessionType;
-    _fetchEnrolledCount();
+    _loadCourseStudents();
     _checkIfAlreadyTaken();
   }
 
