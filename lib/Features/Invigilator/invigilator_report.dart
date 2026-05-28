@@ -117,7 +117,7 @@ class _InvigilatorReportState extends State<InvigilatorReport> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // ── Title ──────────────────────────────────────────────────────
+            // title
             const SizedBox(height: 8),
             const Text(
               'Write Report',
@@ -129,7 +129,7 @@ class _InvigilatorReportState extends State<InvigilatorReport> {
             ),
             const SizedBox(height: 16),
 
-            // ── Assignment details card ─────────────────────────────────────
+            // Assignment details card
             Container(
               width: double.infinity,
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
@@ -151,7 +151,7 @@ class _InvigilatorReportState extends State<InvigilatorReport> {
 
             const SizedBox(height: 16),
 
-            // ── Report text area ───────────────────────────────────────────
+            // Report text area
             Container(
               width: double.infinity,
               height: 260,
@@ -177,7 +177,7 @@ class _InvigilatorReportState extends State<InvigilatorReport> {
 
             const SizedBox(height: 16),
 
-            // ── Warning notice ─────────────────────────────────────────────
+            //  Warning notice
             Container(
               width: double.infinity,
               padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
@@ -208,7 +208,7 @@ class _InvigilatorReportState extends State<InvigilatorReport> {
 
             const SizedBox(height: 24),
 
-            // ── Action buttons ─────────────────────────────────────────────
+            // Action buttons
             Row(
               children: [
                 Expanded(
