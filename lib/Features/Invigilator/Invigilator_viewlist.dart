@@ -19,27 +19,38 @@ class ViewList extends StatelessWidget {
           backgroundColor: tealPrimary,
           iconTheme: const IconThemeData(color: Colors.white),
           title: const Text('Attendance List',
-              style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold))),
+              style:
+                  TextStyle(color: Colors.white, fontWeight: FontWeight.bold))),
       body: Column(
         children: [
-          Container(
-            padding: const EdgeInsets.all(16),
-            child: Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
-              _infoBox(attendanceData['courseCode'] ?? 'N/A'),
-              _infoBox(attendanceData['date'] ?? 'N/A'),
-              _infoBox('${attendanceData['totalPresent'] ?? 0} Present'),
-            ]),
-          ),
-
-          // --- HEADERS ADDED HERE ---
+          // Headers
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
             color: tealPrimary.withOpacity(0.1),
             child: const Row(
               children: [
-                Expanded(flex: 3, child: Text('Reg No', style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: tealDark))),
-                Expanded(flex: 4, child: Text('Full Name', style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: tealDark))),
-                SizedBox(width: 40, child: Text('Status', style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: tealDark), textAlign: TextAlign.right)),
+                Expanded(
+                    flex: 3,
+                    child: Text('Reg No',
+                        style: TextStyle(
+                            fontSize: 10,
+                            fontWeight: FontWeight.bold,
+                            color: tealDark))),
+                Expanded(
+                    flex: 4,
+                    child: Text('Full Name',
+                        style: TextStyle(
+                            fontSize: 10,
+                            fontWeight: FontWeight.bold,
+                            color: tealDark))),
+                SizedBox(
+                    width: 40,
+                    child: Text('Status',
+                        style: TextStyle(
+                            fontSize: 10,
+                            fontWeight: FontWeight.bold,
+                            color: tealDark),
+                        textAlign: TextAlign.right)),
               ],
             ),
           ),
@@ -53,13 +64,22 @@ class ViewList extends StatelessWidget {
                 final s = fullList[i];
                 final bool isPresent = s['status'] == 'Present';
                 return Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                   decoration: const BoxDecoration(
                       color: Colors.white,
-                      border: Border(bottom: BorderSide(color: Colors.black12))),
+                      border:
+                          Border(bottom: BorderSide(color: Colors.black12))),
                   child: Row(children: [
-                    Expanded(flex: 3, child: Text(s['regNo'] ?? '', style: const TextStyle(fontSize: 11))),
-                    Expanded(flex: 4, child: Text("${s['name']} ${s['surname']}", style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w500))),
+                    Expanded(
+                        flex: 3,
+                        child: Text(s['regNo'] ?? '',
+                            style: const TextStyle(fontSize: 11))),
+                    Expanded(
+                        flex: 4,
+                        child: Text("${s['name']} ${s['surname']}",
+                            style: const TextStyle(
+                                fontSize: 11, fontWeight: FontWeight.w500))),
                     SizedBox(
                       width: 40,
                       child: Text(s['status'] ?? '',
@@ -78,14 +98,4 @@ class ViewList extends StatelessWidget {
       ),
     );
   }
-
-  Widget _infoBox(String text) => Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-      decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(5),
-          border: Border.all(color: tealPrimary)),
-      child: Text(text,
-          style: const TextStyle(
-              fontSize: 10, fontWeight: FontWeight.bold, color: tealDark)));
 }

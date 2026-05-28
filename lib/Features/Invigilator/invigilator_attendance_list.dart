@@ -2,7 +2,6 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'Invigilator_viewlist.dart';
-import 'invigilator_home.dart';
 
 const Color tealPrimary = Color(0xFF2E9E8E);
 const Color tealLight = Color(0xFFDFF2EF);
@@ -11,42 +10,21 @@ class InvigilatorAttendanceList extends StatefulWidget {
   const InvigilatorAttendanceList({super.key});
 
   @override
-  State<InvigilatorAttendanceList> createState() => _InvigilatorAttendanceListState();
+  State<InvigilatorAttendanceList> createState() =>
+      _InvigilatorAttendanceListState();
 }
 
 class _InvigilatorAttendanceListState extends State<InvigilatorAttendanceList> {
-  String? _userName;
   DateTime? _selectedDate;
-
-  // Highlighting 'Records' (Index 2)
-  final int _currentIndex = 2;
 
   @override
   void initState() {
     super.initState();
     _selectedDate = DateTime.now();
-    _fetchUser();
-  }
-
-  Future<void> _fetchUser() async {
-    try {
-      final user = FirebaseAuth.instance.currentUser;
-      if (user != null) {
-        final doc = await FirebaseFirestore.instance.collection('users').doc(user.uid).get();
-        if (mounted && doc.exists) {
-          setState(() {
-            _userName = "${doc.data()?['name'] ?? ''} ${doc.data()?['surname'] ?? ''}".trim();
-          });
-        }
-      }
-    } catch (e) {
-      debugPrint("Error fetching user: $e");
-    }
   }
 
   String _formatDate(DateTime? dt) {
     if (dt == null) return "";
-
     final year = dt.year;
     final month = dt.month.toString().padLeft(2, '0');
     final day = dt.day.toString().padLeft(2, '0');
@@ -77,21 +55,13 @@ class _InvigilatorAttendanceListState extends State<InvigilatorAttendanceList> {
     );
 
     if (picked != null && mounted) {
-      setState(() {
-        _selectedDate = picked;
-      });
+      setState(() => _selectedDate = picked);
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    if (_userName == null || _selectedDate == null) {
-      return const Scaffold(
-        backgroundColor: tealLight,
-        body: Center(child: CircularProgressIndicator(color: tealPrimary)),
-      );
-    }
-
+    final String? currentUid = FirebaseAuth.instance.currentUser?.uid;
     final String dateFilter = _formatDate(_selectedDate);
 
     return Scaffold(
@@ -101,15 +71,10 @@ class _InvigilatorAttendanceListState extends State<InvigilatorAttendanceList> {
         elevation: 0,
         automaticallyImplyLeading: false,
         title: const Text(
-          'Attendance Records', // Updated Title
-          style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16),
+          'Attendance Records',
+          style: TextStyle(
+              color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16),
         ),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.calendar_month, color: Colors.white),
-            onPressed: _pickDate,
-          ),
-        ],
       ),
       body: Column(
         children: [
@@ -133,27 +98,22 @@ class _InvigilatorAttendanceListState extends State<InvigilatorAttendanceList> {
                   style: const TextStyle(
                       fontSize: 13,
                       fontWeight: FontWeight.bold,
-                      color: tealPrimary
-                  ),
+                      color: tealPrimary),
                 ),
                 const Spacer(),
-                TextButton.icon(
+                IconButton(
+                  icon: const Icon(Icons.calendar_month, color: tealPrimary),
                   onPressed: _pickDate,
-                  icon: const Icon(Icons.edit, size: 14, color: tealPrimary),
-                  label: const Text(
-                    "Change",
-                    style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: tealPrimary),
-                  ),
-                )
+                ),
               ],
             ),
           ),
+
           Expanded(
             child: StreamBuilder<QuerySnapshot>(
-              // Optimized query
               stream: FirebaseFirestore.instance
                   .collection('attendance')
-                  .where('submittedBy', isEqualTo: _userName)
+                  .where('invigilatorId', isEqualTo: currentUid)
                   .where('date', isEqualTo: dateFilter)
                   .snapshots(),
               builder: (context, snap) {
@@ -161,7 +121,8 @@ class _InvigilatorAttendanceListState extends State<InvigilatorAttendanceList> {
                   return Center(child: Text("Error: ${snap.error}"));
                 }
                 if (snap.connectionState == ConnectionState.waiting) {
-                  return const Center(child: CircularProgressIndicator(color: tealPrimary));
+                  return const Center(
+                      child: CircularProgressIndicator(color: tealPrimary));
                 }
 
                 final docs = snap.data?.docs ?? [];
@@ -171,11 +132,13 @@ class _InvigilatorAttendanceListState extends State<InvigilatorAttendanceList> {
                     child: Column(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        Icon(Icons.search_off, size: 64, color: tealPrimary.withOpacity(0.3)),
+                        Icon(Icons.search_off,
+                            size: 64, color: tealPrimary.withOpacity(0.3)),
                         const SizedBox(height: 16),
                         Text(
                           "No records found for $dateFilter",
-                          style: TextStyle(color: Colors.grey[600], fontSize: 14),
+                          style:
+                              TextStyle(color: Colors.grey[600], fontSize: 14),
                         ),
                       ],
                     ),
@@ -191,32 +154,39 @@ class _InvigilatorAttendanceListState extends State<InvigilatorAttendanceList> {
                       elevation: 2,
                       shadowColor: Colors.black12,
                       margin: const EdgeInsets.only(bottom: 12),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                      shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12)),
                       child: ListTile(
-                        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                        contentPadding: const EdgeInsets.symmetric(
+                            horizontal: 16, vertical: 8),
                         leading: Container(
                           padding: const EdgeInsets.all(8),
                           decoration: BoxDecoration(
                             color: tealLight,
                             borderRadius: BorderRadius.circular(8),
                           ),
-                          child: const Icon(Icons.history_edu, color: tealPrimary),
+                          child:
+                              const Icon(Icons.history_edu, color: tealPrimary),
                         ),
                         title: Text(
                           "${data['courseCode'] ?? 'N/A'} - ${data['sessionType'] ?? 'N/A'}",
-                          style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
+                          style: const TextStyle(
+                              fontWeight: FontWeight.bold, fontSize: 15),
                         ),
                         subtitle: Padding(
                           padding: const EdgeInsets.only(top: 4),
                           child: Text(
                             "${data['date']} • ${data['totalPresent'] ?? 0} Present",
-                            style: TextStyle(color: Colors.grey[600], fontSize: 13),
+                            style: TextStyle(
+                                color: Colors.grey[600], fontSize: 13),
                           ),
                         ),
-                        trailing: const Icon(Icons.chevron_right, color: Colors.grey),
+                        trailing:
+                            const Icon(Icons.chevron_right, color: Colors.grey),
                         onTap: () => Navigator.push(
                           context,
-                          MaterialPageRoute(builder: (_) => ViewList(attendanceData: data)),
+                          MaterialPageRoute(
+                              builder: (_) => ViewList(attendanceData: data)),
                         ),
                       ),
                     );
@@ -227,7 +197,6 @@ class _InvigilatorAttendanceListState extends State<InvigilatorAttendanceList> {
           ),
         ],
       ),
-
     );
   }
 }
