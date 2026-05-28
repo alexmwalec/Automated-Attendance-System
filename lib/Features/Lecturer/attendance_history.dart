@@ -2,6 +2,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:rxdart/rxdart.dart';
+import 'dart:async';
 import 'lecturer_dashboard.dart';
 import 'assign.dart';
 import 'viewlist.dart';
@@ -21,6 +22,8 @@ class _AttendanceHistoryState extends State<AttendanceHistory>
   late TabController _tabController;
   final int _currentIndex = 2;
   List<String> assignedCourses = [];
+  List<String> venues = [];
+  Timer? _refreshTimer;
 
   @override
   void initState() {
@@ -30,6 +33,24 @@ class _AttendanceHistoryState extends State<AttendanceHistory>
       setState(() {});
     });
     _fetchAssignedCourses();
+    _fetchVenues();
+    _refreshTimer = Timer.periodic(const Duration(minutes: 1), (timer) {
+      if (mounted) setState(() {});
+    });
+  }
+
+  @override
+  void dispose() {
+    _refreshTimer?.cancel();
+    _tabController.dispose();
+    super.dispose();
+  }
+
+  Future<void> _fetchVenues() async {
+    final snap = await FirebaseFirestore.instance.collection('rooms').get();
+    setState(() {
+      venues = snap.docs.map((doc) => doc.id).toList();
+    });
   }
 
   DateTime _parseDateTime(dynamic value) {
@@ -65,7 +86,7 @@ class _AttendanceHistoryState extends State<AttendanceHistory>
           DateTime(now.year, now.month, now.day, start.hour, start.minute);
       final endDt =
           DateTime(now.year, now.month, now.day, end.hour, end.minute);
-      return now.isAfter(startDt) && now.isBefore(endDt);
+      return !now.isBefore(startDt) && now.isBefore(endDt);
     } catch (e) {
       return false;
     }
@@ -84,6 +105,25 @@ class _AttendanceHistoryState extends State<AttendanceHistory>
     } catch (e) {
       return TimeOfDay.now();
     }
+  }
+
+  Widget _buildInfoCol(String label, String value) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(label,
+            style: TextStyle(
+                color: Colors.grey[500],
+                fontSize: 11,
+                fontWeight: FontWeight.w500)),
+        const SizedBox(height: 4),
+        Text(value,
+            style: const TextStyle(
+                fontWeight: FontWeight.bold,
+                fontSize: 13,
+                color: Colors.black87)),
+      ],
+    );
   }
 
   void _deleteSession(String docId, bool isAssignedTask) {
@@ -120,6 +160,8 @@ class _AttendanceHistoryState extends State<AttendanceHistory>
   void _showSessionDialog({String? docId, Map<String, dynamic>? existingData}) {
     String? selCourse = existingData?['courseCode'];
     String? selType = existingData?['sessionType'];
+    String? selVenue = existingData?['room'] ?? existingData?['venue'];
+
     TimeOfDay startTime = existingData != null
         ? _parseTime(existingData['startTime'])
         : TimeOfDay.now();
@@ -132,48 +174,63 @@ class _AttendanceHistoryState extends State<AttendanceHistory>
       builder: (context) => StatefulBuilder(
         builder: (context, setDialogState) => AlertDialog(
           title: Text(
-              docId == null ? "Create Active Session" : "Edit Active Session",
+              docId == null ? "Create  Session" : "Edit Session",
               style: const TextStyle(color: tealPrimary)),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              DropdownButton<String>(
-                isExpanded: true,
-                hint: const Text("Select Course"),
-                value: selCourse,
-                items: assignedCourses
-                    .map((e) => DropdownMenuItem(value: e, child: Text(e)))
-                    .toList(),
-                onChanged: (v) => setDialogState(() => selCourse = v),
-              ),
-              DropdownButton<String>(
-                isExpanded: true,
-                hint: const Text("Session Type"),
-                value: selType,
-                items: ["Class", "Lab", "Exam"]
-                    .map((e) => DropdownMenuItem(value: e, child: Text(e)))
-                    .toList(),
-                onChanged: (v) => setDialogState(() => selType = v),
-              ),
-              ListTile(
-                title: Text("Start: ${startTime.format(context)}"),
-                trailing: const Icon(Icons.access_time, size: 20),
-                onTap: () async {
-                  final t = await showTimePicker(
-                      context: context, initialTime: startTime);
-                  if (t != null) setDialogState(() => startTime = t);
-                },
-              ),
-              ListTile(
-                title: Text("End: ${endTime.format(context)}"),
-                trailing: const Icon(Icons.access_time, size: 20),
-                onTap: () async {
-                  final t = await showTimePicker(
-                      context: context, initialTime: endTime);
-                  if (t != null) setDialogState(() => endTime = t);
-                },
-              ),
-            ],
+          content: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                DropdownButton<String>(
+                  isExpanded: true,
+                  hint: const Text("Select Course"),
+                  value: selCourse,
+                  items: assignedCourses
+                      .map((e) => DropdownMenuItem(value: e, child: Text(e)))
+                      .toList(),
+                  onChanged: (v) => setDialogState(() => selCourse = v),
+                ),
+                DropdownButton<String>(
+                  isExpanded: true,
+                  hint: const Text("Session Type"),
+                  value: selType,
+                  items: ["Class", "Lab", "Exam"]
+                      .map((e) => DropdownMenuItem(value: e, child: Text(e)))
+                      .toList(),
+                  onChanged: (v) => setDialogState(() => selType = v),
+                ),
+                DropdownButton<String>(
+                  isExpanded: true,
+                  hint: const Text("Select Venue"),
+                  value: (selVenue != null && venues.contains(selVenue))
+                      ? selVenue
+                      : null,
+                  items: venues
+                      .map((e) => DropdownMenuItem(value: e, child: Text(e)))
+                      .toList(),
+                  onChanged: (v) => setDialogState(() => selVenue = v),
+                ),
+                ListTile(
+                  contentPadding: EdgeInsets.zero,
+                  title: Text("Start: ${startTime.format(context)}"),
+                  trailing: const Icon(Icons.access_time, size: 20),
+                  onTap: () async {
+                    final t = await showTimePicker(
+                        context: context, initialTime: startTime);
+                    if (t != null) setDialogState(() => startTime = t);
+                  },
+                ),
+                ListTile(
+                  contentPadding: EdgeInsets.zero,
+                  title: Text("End: ${endTime.format(context)}"),
+                  trailing: const Icon(Icons.access_time, size: 20),
+                  onTap: () async {
+                    final t = await showTimePicker(
+                        context: context, initialTime: endTime);
+                    if (t != null) setDialogState(() => endTime = t);
+                  },
+                ),
+              ],
+            ),
           ),
           actions: [
             TextButton(
@@ -181,7 +238,7 @@ class _AttendanceHistoryState extends State<AttendanceHistory>
                 child: const Text("Cancel")),
             ElevatedButton(
               style: ElevatedButton.styleFrom(backgroundColor: tealPrimary),
-              onPressed: (selCourse == null || selType == null)
+              onPressed: (selCourse == null || selType == null || selVenue == null)
                   ? null
                   : () async {
                       final uid = FirebaseAuth.instance.currentUser?.uid;
@@ -189,6 +246,7 @@ class _AttendanceHistoryState extends State<AttendanceHistory>
                         'lecturerId': uid,
                         'courseCode': selCourse,
                         'sessionType': selType,
+                        'room': selVenue,
                         'startTime': startTime.format(context),
                         'endTime': endTime.format(context),
                         'updatedAt': FieldValue.serverTimestamp(),
@@ -350,126 +408,117 @@ class _AttendanceHistoryState extends State<AttendanceHistory>
                   builder: (_) => Assign(
                     courseCode: courseCode,
                     sessionType: data['sessionType'] ?? '',
+                    room: room != 'Not Set' ? room : null,
+                    invigilatorId: data['invigilatorId'],
+                    invigilatorName: data['invigilatorName'],
+                    assignmentId: isAssignedTask ? docs[i].id : null,
                   ),
                 ),
               ),
               child: Container(
-                margin: const EdgeInsets.only(bottom: 16),
+                margin: const EdgeInsets.only(bottom: 12),
                 decoration: BoxDecoration(
                   color: Colors.white,
-                  borderRadius: BorderRadius.circular(16),
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: tealPrimary.withOpacity(0.1)),
                   boxShadow: [
                     BoxShadow(
                         color: Colors.black.withOpacity(0.05),
-                        blurRadius: 10,
-                        offset: const Offset(0, 4))
+                        blurRadius: 6,
+                        offset: const Offset(0, 2))
                   ],
                 ),
                 child: Column(
                   children: [
-                    Container(
+                    Padding(
                       padding: const EdgeInsets.symmetric(
-                          horizontal: 16, vertical: 12),
-                      decoration: BoxDecoration(
-                        color: isAssignedTask
-                            ? Colors.blue.withOpacity(0.1)
-                            : (isLive
-                                ? tealPrimary.withOpacity(0.1)
-                                : Colors.grey[100]),
-                        borderRadius: const BorderRadius.vertical(
-                            top: Radius.circular(16)),
-                      ),
+                          horizontal: 12, vertical: 8),
                       child: Row(
                         children: [
-                          Icon(
-                            isAssignedTask
-                                ? Icons.assignment_ind
-                                : (isLive
-                                    ? Icons.sensors
-                                    : Icons.timer_outlined),
-                            color: isAssignedTask
-                                ? Colors.blue
-                                : (isLive ? tealPrimary : Colors.grey),
-                            size: 18,
+                          Container(
+                            padding: const EdgeInsets.all(6),
+                            decoration: BoxDecoration(
+                              color: tealLight,
+                              borderRadius: BorderRadius.circular(6),
+                            ),
+                            child: const Icon(Icons.book_outlined,
+                                color: tealPrimary, size: 18),
                           ),
-                          const SizedBox(width: 12),
+                          const SizedBox(width: 10),
                           Expanded(
                             child: Text(courseCode,
                                 style: const TextStyle(
                                     fontWeight: FontWeight.bold, fontSize: 16)),
                           ),
-                          if (!isAssignedTask)
-                            IconButton(
-                              padding: EdgeInsets.zero,
-                              constraints: const BoxConstraints(),
-                              icon: const Icon(Icons.edit,
-                                  size: 18, color: tealPrimary),
-                              onPressed: () => _showSessionDialog(
-                                  docId: docs[i].id, existingData: data),
-                            ),
-                          IconButton(
-                            padding: EdgeInsets.zero,
-                            constraints: const BoxConstraints(),
-                            icon: const Icon(Icons.delete_outline,
-                                size: 18, color: Colors.redAccent),
-                            onPressed: () =>
-                                _deleteSession(docs[i].id, isAssignedTask),
-                          ),
-                          const SizedBox(width: 8),
                           Container(
                             padding: const EdgeInsets.symmetric(
-                                horizontal: 10, vertical: 4),
+                                horizontal: 8, vertical: 2),
                             decoration: BoxDecoration(
-                              color: isAssignedTask
-                                  ? Colors.blue
-                                  : (isLive
-                                      ? Colors.green[600]
-                                      : Colors.grey[600]),
+                              color: isLive
+                                  ? Colors.green.withOpacity(0.1)
+                                  : Colors.grey.withOpacity(0.1),
                               borderRadius: BorderRadius.circular(20),
                             ),
                             child: Text(
-                              isAssignedTask
-                                  ? "ASSIGNED"
-                                  : (isLive ? "LIVE" : "SCHEDULED"),
-                              style: const TextStyle(
-                                  color: Colors.white,
-                                  fontSize: 10,
+                              isLive ? "LIVE" : "SCHEDULED",
+                              style: TextStyle(
+                                  color: isLive ? Colors.green : Colors.grey,
+                                  fontSize: 9,
                                   fontWeight: FontWeight.bold),
                             ),
                           ),
+                          const SizedBox(width: 4),
+                          const Icon(Icons.chevron_right,
+                              color: Colors.grey, size: 16),
                         ],
                       ),
                     ),
+                    const Divider(
+                        height: 1, thickness: 1, indent: 12, endIndent: 12),
                     Padding(
-                      padding: const EdgeInsets.all(16),
+                      padding: const EdgeInsets.fromLTRB(12, 6, 12, 6),
                       child: Column(
                         children: [
                           Row(
                             children: [
-                              const Icon(Icons.person_outline,
-                                  size: 16, color: Colors.grey),
-                              const SizedBox(width: 8),
-                              Text("Staff: $invigilator",
-                                  style:
-                                      const TextStyle(color: Colors.black87)),
-                              const Spacer(),
-                              const Icon(Icons.location_on_outlined,
-                                  size: 16, color: Colors.grey),
-                              const SizedBox(width: 4),
-                              Text(room,
-                                  style:
-                                      const TextStyle(color: Colors.black87)),
+                              _buildInfoCol("Venue", room),
+                              const SizedBox(width: 20),
+                              _buildInfoCol("Time", time),
+                              const SizedBox(width: 20),
+                              _buildInfoCol(
+                                  "Type", data['sessionType'] ?? 'N/A'),
                             ],
                           ),
-                          const SizedBox(height: 8),
+                          const SizedBox(height: 4),
                           Row(
                             children: [
-                              const Icon(Icons.access_time,
-                                  size: 16, color: Colors.grey),
-                              const SizedBox(width: 8),
-                              Text(time,
-                                  style:
-                                      const TextStyle(color: Colors.black87)),
+                              const Icon(Icons.person_outline,
+                                  size: 14, color: Colors.grey),
+                              const SizedBox(width: 4),
+                              Expanded(
+                                child: Text("Invigilator: $invigilator",
+                                    style: const TextStyle(
+                                        color: Colors.grey, fontSize: 11),
+                                    overflow: TextOverflow.ellipsis),
+                              ),
+                              if (!isAssignedTask)
+                                IconButton(
+                                  padding: EdgeInsets.zero,
+                                  constraints: const BoxConstraints(),
+                                  icon: const Icon(Icons.delete_outline,
+                                      size: 16, color: Colors.redAccent),
+                                  onPressed: () => _deleteSession(
+                                      docs[i].id, isAssignedTask),
+                                ),
+                              const SizedBox(width: 12),
+                              IconButton(
+                                padding: EdgeInsets.zero,
+                                constraints: const BoxConstraints(),
+                                icon: const Icon(Icons.edit_outlined,
+                                    size: 16, color: tealPrimary),
+                                onPressed: () => _showSessionDialog(
+                                    docId: docs[i].id, existingData: data),
+                              ),
                             ],
                           ),
                         ],
@@ -511,7 +560,8 @@ class _AttendanceHistoryState extends State<AttendanceHistory>
             return Card(
               margin: const EdgeInsets.only(bottom: 12),
               shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12)),
+                  borderRadius: BorderRadius.circular(12),
+                  side: BorderSide(color: tealPrimary.withOpacity(0.2))),
               child: ListTile(
                 leading: const CircleAvatar(
                     backgroundColor: tealLight,

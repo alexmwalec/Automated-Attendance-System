@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'dart:async';
 import 'select_course.dart';
 import 'assign.dart';
 import 'attendance_history.dart';
@@ -112,8 +113,59 @@ class _LecturerDashboardState extends State<LecturerDashboard> {
   }
 }
 
-class _DashboardPage extends StatelessWidget {
+class _DashboardPage extends StatefulWidget {
   const _DashboardPage();
+
+  @override
+  State<_DashboardPage> createState() => _DashboardPageState();
+}
+
+class _DashboardPageState extends State<_DashboardPage> {
+  Timer? _timer;
+
+  @override
+  void initState() {
+    super.initState();
+    _timer = Timer.periodic(const Duration(minutes: 1), (timer) {
+      if (mounted) setState(() {});
+    });
+  }
+
+  @override
+  void dispose() {
+    _timer?.cancel();
+    super.dispose();
+  }
+
+  bool _isSessionLive(String startTimeStr, String endTimeStr) {
+    try {
+      final now = DateTime.now();
+      final start = _parseTime(startTimeStr);
+      final end = _parseTime(endTimeStr);
+      final startDt =
+          DateTime(now.year, now.month, now.day, start.hour, start.minute);
+      final endDt =
+          DateTime(now.year, now.month, now.day, end.hour, end.minute);
+      return !now.isBefore(startDt) && now.isBefore(endDt);
+    } catch (e) {
+      return false;
+    }
+  }
+
+  TimeOfDay _parseTime(String timeStr) {
+    try {
+      final parts = timeStr.split(' ');
+      final timeParts = parts[0].split(':');
+      int hour = int.parse(timeParts[0]);
+      int minute = int.parse(timeParts[1]);
+      final ampm = parts[1].toLowerCase();
+      if (ampm == 'pm' && hour < 12) hour += 12;
+      if (ampm == 'am' && hour == 12) hour = 0;
+      return TimeOfDay(hour: hour, minute: minute);
+    } catch (e) {
+      return TimeOfDay.now();
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -132,12 +184,18 @@ class _DashboardPage extends StatelessWidget {
           activeCount = snapshot.data!.docs.length;
           sessions = snapshot.data!.docs.map((doc) {
             final d = doc.data() as Map<String, dynamic>;
+            final startTime = d['startTime'] ?? '--';
+            final endTime = d['endTime'] ?? '--';
+            final live = _isSessionLive(startTime, endTime);
+
             return {
               'type': d['sessionType'] ?? 'N/A',
               'course': d['courseCode'] ?? 'N/A',
               'date': 'Today',
-              'time': d['startTime'] ?? '--',
-              'room': 'TBA'
+              'time': startTime,
+              'room': d['room'] ?? 'TBA',
+              'status': live ? 'LIVE' : 'SCHEDULED',
+              'isLive': live
             };
           }).toList();
         }
@@ -149,12 +207,6 @@ class _DashboardPage extends StatelessWidget {
               const _WelcomeCard(),
               const SizedBox(height: 14),
               Row(children: [
-                const Expanded(
-                    child: _InfoCard(
-                        icon: Icons.menu_book,
-                        title: 'Status',
-                        subtitle: 'Active Mode')),
-                const SizedBox(width: 10),
                 Expanded(
                     child: _InfoCard(
                         icon: Icons.event,
@@ -189,7 +241,7 @@ class _WelcomeCard extends StatelessWidget {
                       fontSize: 16,
                       fontWeight: FontWeight.bold,
                       color: tealPrimary)),
-              Text('Your active sessions are shown below.',
+              Text('Your  sessions are shown below.',
                   style: TextStyle(fontSize: 12, color: Colors.black54)),
             ]),
       );
@@ -251,7 +303,7 @@ class _TodaysSessionsTable extends StatelessWidget {
             color: tealPrimary,
             padding: const EdgeInsets.symmetric(vertical: 10),
             child: Row(
-                children: ['TYPE', 'COURSE', 'DATE', 'TIME']
+                children: ['COURSE', 'DATE', 'VENUE', 'TIME', 'STATUS']
                     .map((h) => Expanded(
                         child: Center(
                             child: Text(h,
@@ -266,23 +318,38 @@ class _TodaysSessionsTable extends StatelessWidget {
               child: Row(children: [
                 Expanded(
                     child: Center(
-                        child: Text(e.value['type'],
-                            style: const TextStyle(
-                                fontSize: 10,
-                                fontWeight: FontWeight.bold,
-                                color: tealPrimary)))),
-                Expanded(
-                    child: Center(
-                        child: Text(e.value['course'],
-                            style: const TextStyle(fontSize: 10)))),
+                        child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(e.value['course'],
+                        style: const TextStyle(
+                            fontSize: 10, fontWeight: FontWeight.bold)),
+                    Text(e.value['type'],
+                        style:
+                            const TextStyle(fontSize: 9, color: Colors.grey)),
+                  ],
+                ))),
                 Expanded(
                     child: Center(
                         child: Text(e.value['date'],
                             style: const TextStyle(fontSize: 10)))),
                 Expanded(
                     child: Center(
+                        child: Text(e.value['room'],
+                            style: const TextStyle(fontSize: 10)))),
+                Expanded(
+                    child: Center(
                         child: Text(e.value['time'],
                             style: const TextStyle(fontSize: 10)))),
+                Expanded(
+                    child: Center(
+                        child: Text(e.value['status'],
+                            style: TextStyle(
+                                fontSize: 9,
+                                fontWeight: FontWeight.bold,
+                                color: e.value['isLive']
+                                    ? Colors.green
+                                    : Colors.orange)))),
               ]),
             ))
       ]),

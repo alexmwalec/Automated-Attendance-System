@@ -1,4 +1,5 @@
-import 'dart:async';import 'package:flutter/material.dart';
+import 'dart:async';
+import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 
@@ -9,8 +10,20 @@ const Color tealLight = Color(0xFFDFF2EF);
 class Assign extends StatefulWidget {
   final String? courseCode;
   final String? sessionType;
+  final String? room;
+  final String? invigilatorId;
+  final String? invigilatorName;
+  final String? assignmentId;
 
-  const Assign({super.key, this.courseCode, this.sessionType});
+  const Assign({
+    super.key,
+    this.courseCode,
+    this.sessionType,
+    this.room,
+    this.invigilatorId,
+    this.invigilatorName,
+    this.assignmentId,
+  });
 
   @override
   State<Assign> createState() => _AssignState();
@@ -21,11 +34,22 @@ class _AssignState extends State<Assign> {
   final _invigilatorController = TextEditingController();
 
   String? _selectedRoom;
-  String? _selectedInvigilatorId; // NEW: To store the UID
-  String? _selectedInvigilatorName; // NEW: To store the Full Name
+  String? _selectedInvigilatorId;
+  String? _selectedInvigilatorName;
 
   bool _isAssigning = false;
-  List<Map<String, dynamic>> _userSuggestions = [];
+  bool _isEditable = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _selectedRoom = widget.room;
+    _selectedInvigilatorId = widget.invigilatorId;
+    _selectedInvigilatorName = widget.invigilatorName;
+    if (widget.assignmentId != null) {
+      _isEditable = false;
+    }
+  }
 
   @override
   void dispose() {
@@ -33,7 +57,6 @@ class _AssignState extends State<Assign> {
     super.dispose();
   }
 
-  // NEW: Fetch real users from 'users' collection for the dropdown
   Future<List<Map<String, dynamic>>> _fetchUsers() async {
     final snap = await FirebaseFirestore.instance.collection('users').get();
     return snap.docs.map((d) => {
@@ -53,23 +76,37 @@ class _AssignState extends State<Assign> {
       setState(() => _isAssigning = true);
 
       try {
-        await FirebaseFirestore.instance.collection('exam_assignments').add({
+        final data = {
           'course': widget.courseCode ?? 'N/A',
           'sessionType': widget.sessionType ?? 'N/A',
-          'date': DateTime.now().toIso8601String().split('T')[0],
-          'time': TimeOfDay.now().format(context),
           'room': _selectedRoom,
-          'invigilatorId': _selectedInvigilatorId, // REQUIRED for Invigilator Home query
+          'invigilatorId': _selectedInvigilatorId,
           'invigilatorName': _selectedInvigilatorName,
-          'lecturerId': FirebaseAuth.instance.currentUser?.uid,
-          'createdAt': FieldValue.serverTimestamp(),
-          'status': 'Assigned',
-        });
+          'updatedAt': FieldValue.serverTimestamp(),
+        };
+
+        if (widget.assignmentId == null) {
+          data['date'] = DateTime.now().toIso8601String().split('T')[0];
+          data['time'] = TimeOfDay.now().format(context);
+          data['lecturerId'] = FirebaseAuth.instance.currentUser?.uid;
+          data['createdAt'] = FieldValue.serverTimestamp();
+          data['status'] = 'Assigned';
+          await FirebaseFirestore.instance.collection('exam_assignments').add(data);
+        } else {
+          await FirebaseFirestore.instance
+              .collection('exam_assignments')
+              .doc(widget.assignmentId)
+              .update(data);
+        }
 
         if (!mounted) return;
         Navigator.pop(context);
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Task Assigned Successfully'), backgroundColor: tealPrimary),
+          SnackBar(
+              content: Text(widget.assignmentId == null
+                  ? 'Task Assigned Successfully'
+                  : 'Assignment Updated Successfully'),
+              backgroundColor: tealPrimary),
         );
       } catch (e) {
         setState(() => _isAssigning = false);
@@ -85,6 +122,13 @@ class _AssignState extends State<Assign> {
       appBar: AppBar(
         backgroundColor: tealPrimary,
         title: const Text('Assign Staff', style: TextStyle(color: Colors.white)),
+        actions: [
+          if (widget.assignmentId != null)
+            IconButton(
+              icon: Icon(_isEditable ? Icons.close : Icons.edit, color: Colors.white),
+              onPressed: () => setState(() => _isEditable = !_isEditable),
+            )
+        ],
       ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(20),
@@ -108,17 +152,18 @@ class _AssignState extends State<Assign> {
               _buildInvigilatorDropdown(),
 
               const SizedBox(height: 30),
-              SizedBox(
-                width: double.infinity,
-                height: 50,
-                child: ElevatedButton(
-                  onPressed: _isAssigning ? null : _submitAssignment,
-                  style: ElevatedButton.styleFrom(backgroundColor: tealPrimary, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8))),
-                  child: _isAssigning
-                      ? const CircularProgressIndicator(color: Colors.white)
-                      : const Text('Confirm Assignment', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+              if (_isEditable)
+                SizedBox(
+                  width: double.infinity,
+                  height: 50,
+                  child: ElevatedButton(
+                    onPressed: _isAssigning ? null : _submitAssignment,
+                    style: ElevatedButton.styleFrom(backgroundColor: tealPrimary, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8))),
+                    child: _isAssigning
+                        ? const CircularProgressIndicator(color: Colors.white)
+                        : Text(widget.assignmentId == null ? 'Confirm Assignment' : 'Update Assignment', style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+                  ),
                 ),
-              ),
             ],
           ),
         ),
@@ -133,10 +178,15 @@ class _AssignState extends State<Assign> {
         if (!snapshot.hasData) return const LinearProgressIndicator(color: tealPrimary);
         return DropdownButtonFormField<String>(
           value: _selectedRoom,
-          decoration: InputDecoration(filled: true, fillColor: Colors.white, border: OutlineInputBorder(borderRadius: BorderRadius.circular(8))),
+          decoration: InputDecoration(
+            filled: true,
+            fillColor: _isEditable ? Colors.white : Colors.grey.shade200,
+            border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+            enabled: _isEditable,
+          ),
           hint: const Text("Select Room"),
           items: snapshot.data!.docs.map((doc) => DropdownMenuItem(value: doc.id, child: Text(doc.id))).toList(),
-          onChanged: (val) => setState(() => _selectedRoom = val),
+          onChanged: _isEditable ? (val) => setState(() => _selectedRoom = val) : null,
           validator: (v) => v == null ? 'Required' : null,
         );
       },
@@ -150,16 +200,21 @@ class _AssignState extends State<Assign> {
         if (!snapshot.hasData) return const LinearProgressIndicator(color: tealPrimary);
         return DropdownButtonFormField<String>(
           value: _selectedInvigilatorId,
-          decoration: InputDecoration(filled: true, fillColor: Colors.white, border: OutlineInputBorder(borderRadius: BorderRadius.circular(8))),
+          decoration: InputDecoration(
+            filled: true,
+            fillColor: _isEditable ? Colors.white : Colors.grey.shade200,
+            border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+            enabled: _isEditable,
+          ),
           hint: const Text("Select Staff Member"),
           items: snapshot.data!.map((u) => DropdownMenuItem(value: u['id'].toString(), child: Text(u['name']))).toList(),
-          onChanged: (val) {
+          onChanged: _isEditable ? (val) {
             final user = snapshot.data!.firstWhere((element) => element['id'] == val);
             setState(() {
               _selectedInvigilatorId = val;
               _selectedInvigilatorName = user['name'];
             });
-          },
+          } : null,
           validator: (v) => v == null ? 'Required' : null,
         );
       },
