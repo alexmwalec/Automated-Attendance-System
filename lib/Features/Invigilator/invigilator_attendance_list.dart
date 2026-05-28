@@ -75,12 +75,6 @@ class _InvigilatorAttendanceListState extends State<InvigilatorAttendanceList> {
           style: TextStyle(
               color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16),
         ),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.calendar_month, color: Colors.white),
-            onPressed: _pickDate,
-          ),
-        ],
       ),
       body: Column(
         children: [
@@ -107,17 +101,10 @@ class _InvigilatorAttendanceListState extends State<InvigilatorAttendanceList> {
                       color: tealPrimary),
                 ),
                 const Spacer(),
-                TextButton.icon(
+                IconButton(
+                  icon: const Icon(Icons.calendar_month, color: tealPrimary),
                   onPressed: _pickDate,
-                  icon: const Icon(Icons.edit, size: 14, color: tealPrimary),
-                  label: const Text(
-                    "Change",
-                    style: TextStyle(
-                        fontSize: 13,
-                        fontWeight: FontWeight.bold,
-                        color: tealPrimary),
-                  ),
-                )
+                ),
               ],
             ),
           ),
