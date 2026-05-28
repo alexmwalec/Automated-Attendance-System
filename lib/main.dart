@@ -43,6 +43,7 @@ class AttendanceApp extends StatelessWidget {
           return AttendancePage(
             courseCode: args?['courseCode'] ?? 'Unknown Course',
             sessionType: args?['sessionType'] ?? 'Unknown Session',
+            room: args?['room'] ?? 'TBA',
           );
         },
 
