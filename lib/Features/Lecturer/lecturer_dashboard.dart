@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:rxdart/rxdart.dart';
 import 'dart:async';
 import 'select_course.dart';
 import 'assign.dart';
@@ -141,11 +142,25 @@ class _DashboardPageState extends State<_DashboardPage> {
     try {
       final now = DateTime.now();
       final start = _parseTime(startTimeStr);
-      final end = _parseTime(endTimeStr);
+      TimeOfDay end;
+
+      if (endTimeStr == '--' || endTimeStr.isEmpty) {
+        // Default to 2 hours after start time if end time is missing
+        end = TimeOfDay(hour: (start.hour + 2) % 24, minute: start.minute);
+      } else {
+        end = _parseTime(endTimeStr);
+      }
+
       final startDt =
           DateTime(now.year, now.month, now.day, start.hour, start.minute);
-      final endDt =
+      var endDt =
           DateTime(now.year, now.month, now.day, end.hour, end.minute);
+
+      // If end time is before start time, assume it's next day (though rare for class)
+      if (endDt.isBefore(startDt)) {
+        endDt = endDt.add(const Duration(days: 1));
+      }
+
       return !now.isBefore(startDt) && now.isBefore(endDt);
     } catch (e) {
       return false;
@@ -154,50 +169,125 @@ class _DashboardPageState extends State<_DashboardPage> {
 
   TimeOfDay _parseTime(String timeStr) {
     try {
-      final parts = timeStr.split(' ');
-      final timeParts = parts[0].split(':');
-      int hour = int.parse(timeParts[0]);
-      int minute = int.parse(timeParts[1]);
-      final ampm = parts[1].toLowerCase();
-      if (ampm == 'pm' && hour < 12) hour += 12;
-      if (ampm == 'am' && hour == 12) hour = 0;
-      return TimeOfDay(hour: hour, minute: minute);
+      // Handle both "08:00 AM" and "08:00AM" and "13:00"
+      final cleanStr = timeStr.trim().toUpperCase();
+      final hasAmPm = cleanStr.endsWith('AM') || cleanStr.endsWith('PM');
+
+      if (hasAmPm) {
+        final ampm = cleanStr.substring(cleanStr.length - 2);
+        final timePart = cleanStr.substring(0, cleanStr.length - 2).trim();
+        final timeParts = timePart.split(':');
+        int hour = int.parse(timeParts[0]);
+        int minute = int.parse(timeParts[1]);
+
+        if (ampm == 'PM' && hour < 12) hour += 12;
+        if (ampm == 'AM' && hour == 12) hour = 0;
+        return TimeOfDay(hour: hour, minute: minute);
+      } else {
+        final timeParts = cleanStr.split(':');
+        int hour = int.parse(timeParts[0]);
+        int minute = int.parse(timeParts[1]);
+        return TimeOfDay(hour: hour, minute: minute);
+      }
     } catch (e) {
-      return TimeOfDay.now();
+      // Return a time that won't likely trigger "Live" by accident if parsing fails
+      return const TimeOfDay(hour: 0, minute: 0);
     }
   }
 
   @override
   Widget build(BuildContext context) {
     final String uid = FirebaseAuth.instance.currentUser?.uid ?? "";
+    final today = DateTime.now().toIso8601String().split('T')[0];
 
-    return StreamBuilder<QuerySnapshot>(
-      stream: FirebaseFirestore.instance
-          .collection('active_sessions')
-          .where('lecturerId', isEqualTo: uid)
-          .snapshots(),
+    Stream<QuerySnapshot> activeSessions = FirebaseFirestore.instance
+        .collection('active_sessions')
+        .where('lecturerId', isEqualTo: uid)
+        .snapshots();
+
+    Stream<QuerySnapshot> assignedTasks = FirebaseFirestore.instance
+        .collection('exam_assignments')
+        .where('lecturerId', isEqualTo: uid)
+        .snapshots();
+
+    Stream<QuerySnapshot> todayAttendance = FirebaseFirestore.instance
+        .collection('attendance')
+        .where('date', isEqualTo: today)
+        .snapshots();
+
+    return StreamBuilder<List<dynamic>>(
+      stream: CombineLatestStream.list(
+              [activeSessions, assignedTasks, todayAttendance])
+          .map((snapshots) {
+        final sessionDocs = snapshots[0].docs;
+        final assignedDocs = snapshots[1].docs;
+        final attendanceDocs = snapshots[2].docs;
+
+        List<Map<String, dynamic>> combined = [];
+
+        for (var doc in sessionDocs) {
+          final d = doc.data() as Map<String, dynamic>;
+          final startTime = d['startTime'] ?? '--';
+          final endTime = d['endTime'] ?? '--';
+
+          final bool isTaken = attendanceDocs.any((att) {
+            final attData = att.data() as Map<String, dynamic>;
+            return attData['courseCode'] == d['courseCode'] &&
+                attData['sessionType'] == d['sessionType'] &&
+                attData['room'] == d['room'];
+          });
+
+          final live = !isTaken && _isSessionLive(startTime, endTime);
+
+          combined.add({
+            'type': d['sessionType'] ?? 'N/A',
+            'course': d['courseCode'] ?? 'N/A',
+            'date': 'Today',
+            'time': startTime,
+            'room': d['room'] ?? 'TBA',
+            'status': isTaken ? 'TAKEN' : (live ? 'LIVE' : 'SCHEDULED'),
+            'isLive': live,
+            'isTaken': isTaken,
+          });
+        }
+
+        for (var doc in assignedDocs) {
+          final d = doc.data() as Map<String, dynamic>;
+          final startTime = d['startTime'] ?? d['time'] ?? '--';
+          final endTime = d['endTime'] ?? '--';
+
+          final bool isTaken = attendanceDocs.any((att) {
+            final attData = att.data() as Map<String, dynamic>;
+            return attData['courseCode'] == (d['course'] ?? d['courseCode']) &&
+                attData['sessionType'] == d['sessionType'] &&
+                attData['room'] == d['room'];
+          });
+
+          // For assigned tasks, we might not have start/end times in standard format
+          // but if we do, we can use them.
+          final live = !isTaken && _isSessionLive(startTime, endTime);
+
+          combined.add({
+            'type': d['sessionType'] ?? 'N/A',
+            'course': d['course'] ?? d['courseCode'] ?? 'N/A',
+            'date': 'Today',
+            'time': startTime,
+            'room': d['room'] ?? 'TBA',
+            'status': isTaken ? 'TAKEN' : (live ? 'LIVE' : 'SCHEDULED'),
+            'isLive': live,
+            'isTaken': isTaken,
+          });
+        }
+
+        return combined;
+      }),
       builder: (context, snapshot) {
         int activeCount = 0;
         List<Map<String, dynamic>> sessions = [];
 
         if (snapshot.hasData) {
-          activeCount = snapshot.data!.docs.length;
-          sessions = snapshot.data!.docs.map((doc) {
-            final d = doc.data() as Map<String, dynamic>;
-            final startTime = d['startTime'] ?? '--';
-            final endTime = d['endTime'] ?? '--';
-            final live = _isSessionLive(startTime, endTime);
-
-            return {
-              'type': d['sessionType'] ?? 'N/A',
-              'course': d['courseCode'] ?? 'N/A',
-              'date': 'Today',
-              'time': startTime,
-              'room': d['room'] ?? 'TBA',
-              'status': live ? 'LIVE' : 'SCHEDULED',
-              'isLive': live
-            };
-          }).toList();
+          sessions = List<Map<String, dynamic>>.from(snapshot.data!);
+          activeCount = sessions.length;
         }
 
         return SingleChildScrollView(
@@ -312,7 +402,7 @@ class _TodaysSessionsTable extends StatelessWidget {
                                     fontWeight: FontWeight.bold,
                                     fontSize: 10)))))
                     .toList())),
-        ...(sessions ?? []).asMap().entries.map((e) => Container(
+        ...sessions.asMap().entries.map((e) => Container(
               color: e.key.isEven ? Colors.white : tealLight.withOpacity(0.3),
               padding: const EdgeInsets.symmetric(vertical: 12),
               child: Row(children: [
@@ -347,9 +437,11 @@ class _TodaysSessionsTable extends StatelessWidget {
                             style: TextStyle(
                                 fontSize: 9,
                                 fontWeight: FontWeight.bold,
-                                color: e.value['isLive']
-                                    ? Colors.green
-                                    : Colors.orange)))),
+                                color: e.value['isTaken']
+                                    ? Colors.blue
+                                    : (e.value['isLive']
+                                        ? Colors.green
+                                        : Colors.orange))))),
               ]),
             ))
       ]),

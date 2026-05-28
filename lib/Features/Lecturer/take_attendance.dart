@@ -12,11 +12,13 @@ const Color tealLight = Color(0xFFE0F2F0);
 class AttendancePage extends StatefulWidget {
   final String courseCode;
   final String sessionType;
+  final String room;
 
   const AttendancePage({
     super.key,
     required this.courseCode,
     required this.sessionType,
+    required this.room,
   });
 
   @override
@@ -28,6 +30,7 @@ class _AttendancePageState extends State<AttendancePage> {
   final List<Map<String, String>> _scannedStudents = [];
   bool _isProcessing = false;
   bool _isSubmitting = false;
+  bool _alreadyTaken = false;
 
   int _totalEnrolled = 0;
 
@@ -41,6 +44,22 @@ class _AttendancePageState extends State<AttendancePage> {
     super.initState();
     _selectedSessionType = widget.sessionType;
     _fetchEnrolledCount();
+    _checkIfAlreadyTaken();
+  }
+
+  Future<void> _checkIfAlreadyTaken() async {
+    final today = DateTime.now().toIso8601String().split('T')[0];
+    final snap = await FirebaseFirestore.instance
+        .collection('attendance')
+        .where('courseCode', isEqualTo: widget.courseCode)
+        .where('sessionType', isEqualTo: widget.sessionType)
+        .where('room', isEqualTo: widget.room)
+        .where('date', isEqualTo: today)
+        .get();
+
+    if (snap.docs.isNotEmpty) {
+      if (mounted) setState(() => _alreadyTaken = true);
+    }
   }
 
   // Mirrors the exact same filtering logic used in ManualSearch
@@ -101,7 +120,7 @@ class _AttendancePageState extends State<AttendancePage> {
   }
 
   void _onDetect(BarcodeCapture capture) async {
-    if (_isProcessing) return;
+    if (_isProcessing || _alreadyTaken) return;
     for (final barcode in capture.barcodes) {
       final code = barcode.rawValue;
       if (code == null || code.isEmpty) continue;
@@ -267,6 +286,7 @@ class _AttendancePageState extends State<AttendancePage> {
       await FirebaseFirestore.instance.collection('attendance').add({
         'courseCode': widget.courseCode,
         'sessionType': _selectedSessionType,
+        'room': widget.room,
         'date': DateTime.now().toIso8601String().split('T')[0],
         'timestamp': FieldValue.serverTimestamp(),
         'lecturerId': uid,
@@ -366,6 +386,19 @@ class _AttendancePageState extends State<AttendancePage> {
                     // Camera feed
                     MobileScanner(controller: _cameraCtrl, onDetect: _onDetect),
 
+                    if (_alreadyTaken)
+                      Container(
+                        color: Colors.black54,
+                        child: const Center(
+                          child: Text(
+                            "ATTENDANCE ALREADY TAKEN",
+                            style: TextStyle(
+                                color: Colors.white,
+                                fontWeight: FontWeight.bold),
+                          ),
+                        ),
+                      ),
+
                     // Processing overlay
                     if (_isProcessing)
                       Container(
@@ -406,13 +439,13 @@ class _AttendancePageState extends State<AttendancePage> {
           Padding(
             padding: const EdgeInsets.fromLTRB(14, 12, 14, 0),
             child: GestureDetector(
-              onTap: _goManual,
+              onTap: _alreadyTaken ? null : _goManual,
               child: Container(
                 width: double.infinity,
                 padding:
                     const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
                 decoration: BoxDecoration(
-                  color: Colors.white,
+                  color: _alreadyTaken ? Colors.grey.shade100 : Colors.white,
                   borderRadius: BorderRadius.circular(30),
                   border: Border.all(color: Colors.grey.shade300),
                   boxShadow: [
@@ -428,7 +461,9 @@ class _AttendancePageState extends State<AttendancePage> {
                     Icon(Icons.search, color: Colors.grey.shade400, size: 20),
                     const SizedBox(width: 10),
                     Text(
-                      'Add student by searching reg number',
+                      _alreadyTaken
+                          ? 'Attendance already recorded for today'
+                          : 'Add student by searching reg number',
                       style:
                           TextStyle(color: Colors.grey.shade400, fontSize: 13),
                     ),
@@ -523,7 +558,7 @@ class _AttendancePageState extends State<AttendancePage> {
             child: Align(
               alignment: Alignment.centerRight,
               child: ElevatedButton(
-                onPressed: (_scannedStudents.isEmpty || _isSubmitting)
+                onPressed: (_scannedStudents.isEmpty || _isSubmitting || _alreadyTaken)
                     ? null
                     : _showConfirmDialog,
                 style: ElevatedButton.styleFrom(
@@ -541,9 +576,9 @@ class _AttendancePageState extends State<AttendancePage> {
                         child: CircularProgressIndicator(
                             color: Colors.white, strokeWidth: 2),
                       )
-                    : const Text(
-                        'Confirm & Save',
-                        style: TextStyle(
+                    : Text(
+                        _alreadyTaken ? 'Already Saved' : 'Confirm & Save',
+                        style: const TextStyle(
                             color: Colors.white,
                             fontWeight: FontWeight.bold,
                             fontSize: 13),

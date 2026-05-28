@@ -148,6 +148,7 @@ class _CourseSelectionScreenState extends State<CourseSelectionScreen> {
                   builder: (_) => AttendancePage(
                     courseCode: session['courseCode'],
                     sessionType: session['sessionType'],
+                    room: session['room'] ?? 'TBA',
                   ),
                 ),
               );

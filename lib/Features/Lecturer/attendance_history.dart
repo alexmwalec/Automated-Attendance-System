@@ -81,11 +81,23 @@ class _AttendanceHistoryState extends State<AttendanceHistory>
     try {
       final now = DateTime.now();
       final start = _parseTime(startTimeStr);
-      final end = _parseTime(endTimeStr);
+      TimeOfDay end;
+
+      if (endTimeStr == '--' || endTimeStr.isEmpty) {
+        end = TimeOfDay(hour: (start.hour + 2) % 24, minute: start.minute);
+      } else {
+        end = _parseTime(endTimeStr);
+      }
+
       final startDt =
           DateTime(now.year, now.month, now.day, start.hour, start.minute);
-      final endDt =
+      var endDt =
           DateTime(now.year, now.month, now.day, end.hour, end.minute);
+
+      if (endDt.isBefore(startDt)) {
+        endDt = endDt.add(const Duration(days: 1));
+      }
+
       return !now.isBefore(startDt) && now.isBefore(endDt);
     } catch (e) {
       return false;
@@ -94,16 +106,27 @@ class _AttendanceHistoryState extends State<AttendanceHistory>
 
   TimeOfDay _parseTime(String timeStr) {
     try {
-      final parts = timeStr.split(' ');
-      final timeParts = parts[0].split(':');
-      int hour = int.parse(timeParts[0]);
-      int minute = int.parse(timeParts[1]);
-      final ampm = parts[1].toLowerCase();
-      if (ampm == 'pm' && hour < 12) hour += 12;
-      if (ampm == 'am' && hour == 12) hour = 0;
-      return TimeOfDay(hour: hour, minute: minute);
+      final cleanStr = timeStr.trim().toUpperCase();
+      final hasAmPm = cleanStr.endsWith('AM') || cleanStr.endsWith('PM');
+
+      if (hasAmPm) {
+        final ampm = cleanStr.substring(cleanStr.length - 2);
+        final timePart = cleanStr.substring(0, cleanStr.length - 2).trim();
+        final timeParts = timePart.split(':');
+        int hour = int.parse(timeParts[0]);
+        int minute = int.parse(timeParts[1]);
+
+        if (ampm == 'PM' && hour < 12) hour += 12;
+        if (ampm == 'AM' && hour == 12) hour = 0;
+        return TimeOfDay(hour: hour, minute: minute);
+      } else {
+        final timeParts = cleanStr.split(':');
+        int hour = int.parse(timeParts[0]);
+        int minute = int.parse(timeParts[1]);
+        return TimeOfDay(hour: hour, minute: minute);
+      }
     } catch (e) {
-      return TimeOfDay.now();
+      return const TimeOfDay(hour: 0, minute: 0);
     }
   }
 
@@ -337,6 +360,8 @@ class _AttendanceHistoryState extends State<AttendanceHistory>
   Widget _buildManageTab() {
     final uid = FirebaseAuth.instance.currentUser?.uid ?? "";
 
+    final today = DateTime.now().toIso8601String().split('T')[0];
+
     Stream<QuerySnapshot> manualSessions = FirebaseFirestore.instance
         .collection('active_sessions')
         .where('lecturerId', isEqualTo: uid)
@@ -347,25 +372,64 @@ class _AttendanceHistoryState extends State<AttendanceHistory>
         .where('lecturerId', isEqualTo: uid)
         .snapshots();
 
-    return StreamBuilder<List<QueryDocumentSnapshot>>(
-      stream: CombineLatestStream.list([manualSessions, assignedTasks])
+    Stream<QuerySnapshot> todayAttendance = FirebaseFirestore.instance
+        .collection('attendance')
+        .where('date', isEqualTo: today)
+        .snapshots();
+
+    return StreamBuilder<List<dynamic>>(
+      stream: CombineLatestStream.list(
+              [manualSessions, assignedTasks, todayAttendance])
           .map((snapshots) {
-        List<QueryDocumentSnapshot> combined = [];
-        for (var snap in snapshots) combined.addAll(snap.docs);
-        combined.sort((a, b) {
-          final aData = a.data() as Map<String, dynamic>;
-          final bData = b.data() as Map<String, dynamic>;
-          return _parseDateTime(bData['createdAt'])
-              .compareTo(_parseDateTime(aData['createdAt']));
-        });
+        final manualDocs = snapshots[0].docs;
+        final assignedDocs = snapshots[1].docs;
+        final attendanceDocs = snapshots[2].docs;
+
+        List<Map<String, dynamic>> combined = [];
+
+        for (var doc in manualDocs) {
+          final data = doc.data() as Map<String, dynamic>;
+          final bool isTaken = attendanceDocs.any((att) {
+            final attData = att.data() as Map<String, dynamic>;
+            return attData['courseCode'] == data['courseCode'] &&
+                attData['sessionType'] == data['sessionType'] &&
+                attData['room'] == data['room'];
+          });
+          combined.add({
+            'docId': doc.id,
+            'data': data,
+            'isAssignedTask': false,
+            'isTaken': isTaken,
+            'createdAt': _parseDateTime(data['createdAt']),
+          });
+        }
+
+        for (var doc in assignedDocs) {
+          final data = doc.data() as Map<String, dynamic>;
+          final bool isTaken = attendanceDocs.any((att) {
+            final attData = att.data() as Map<String, dynamic>;
+            return attData['courseCode'] == (data['course'] ?? data['courseCode']) &&
+                attData['sessionType'] == data['sessionType'] &&
+                attData['room'] == data['room'];
+          });
+          combined.add({
+            'docId': doc.id,
+            'data': data,
+            'isAssignedTask': true,
+            'isTaken': isTaken,
+            'createdAt': _parseDateTime(data['createdAt']),
+          });
+        }
+
+        combined.sort((a, b) => b['createdAt'].compareTo(a['createdAt']));
         return combined;
       }),
       builder: (context, snapshot) {
         if (!snapshot.hasData)
           return const Center(child: CircularProgressIndicator());
-        final docs = snapshot.data!;
+        final sessions = snapshot.data!;
 
-        if (docs.isEmpty) {
+        if (sessions.isEmpty) {
           return Center(
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
@@ -381,12 +445,13 @@ class _AttendanceHistoryState extends State<AttendanceHistory>
         }
 
         return ListView.builder(
-          itemCount: docs.length,
+          itemCount: sessions.length,
           padding: const EdgeInsets.all(16),
           itemBuilder: (context, i) {
-            final data = docs[i].data() as Map<String, dynamic>;
-            final bool isAssignedTask =
-                docs[i].reference.path.contains('exam_assignments');
+            final session = sessions[i];
+            final data = session['data'];
+            final bool isAssignedTask = session['isAssignedTask'];
+            final bool isTaken = session['isTaken'];
 
             final String courseCode =
                 data['courseCode'] ?? data['course'] ?? 'N/A';
@@ -396,10 +461,15 @@ class _AttendanceHistoryState extends State<AttendanceHistory>
                 data['time'] ?? "${data['startTime']} - ${data['endTime']}";
 
             bool isLive = false;
-            if (!isAssignedTask) {
+            if (!isAssignedTask && !isTaken) {
               isLive = _isSessionLive(
                   data['startTime'] ?? "", data['endTime'] ?? "");
             }
+
+            String status = isTaken ? "TAKEN" : (isLive ? "LIVE" : "SCHEDULED");
+            Color statusColor = isTaken
+                ? Colors.blue
+                : (isLive ? Colors.green : Colors.grey);
 
             return GestureDetector(
               onTap: () => Navigator.push(
@@ -411,7 +481,7 @@ class _AttendanceHistoryState extends State<AttendanceHistory>
                     room: room != 'Not Set' ? room : null,
                     invigilatorId: data['invigilatorId'],
                     invigilatorName: data['invigilatorName'],
-                    assignmentId: isAssignedTask ? docs[i].id : null,
+                    assignmentId: isAssignedTask ? session['docId'] : null,
                   ),
                 ),
               ),
@@ -454,15 +524,13 @@ class _AttendanceHistoryState extends State<AttendanceHistory>
                             padding: const EdgeInsets.symmetric(
                                 horizontal: 8, vertical: 2),
                             decoration: BoxDecoration(
-                              color: isLive
-                                  ? Colors.green.withOpacity(0.1)
-                                  : Colors.grey.withOpacity(0.1),
+                              color: statusColor.withOpacity(0.1),
                               borderRadius: BorderRadius.circular(20),
                             ),
                             child: Text(
-                              isLive ? "LIVE" : "SCHEDULED",
+                              status,
                               style: TextStyle(
-                                  color: isLive ? Colors.green : Colors.grey,
+                                  color: statusColor,
                                   fontSize: 9,
                                   fontWeight: FontWeight.bold),
                             ),
@@ -501,15 +569,14 @@ class _AttendanceHistoryState extends State<AttendanceHistory>
                                         color: Colors.grey, fontSize: 11),
                                     overflow: TextOverflow.ellipsis),
                               ),
-                              if (!isAssignedTask)
-                                IconButton(
-                                  padding: EdgeInsets.zero,
-                                  constraints: const BoxConstraints(),
-                                  icon: const Icon(Icons.delete_outline,
-                                      size: 16, color: Colors.redAccent),
-                                  onPressed: () => _deleteSession(
-                                      docs[i].id, isAssignedTask),
-                                ),
+                              IconButton(
+                                padding: EdgeInsets.zero,
+                                constraints: const BoxConstraints(),
+                                icon: const Icon(Icons.delete_outline,
+                                    size: 16, color: Colors.redAccent),
+                                onPressed: () => _deleteSession(
+                                    session['docId'], isAssignedTask),
+                              ),
                               const SizedBox(width: 12),
                               IconButton(
                                 padding: EdgeInsets.zero,
@@ -517,7 +584,7 @@ class _AttendanceHistoryState extends State<AttendanceHistory>
                                 icon: const Icon(Icons.edit_outlined,
                                     size: 16, color: tealPrimary),
                                 onPressed: () => _showSessionDialog(
-                                    docId: docs[i].id, existingData: data),
+                                    docId: session['docId'], existingData: data),
                               ),
                             ],
                           ),
