@@ -185,9 +185,12 @@ class _InvigilatorTakeAttendanceState extends State<InvigilatorTakeAttendance> {
         'courseCode': widget.courseCode,
         'sessionType': widget.sessionType,
         'venue': widget.venue,
-        'date': widget.date,
+        'date': (widget.date.isNotEmpty && widget.date != 'N/A')
+            ? widget.date
+            : DateTime.now().toIso8601String().split('T')[0],
         'timestamp': FieldValue.serverTimestamp(),
         'submittedBy': invName,
+        'invigilatorId': user?.uid,
         'lecturerId': widget.lecturerId,
         'fullAttendanceList': fullReport,
         'totalPresent': _scannedStudents.length,
@@ -378,7 +381,7 @@ class _InvigilatorTakeAttendanceState extends State<InvigilatorTakeAttendance> {
             ),
           ),
 
-          // Submit button — small, right-aligned
+          // Submit button
           Padding(
             padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
             child: Align(
