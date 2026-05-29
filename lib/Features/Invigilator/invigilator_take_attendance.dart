@@ -4,6 +4,7 @@ import 'package:mobile_scanner/mobile_scanner.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'manual_search.dart';
+import 'attendance_state.dart';
 
 const Color tealPrimary = Color(0xFF2E9E8E);
 const Color tealDark = Color(0xFF227A6D);
@@ -32,7 +33,6 @@ class InvigilatorTakeAttendance extends StatefulWidget {
 
 class _InvigilatorTakeAttendanceState extends State<InvigilatorTakeAttendance> {
   final MobileScannerController _cameraCtrl = MobileScannerController();
-  final List<Map<String, String>> _scannedStudents = [];
   List<Map<String, dynamic>> _allEligibleStudents = [];
   bool _isProcessing = false;
   bool _isLoadingStudents = true;
@@ -43,7 +43,20 @@ class _InvigilatorTakeAttendanceState extends State<InvigilatorTakeAttendance> {
   @override
   void initState() {
     super.initState();
+    AttendanceState.clear();
+    AttendanceState.markedStudents.addListener(_onMarkedStudentsChanged);
     _loadCourseStudents();
+  }
+
+  void _onMarkedStudentsChanged() {
+    if (mounted) setState(() {});
+  }
+
+  @override
+  void dispose() {
+    AttendanceState.markedStudents.removeListener(_onMarkedStudentsChanged);
+    _cameraCtrl.dispose();
+    super.dispose();
   }
 
   Future<void> _loadCourseStudents() async {
@@ -58,9 +71,12 @@ class _InvigilatorTakeAttendanceState extends State<InvigilatorTakeAttendance> {
             .split(',')
             .map((e) => e.trim().toUpperCase())
             .toList();
-
         if (courseList.contains(widget.courseCode.trim().toUpperCase())) {
-          filtered.add({'regNo': doc.id.trim(), ...data});
+          filtered.add({
+            'regNo': normalizeReg(doc.id),
+            'originalRegNo': doc.id,
+            ...data
+          });
         }
       }
       if (mounted) {
@@ -78,31 +94,37 @@ class _InvigilatorTakeAttendanceState extends State<InvigilatorTakeAttendance> {
   void _onDetect(BarcodeCapture capture) async {
     if (_isProcessing || _isLoadingStudents) return;
     for (final barcode in capture.barcodes) {
-      final code = barcode.rawValue?.trim().toUpperCase();
+      String? code = barcode.rawValue?.trim();
       if (code == null || code.isEmpty) continue;
 
       setState(() => _isProcessing = true);
+
+      final String normalizedCode = normalizeReg(code);
+      debugPrint('Scanned: $code -> Normalized: $normalizedCode');
+
       final studentData = _allEligibleStudents.firstWhere(
-        (s) => s['regNo'].toString().toUpperCase() == code,
+        (s) => normalizeReg(s['regNo'].toString()) == normalizedCode,
         orElse: () => {},
       );
 
       if (studentData.isNotEmpty) {
-        final student = {
-          'regNo': studentData['regNo'].toString(),
-          'name': studentData['name'].toString(),
-          'surname': studentData['surname'].toString(),
-        };
-        if (!_scannedStudents.any((s) => s['regNo'] == student['regNo'])) {
-          setState(() {
-            _scannedStudents.insert(0, student);
-            _failedScanCount = 0;
+        if (!AttendanceState.isMarked(normalizedCode)) {
+          AttendanceState.addStudent({
+            'regNo': normalizedCode,
+            'name': studentData['name'].toString(),
+            'surname': studentData['surname'].toString(),
           });
-          _showSnack('Captured: ${student['name']}', tealDark);
+          _showSnack(
+              'Captured: ${studentData['name']} ${studentData['surname']}',
+              tealDark);
+          _failedScanCount = 0;
+        } else {
+          _showSnack('$normalizedCode already marked!', Colors.orange);
         }
       } else {
         _handleFailedScan(code);
       }
+
       await Future.delayed(const Duration(seconds: 1));
       if (mounted) setState(() => _isProcessing = false);
       break;
@@ -121,6 +143,7 @@ class _InvigilatorTakeAttendanceState extends State<InvigilatorTakeAttendance> {
   }
 
   void _showSnack(String msg, Color color) {
+    if (!mounted) return;
     ScaffoldMessenger.of(context).clearSnackBars();
     ScaffoldMessenger.of(context).showSnackBar(SnackBar(
         content: Text(msg),
@@ -130,58 +153,118 @@ class _InvigilatorTakeAttendanceState extends State<InvigilatorTakeAttendance> {
 
   void _goManual() {
     Navigator.push(
-        context,
-        MaterialPageRoute(
-            builder: (_) => ManualSearch(
-                  existingStudents: _scannedStudents,
-                  onStudentAdded: (s) =>
-                      setState(() => _scannedStudents.insert(0, s)),
-                  courseCode: widget.courseCode,
-                )));
+      context,
+      MaterialPageRoute(
+        builder: (_) => ManualSearch(courseCode: widget.courseCode),
+      ),
+    );
   }
 
   Future<void> _submitAttendance() async {
+    final scanned = AttendanceState.markedStudents.value;
+    if (scanned.isEmpty) {
+      _showSnack('No students marked for attendance', Colors.orange);
+      return;
+    }
+
     setState(() => _isSubmitting = true);
+
     try {
       final user = FirebaseAuth.instance.currentUser;
+      if (user == null) {
+        _showSnack('User not logged in', Colors.red);
+        return;
+      }
+
       final userDoc = await FirebaseFirestore.instance
           .collection('users')
-          .doc(user?.uid)
+          .doc(user.uid)
           .get();
       final String invName =
-          "${userDoc.data()?['name']} ${userDoc.data()?['surname']}".trim();
+          "${userDoc.data()?['name'] ?? ''} ${userDoc.data()?['surname'] ?? ''}"
+              .trim();
 
       final courseDoc = await FirebaseFirestore.instance
           .collection('courses')
           .doc(widget.courseCode)
           .get();
+
       List<String> expectedRegNos = [];
       if (courseDoc.exists) {
         List<dynamic> raw = courseDoc.data()?['enrolledStudents'] ?? [];
         if (raw.isNotEmpty) {
-          expectedRegNos =
-              raw[0].toString().split(',').map((e) => e.trim()).toList();
+          if (raw[0] is String) {
+            expectedRegNos = raw[0]
+                .toString()
+                .split(',')
+                .map((e) => normalizeReg(e))
+                .toList();
+          } else if (raw is List) {
+            expectedRegNos =
+                raw.map((e) => normalizeReg(e.toString())).toList();
+          }
         }
       }
 
-      final presentRegNos = _scannedStudents.map((s) => s['regNo']).toSet();
+      if (expectedRegNos.isEmpty) {
+        expectedRegNos = scanned.map((s) => s['regNo']!).toList();
+      }
+
+      final Set<String> presentRegNos =
+          scanned.map((s) => normalizeReg(s['regNo']!)).toSet();
+
       List<Map<String, dynamic>> fullReport = [];
 
       for (String reg in expectedRegNos) {
         if (reg.isEmpty) continue;
-        var sDoc = await FirebaseFirestore.instance
-            .collection('students')
-            .doc(reg)
-            .get();
+        final String normalizedReg = normalizeReg(reg);
+        final bool isPresent = presentRegNos.contains(normalizedReg);
+
+        DocumentSnapshot studentDoc;
+        try {
+          studentDoc = await FirebaseFirestore.instance
+              .collection('students')
+              .doc(reg)
+              .get();
+          if (!studentDoc.exists) {
+            studentDoc = await FirebaseFirestore.instance
+                .collection('students')
+                .doc(normalizedReg)
+                .get();
+          }
+        } catch (e) {
+          studentDoc = await FirebaseFirestore.instance
+              .collection('students')
+              .doc(normalizedReg)
+              .get();
+        }
+
+        final studentData = studentDoc.data() as Map<String, dynamic>?;
         fullReport.add({
           'regNo': reg,
-          'name': sDoc.data()?['name'] ?? 'Unknown',
-          'surname': sDoc.data()?['surname'] ?? '',
-          'status': presentRegNos.contains(reg) ? 'Present' : 'Absent',
+          'name': studentData?['name']?.toString() ?? 'Unknown',
+          'surname': studentData?['surname']?.toString() ?? '',
+          'status': isPresent ? 'Present' : 'Absent',
         });
       }
 
-      await FirebaseFirestore.instance.collection('attendance').add({
+      for (String scannedReg in presentRegNos) {
+        if (!expectedRegNos.map((e) => normalizeReg(e)).contains(scannedReg)) {
+          DocumentSnapshot studentDoc = await FirebaseFirestore.instance
+              .collection('students')
+              .doc(scannedReg)
+              .get();
+          final studentData = studentDoc.data() as Map<String, dynamic>?;
+          fullReport.add({
+            'regNo': scannedReg,
+            'name': studentData?['name']?.toString() ?? 'Unknown',
+            'surname': studentData?['surname']?.toString() ?? '',
+            'status': 'Present',
+          });
+        }
+      }
+
+      final attendanceData = {
         'courseCode': widget.courseCode,
         'sessionType': widget.sessionType,
         'venue': widget.venue,
@@ -189,20 +272,28 @@ class _InvigilatorTakeAttendanceState extends State<InvigilatorTakeAttendance> {
             ? widget.date
             : DateTime.now().toIso8601String().split('T')[0],
         'timestamp': FieldValue.serverTimestamp(),
-        'submittedBy': invName,
-        'invigilatorId': user?.uid,
+        'submittedBy': invName.isEmpty ? 'Invigilator' : invName,
+        'invigilatorId': user.uid,
         'lecturerId': widget.lecturerId,
         'fullAttendanceList': fullReport,
-        'totalPresent': _scannedStudents.length,
+        'totalPresent': scanned.length,
         'totalExpected': expectedRegNos.length,
-      });
+        'presentRegNos': presentRegNos.toList(),
+      };
+
+      await FirebaseFirestore.instance
+          .collection('attendance')
+          .add(attendanceData);
 
       if (mounted) {
-        _showSnack('Attendance Submitted Successfully', tealPrimary);
+        _showSnack('Submitted! ${scanned.length} students marked present',
+            tealPrimary);
+        await Future.delayed(const Duration(seconds: 2));
         Navigator.of(context).popUntil((r) => r.isFirst);
       }
     } catch (e) {
-      _showSnack('Error: $e', Colors.red);
+      debugPrint('Submit error: $e');
+      if (mounted) _showSnack('Error submitting: $e', Colors.red);
     } finally {
       if (mounted) setState(() => _isSubmitting = false);
     }
@@ -210,6 +301,8 @@ class _InvigilatorTakeAttendanceState extends State<InvigilatorTakeAttendance> {
 
   @override
   Widget build(BuildContext context) {
+    final scanned = AttendanceState.markedStudents.value;
+
     return Scaffold(
       backgroundColor: Colors.white,
       appBar: AppBar(
@@ -223,7 +316,6 @@ class _InvigilatorTakeAttendanceState extends State<InvigilatorTakeAttendance> {
                   fontWeight: FontWeight.bold))),
       body: Column(
         children: [
-          // Info bar
           Container(
             width: double.infinity,
             padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
@@ -243,8 +335,6 @@ class _InvigilatorTakeAttendanceState extends State<InvigilatorTakeAttendance> {
                           fontSize: 12)),
                 ]),
           ),
-
-          // Scanner Area
           Padding(
             padding: const EdgeInsets.fromLTRB(14, 14, 14, 8),
             child: Container(
@@ -259,8 +349,27 @@ class _InvigilatorTakeAttendanceState extends State<InvigilatorTakeAttendance> {
                 child: Stack(children: [
                   MobileScanner(controller: _cameraCtrl, onDetect: _onDetect),
                   if (_isProcessing)
-                    const Center(
-                        child: CircularProgressIndicator(color: tealPrimary)),
+                    Container(
+                      color: Colors.black45,
+                      child: const Center(
+                          child: CircularProgressIndicator(color: tealPrimary)),
+                    ),
+                  if (_isLoadingStudents)
+                    Container(
+                      color: Colors.black45,
+                      child: const Center(
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            CircularProgressIndicator(color: tealPrimary),
+                            SizedBox(height: 8),
+                            Text('Loading students...',
+                                style: TextStyle(
+                                    color: Colors.white, fontSize: 12)),
+                          ],
+                        ),
+                      ),
+                    ),
                   Positioned(
                       top: 10,
                       right: 10,
@@ -270,8 +379,7 @@ class _InvigilatorTakeAttendanceState extends State<InvigilatorTakeAttendance> {
                           decoration: BoxDecoration(
                               color: tealPrimary,
                               borderRadius: BorderRadius.circular(20)),
-                          child: Text(
-                              '${_scannedStudents.length} / $_totalEnrolled',
+                          child: Text('${scanned.length} / $_totalEnrolled',
                               style: const TextStyle(
                                   color: Colors.white,
                                   fontSize: 12,
@@ -280,8 +388,6 @@ class _InvigilatorTakeAttendanceState extends State<InvigilatorTakeAttendance> {
               ),
             ),
           ),
-
-          // Search bar below camera
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 4),
             child: GestureDetector(
@@ -302,8 +408,6 @@ class _InvigilatorTakeAttendanceState extends State<InvigilatorTakeAttendance> {
               ),
             ),
           ),
-
-          // Review list header
           const Padding(
               padding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
               child: Align(
@@ -313,8 +417,6 @@ class _InvigilatorTakeAttendanceState extends State<InvigilatorTakeAttendance> {
                           color: Colors.grey,
                           fontWeight: FontWeight.bold,
                           fontSize: 12)))),
-
-          // Table header
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 14),
             child: Container(
@@ -342,46 +444,62 @@ class _InvigilatorTakeAttendanceState extends State<InvigilatorTakeAttendance> {
               ),
             ),
           ),
-
-          // Scanned students list
           Expanded(
-            child: ListView.builder(
-              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 4),
-              itemCount: _scannedStudents.length,
-              itemBuilder: (context, i) {
-                final s = _scannedStudents[i];
-                return Container(
-                  padding:
-                      const EdgeInsets.symmetric(vertical: 8, horizontal: 8),
-                  decoration: const BoxDecoration(
-                    border: Border(
-                        bottom: BorderSide(color: Colors.black12, width: 0.5)),
+            child: scanned.isEmpty
+                ? Center(
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(Icons.qr_code_scanner,
+                            size: 64, color: Colors.grey.shade400),
+                        const SizedBox(height: 16),
+                        Text('No students scanned yet',
+                            style: TextStyle(
+                                color: Colors.grey.shade600, fontSize: 14)),
+                        const SizedBox(height: 8),
+                        Text('Scan QR codes or search manually',
+                            style: TextStyle(
+                                color: Colors.grey.shade500, fontSize: 12)),
+                      ],
+                    ),
+                  )
+                : ListView.builder(
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 14, vertical: 4),
+                    itemCount: scanned.length,
+                    itemBuilder: (context, i) {
+                      final s = scanned[i];
+                      return Container(
+                        padding: const EdgeInsets.symmetric(
+                            vertical: 8, horizontal: 8),
+                        decoration: const BoxDecoration(
+                          border: Border(
+                              bottom: BorderSide(
+                                  color: Colors.black12, width: 0.5)),
+                        ),
+                        child: Row(
+                          children: [
+                            Expanded(
+                                flex: 3,
+                                child: Text(s['regNo']!,
+                                    style: const TextStyle(fontSize: 11))),
+                            Expanded(
+                                flex: 4,
+                                child: Text("${s['name']} ${s['surname']}",
+                                    style: const TextStyle(fontSize: 11))),
+                            const Expanded(
+                                flex: 2,
+                                child: Text('Present',
+                                    style: TextStyle(
+                                        color: tealDark,
+                                        fontWeight: FontWeight.bold,
+                                        fontSize: 11))),
+                          ],
+                        ),
+                      );
+                    },
                   ),
-                  child: Row(
-                    children: [
-                      Expanded(
-                          flex: 3,
-                          child: Text(s['regNo']!,
-                              style: const TextStyle(fontSize: 11))),
-                      Expanded(
-                          flex: 4,
-                          child: Text("${s['name']} ${s['surname']}",
-                              style: const TextStyle(fontSize: 11))),
-                      const Expanded(
-                          flex: 2,
-                          child: Text('Present',
-                              style: TextStyle(
-                                  color: tealDark,
-                                  fontWeight: FontWeight.bold,
-                                  fontSize: 11))),
-                    ],
-                  ),
-                );
-              },
-            ),
           ),
-
-          // Submit button
           Padding(
             padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
             child: Align(
@@ -391,7 +509,7 @@ class _InvigilatorTakeAttendanceState extends State<InvigilatorTakeAttendance> {
                     backgroundColor: tealPrimary,
                     padding: const EdgeInsets.symmetric(
                         horizontal: 24, vertical: 12)),
-                onPressed: (_scannedStudents.isEmpty || _isSubmitting)
+                onPressed: (scanned.isEmpty || _isSubmitting)
                     ? null
                     : _submitAttendance,
                 child: _isSubmitting
