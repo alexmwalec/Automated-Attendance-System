@@ -6,7 +6,6 @@ import 'assign.dart';
 import 'attendance_history.dart';
 import 'profile.dart';
 
-// ─── Constants ───────────────────────────────────────────────────────────────
 const Color tealPrimary = Color(0xFF2E9E8E);
 const Color tealDark = Color(0xFF227A6D);
 const Color tealLight = Color(0xFFDFF2EF);
@@ -28,11 +27,10 @@ class _InvigilatorDashboardState extends State<InvigilatorDashboard> {
     _currentIndex = widget.initialIndex;
   }
 
+  // Only 2 inline pages; History and Assign are pushed
   final List<Widget> _pages = [
     const _DashboardPage(),
     const CourseSelectionScreen(),
-    const AttendanceHistory(),
-    const Assign(),
   ];
 
   @override
@@ -43,14 +41,19 @@ class _InvigilatorDashboardState extends State<InvigilatorDashboard> {
         backgroundColor: tealPrimary,
         automaticallyImplyLeading: false,
         elevation: 0,
-        title: const Text('AAS Lecturer', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 18)),
+        title: const Text('AAS Invigilator',
+            style: TextStyle(
+                color: Colors.white,
+                fontWeight: FontWeight.bold,
+                fontSize: 18)),
         actions: [
           IconButton(
             icon: const Icon(Icons.notifications_outlined, color: Colors.white),
             onPressed: () {},
           ),
           GestureDetector(
-            onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const Profile())),
+            onTap: () => Navigator.push(
+                context, MaterialPageRoute(builder: (_) => const Profile())),
             child: const Padding(
               padding: EdgeInsets.only(right: 16),
               child: CircleAvatar(
@@ -67,8 +70,11 @@ class _InvigilatorDashboardState extends State<InvigilatorDashboard> {
         currentIndex: _currentIndex,
         onTap: (i) {
           if (i == 2 || i == 3) {
-            Navigator.push(context, MaterialPageRoute(
-                builder: (_) => i == 2 ? const AttendanceHistory() : const Assign()));
+            Navigator.push(
+                context,
+                MaterialPageRoute(
+                    builder: (_) =>
+                        i == 2 ? const AttendanceHistory() : const Assign()));
           } else {
             setState(() => _currentIndex = i);
           }
@@ -78,17 +84,20 @@ class _InvigilatorDashboardState extends State<InvigilatorDashboard> {
         selectedItemColor: Colors.white,
         unselectedItemColor: Colors.white54,
         items: const [
-          BottomNavigationBarItem(icon: Icon(Icons.home_outlined), label: 'Home'),
-          BottomNavigationBarItem(icon: Icon(Icons.check_circle_outline), label: 'Attendance'),
-          BottomNavigationBarItem(icon: Icon(Icons.history_outlined), label: 'History'),
-          BottomNavigationBarItem(icon: Icon(Icons.assignment_outlined), label: 'Assign'),
+          BottomNavigationBarItem(
+              icon: Icon(Icons.home_outlined), label: 'Home'),
+          BottomNavigationBarItem(
+              icon: Icon(Icons.check_circle_outline), label: 'Attendance'),
+          BottomNavigationBarItem(
+              icon: Icon(Icons.history_outlined), label: 'History'),
+          BottomNavigationBarItem(
+              icon: Icon(Icons.assignment_outlined), label: 'Assign'),
         ],
       ),
     );
   }
 }
 
-// ─── Dynamic Dashboard Page ──────────────────────────────────────────────────
 class _DashboardPage extends StatefulWidget {
   const _DashboardPage();
 
@@ -112,8 +121,10 @@ class _DashboardPageState extends State<_DashboardPage> {
       final String? uid = FirebaseAuth.instance.currentUser?.uid;
       if (uid == null) return;
 
-      // 1. Get assigned course codes from lecturer doc
-      var lectDoc = await FirebaseFirestore.instance.collection('lecturers').doc(uid).get();
+      var lectDoc = await FirebaseFirestore.instance
+          .collection('lecturers')
+          .doc(uid)
+          .get();
       if (!lectDoc.exists) {
         setState(() => isLoading = false);
         return;
@@ -122,7 +133,6 @@ class _DashboardPageState extends State<_DashboardPage> {
       List<dynamic> rawList = lectDoc.data()?['assignedCourses'] ?? [];
       List<String> codes = [];
 
-      // Handle comma separated strings if present
       for (var item in rawList) {
         String val = item.toString();
         if (val.contains(',')) {
@@ -132,11 +142,13 @@ class _DashboardPageState extends State<_DashboardPage> {
         }
       }
 
-      // 2. Fetch details for each course from 'courses' collection
       List<Map<String, dynamic>> sessions = [];
       for (String code in codes) {
         if (code.isEmpty) continue;
-        var courseDoc = await FirebaseFirestore.instance.collection('courses').doc(code).get();
+        var courseDoc = await FirebaseFirestore.instance
+            .collection('courses')
+            .doc(code)
+            .get();
 
         if (courseDoc.exists) {
           var data = courseDoc.data()!;
@@ -163,7 +175,9 @@ class _DashboardPageState extends State<_DashboardPage> {
 
   @override
   Widget build(BuildContext context) {
-    if (isLoading) return const Center(child: CircularProgressIndicator(color: tealPrimary));
+    if (isLoading) {
+      return const Center(child: CircularProgressIndicator(color: tealPrimary));
+    }
 
     return RefreshIndicator(
       onRefresh: _loadLecturerData,
@@ -207,7 +221,6 @@ class _DashboardPageState extends State<_DashboardPage> {
   }
 }
 
-// ─── Table Widget (Dynamic) ──────────────────────────────────────────────────
 class _TodaysSessionsTable extends StatelessWidget {
   final List<Map<String, dynamic>> sessions;
   const _TodaysSessionsTable({required this.sessions});
@@ -215,14 +228,19 @@ class _TodaysSessionsTable extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     if (sessions.isEmpty) {
-      return const Center(child: Padding(
+      return const Center(
+          child: Padding(
         padding: EdgeInsets.all(20),
         child: Text("No courses assigned to your account."),
       ));
     }
 
     const headers = ['TYPE', 'COURSE', 'DATE', 'TIME', 'ROOM'];
-    final typeColors = {'Class': tealPrimary, 'Lab': Colors.green, 'Exam': Colors.orange};
+    final typeColors = {
+      'Class': tealPrimary,
+      'Lab': Colors.green,
+      'Exam': Colors.orange
+    };
 
     return Container(
       decoration: BoxDecoration(
@@ -237,9 +255,16 @@ class _TodaysSessionsTable extends StatelessWidget {
             color: tealPrimary,
             padding: const EdgeInsets.symmetric(vertical: 10),
             child: Row(
-              children: headers.map((h) => Expanded(
-                child: Center(child: Text(h, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 10))),
-              )).toList(),
+              children: headers
+                  .map((h) => Expanded(
+                        child: Center(
+                            child: Text(h,
+                                style: const TextStyle(
+                                    color: Colors.white,
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: 10))),
+                      ))
+                  .toList(),
             ),
           ),
           ...sessions.asMap().entries.map((entry) {
@@ -250,11 +275,30 @@ class _TodaysSessionsTable extends StatelessWidget {
               padding: const EdgeInsets.symmetric(vertical: 12),
               child: Row(
                 children: [
-                  Expanded(child: Center(child: Text(data['type'], style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: typeColors[data['type']] ?? Colors.black)))),
-                  Expanded(child: Center(child: Text(data['course'], style: const TextStyle(fontSize: 10)))),
-                  Expanded(child: Center(child: Text(data['date'], style: const TextStyle(fontSize: 10)))),
-                  Expanded(child: Center(child: Text(data['time'], style: const TextStyle(fontSize: 10)))),
-                  Expanded(child: Center(child: Text(data['room'], style: const TextStyle(fontSize: 10)))),
+                  Expanded(
+                      child: Center(
+                          child: Text(data['type'],
+                              style: TextStyle(
+                                  fontSize: 10,
+                                  fontWeight: FontWeight.bold,
+                                  color: typeColors[data['type']] ??
+                                      Colors.black)))),
+                  Expanded(
+                      child: Center(
+                          child: Text(data['course'],
+                              style: const TextStyle(fontSize: 10)))),
+                  Expanded(
+                      child: Center(
+                          child: Text(data['date'],
+                              style: const TextStyle(fontSize: 10)))),
+                  Expanded(
+                      child: Center(
+                          child: Text(data['time'],
+                              style: const TextStyle(fontSize: 10)))),
+                  Expanded(
+                      child: Center(
+                          child: Text(data['room'],
+                              style: const TextStyle(fontSize: 10)))),
                 ],
               ),
             );
@@ -265,7 +309,6 @@ class _TodaysSessionsTable extends StatelessWidget {
   }
 }
 
-// ─── UI Helper Components (WelcomeCard, InfoCard, etc.) ──────────────────────
 class _WelcomeCard extends StatelessWidget {
   const _WelcomeCard();
   @override
@@ -281,9 +324,15 @@ class _WelcomeCard extends StatelessWidget {
       child: const Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text('Welcome Back!', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: tealPrimary)),
+          Text('Welcome Back!',
+              style: TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
+                  color: tealPrimary)),
           SizedBox(height: 4),
-          Text('Monitor your courses and student attendance records effectively.', style: TextStyle(fontSize: 12, color: Colors.black54)),
+          Text(
+              'Monitor your courses and student attendance records effectively.',
+              style: TextStyle(fontSize: 12, color: Colors.black54)),
         ],
       ),
     );
@@ -295,13 +344,20 @@ class _InfoCard extends StatelessWidget {
   final Color iconColor;
   final String title;
   final String subtitle;
-  const _InfoCard({required this.icon, required this.iconColor, required this.title, required this.subtitle});
+  const _InfoCard(
+      {required this.icon,
+      required this.iconColor,
+      required this.title,
+      required this.subtitle});
 
   @override
   Widget build(BuildContext context) {
     return Container(
       padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(10), border: Border.all(color: tealPrimary.withOpacity(0.1))),
+      decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(10),
+          border: Border.all(color: tealPrimary.withOpacity(0.1))),
       child: Row(
         children: [
           Icon(icon, color: iconColor, size: 20),
@@ -309,8 +365,11 @@ class _InfoCard extends StatelessWidget {
           Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(title, style: const TextStyle(fontSize: 10, fontWeight: FontWeight.bold)),
-              Text(subtitle, style: const TextStyle(fontSize: 11, color: tealDark)),
+              Text(title,
+                  style: const TextStyle(
+                      fontSize: 10, fontWeight: FontWeight.bold)),
+              Text(subtitle,
+                  style: const TextStyle(fontSize: 11, color: tealDark)),
             ],
           )
         ],
@@ -324,6 +383,8 @@ class _SectionHeader extends StatelessWidget {
   const _SectionHeader({required this.title});
   @override
   Widget build(BuildContext context) {
-    return Text(title, style: const TextStyle(color: tealDark, fontWeight: FontWeight.bold, fontSize: 12));
+    return Text(title,
+        style: const TextStyle(
+            color: tealDark, fontWeight: FontWeight.bold, fontSize: 12));
   }
 }
