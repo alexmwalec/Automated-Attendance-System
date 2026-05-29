@@ -58,7 +58,10 @@ class _AssignState extends State<Assign> {
   }
 
   Future<List<Map<String, dynamic>>> _fetchUsers() async {
-    final snap = await FirebaseFirestore.instance.collection('users').get();
+    final snap = await FirebaseFirestore.instance
+        .collection('users')
+        .where('role', isEqualTo: 'invigilator')
+        .get();
     return snap.docs.map((d) => {
       'id': d.id,
       'name': "${d.data()['name'] ?? ''} ${d.data()['surname'] ?? ''}".trim()
@@ -176,8 +179,13 @@ class _AssignState extends State<Assign> {
       stream: FirebaseFirestore.instance.collection('rooms').snapshots(),
       builder: (context, snapshot) {
         if (!snapshot.hasData) return const LinearProgressIndicator(color: tealPrimary);
+        
+        final roomIds = snapshot.data!.docs.map((doc) => doc.id).toList();
+        // Safety check: Ensure selected value exists in current list
+        final currentValue = roomIds.contains(_selectedRoom) ? _selectedRoom : null;
+
         return DropdownButtonFormField<String>(
-          value: _selectedRoom,
+          value: currentValue,
           decoration: InputDecoration(
             filled: true,
             fillColor: _isEditable ? Colors.white : Colors.grey.shade200,
@@ -185,7 +193,7 @@ class _AssignState extends State<Assign> {
             enabled: _isEditable,
           ),
           hint: const Text("Select Room"),
-          items: snapshot.data!.docs.map((doc) => DropdownMenuItem(value: doc.id, child: Text(doc.id))).toList(),
+          items: roomIds.map((id) => DropdownMenuItem(value: id, child: Text(id))).toList(),
           onChanged: _isEditable ? (val) => setState(() => _selectedRoom = val) : null,
           validator: (v) => v == null ? 'Required' : null,
         );
@@ -198,8 +206,15 @@ class _AssignState extends State<Assign> {
       future: _fetchUsers(),
       builder: (context, snapshot) {
         if (!snapshot.hasData) return const LinearProgressIndicator(color: tealPrimary);
+
+        final users = snapshot.data!;
+        // Safety check: Ensure selected ID exists in the list of users
+        final currentValue = users.any((u) => u['id'] == _selectedInvigilatorId) 
+            ? _selectedInvigilatorId 
+            : null;
+
         return DropdownButtonFormField<String>(
-          value: _selectedInvigilatorId,
+          value: currentValue,
           decoration: InputDecoration(
             filled: true,
             fillColor: _isEditable ? Colors.white : Colors.grey.shade200,
@@ -207,15 +222,18 @@ class _AssignState extends State<Assign> {
             enabled: _isEditable,
           ),
           hint: const Text("Select Staff Member"),
-          items: snapshot.data!.map((u) => DropdownMenuItem(value: u['id'].toString(), child: Text(u['name']))).toList(),
+          items: users.map((u) => DropdownMenuItem(
+            value: u['id'].toString(), 
+            child: Text(u['name'])
+          )).toList(),
           onChanged: _isEditable ? (val) {
-            final user = snapshot.data!.firstWhere((element) => element['id'] == val);
+            final user = users.firstWhere((element) => element['id'] == val);
             setState(() {
               _selectedInvigilatorId = val;
               _selectedInvigilatorName = user['name'];
             });
           } : null,
-          validator: (v) => v == null ? 'Required' : null,
+          validator: (v) => v == null ? 'Required ' : null,
         );
       },
     );
