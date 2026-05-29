@@ -66,7 +66,7 @@ class _AttendancePageState extends State<AttendancePage> {
   Future<void> _loadCourseStudents() async {
     try {
       final snapshot =
-          await FirebaseFirestore.instance.collection('students').get();
+      await FirebaseFirestore.instance.collection('students').get();
 
       final List<Map<String, dynamic>> filtered = [];
       for (var doc in snapshot.docs) {
@@ -78,7 +78,10 @@ class _AttendancePageState extends State<AttendancePage> {
             .toList();
 
         if (courseList.contains(widget.courseCode.trim().toUpperCase())) {
-          filtered.add({'regNo': doc.id.trim(), ...data});
+          filtered.add({
+            ...data,
+            'regNo': doc.id.trim().toUpperCase(),
+          });
         }
       }
 
@@ -135,13 +138,13 @@ class _AttendancePageState extends State<AttendancePage> {
       setState(() => _isProcessing = true);
 
       final studentData = _allEligibleStudents.firstWhere(
-        (s) => s['regNo'].toString().toUpperCase() == code,
+            (s) => s['regNo'].toString().toUpperCase() == code,
         orElse: () => {},
       );
 
       if (studentData.isNotEmpty) {
         final student = {
-          'regNo': studentData['regNo'].toString(),
+          'regNo': studentData['regNo'].toString().trim().toUpperCase(),
           'name': studentData['name'].toString(),
           'surname': studentData['surname'].toString(),
         };
@@ -182,12 +185,18 @@ class _AttendancePageState extends State<AttendancePage> {
       context,
       MaterialPageRoute(
         builder: (_) => ManualSearch(
-          existingStudents: _scannedStudents,
+          // ← Pass a live getter so ManualSearch always reads the current list
+          getExistingStudents: () => _scannedStudents,
           onStudentAdded: (student) {
             setState(() {
+              final normalizedRegNo =
+                  student['regNo']?.toString().trim().toUpperCase() ?? '';
               if (!_scannedStudents
-                  .any((s) => s['regNo'] == student['regNo'])) {
-                _scannedStudents.add(student);
+                  .any((s) => s['regNo'] == normalizedRegNo)) {
+                _scannedStudents.add({
+                  ...student,
+                  'regNo': normalizedRegNo,
+                });
               }
             });
           },
@@ -247,16 +256,28 @@ class _AttendancePageState extends State<AttendancePage> {
       List<String> expectedRegNos = [];
 
       if (rawEnrolled.isNotEmpty) {
-        String allIds = rawEnrolled[0].toString();
-        expectedRegNos = allIds.split(',').map((e) => e.trim()).toList();
+        if (rawEnrolled.length == 1 &&
+            rawEnrolled[0].toString().contains(',')) {
+          expectedRegNos = rawEnrolled[0]
+              .toString()
+              .split(',')
+              .map((e) => e.trim().toUpperCase())
+              .where((e) => e.isNotEmpty)
+              .toList();
+        } else {
+          expectedRegNos = rawEnrolled
+              .map((e) => e.toString().trim().toUpperCase())
+              .where((e) => e.isNotEmpty)
+              .toList();
+        }
       }
 
-      final presentRegNos = _scannedStudents.map((s) => s['regNo']).toSet();
+      final presentRegNos = _scannedStudents
+          .map((s) => s['regNo'].toString().trim().toUpperCase())
+          .toSet();
       List<Map<String, dynamic>> fullAttendanceList = [];
 
       for (String regNo in expectedRegNos) {
-        if (regNo.isEmpty) continue;
-
         var sDoc = await FirebaseFirestore.instance
             .collection('students')
             .doc(regNo)
@@ -383,13 +404,12 @@ class _AttendancePageState extends State<AttendancePage> {
                         ),
                       ),
 
-                    // Processing overlay
                     if (_isProcessing)
                       Container(
                         color: Colors.black45,
                         child: const Center(
                             child:
-                                CircularProgressIndicator(color: tealPrimary)),
+                            CircularProgressIndicator(color: tealPrimary)),
                       ),
                     if (_isLoadingStudents)
                       Container(
@@ -439,7 +459,7 @@ class _AttendancePageState extends State<AttendancePage> {
               child: Container(
                 width: double.infinity,
                 padding:
-                    const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
                 decoration: BoxDecoration(
                   color: _alreadyTaken ? Colors.grey.shade100 : Colors.white,
                   borderRadius: BorderRadius.circular(30),
@@ -461,7 +481,7 @@ class _AttendancePageState extends State<AttendancePage> {
                           ? 'Attendance already recorded for today'
                           : 'Add student by searching reg number',
                       style:
-                          TextStyle(color: Colors.grey.shade400, fontSize: 13),
+                      TextStyle(color: Colors.grey.shade400, fontSize: 13),
                     ),
                   ],
                 ),
@@ -507,70 +527,72 @@ class _AttendancePageState extends State<AttendancePage> {
             child: _scannedStudents.isEmpty
                 ? const SizedBox()
                 : ListView.builder(
-                    padding: const EdgeInsets.symmetric(horizontal: 14),
-                    itemCount: _scannedStudents.length,
-                    itemBuilder: (context, index) {
-                      final s = _scannedStudents[index];
-                      return Padding(
-                        padding: const EdgeInsets.symmetric(vertical: 6),
-                        child: Row(
-                          children: [
-                            Expanded(
-                              flex: 2,
-                              child: Text(s['regNo'] ?? '',
-                                  style: const TextStyle(fontSize: 12)),
-                            ),
-                            Expanded(
-                              flex: 3,
-                              child: Text('${s['name']} ${s['surname']}',
-                                  textAlign: TextAlign.center,
-                                  style: const TextStyle(fontSize: 12)),
-                            ),
-                            const Expanded(
-                              flex: 2,
-                              child: Text('Present',
-                                  textAlign: TextAlign.end,
-                                  style: TextStyle(
-                                      fontSize: 12,
-                                      color: tealPrimary,
-                                      fontWeight: FontWeight.bold)),
-                            ),
-                          ],
-                        ),
-                      );
-                    },
+              padding: const EdgeInsets.symmetric(horizontal: 14),
+              itemCount: _scannedStudents.length,
+              itemBuilder: (context, index) {
+                final s = _scannedStudents[index];
+                return Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 6),
+                  child: Row(
+                    children: [
+                      Expanded(
+                        flex: 2,
+                        child: Text(s['regNo'] ?? '',
+                            style: const TextStyle(fontSize: 12)),
+                      ),
+                      Expanded(
+                        flex: 3,
+                        child: Text('${s['name']} ${s['surname']}',
+                            textAlign: TextAlign.center,
+                            style: const TextStyle(fontSize: 12)),
+                      ),
+                      const Expanded(
+                        flex: 2,
+                        child: Text('Present',
+                            textAlign: TextAlign.end,
+                            style: TextStyle(
+                                fontSize: 12,
+                                color: tealPrimary,
+                                fontWeight: FontWeight.bold)),
+                      ),
+                    ],
                   ),
+                );
+              },
+            ),
           ),
           Padding(
             padding: const EdgeInsets.fromLTRB(14, 8, 14, 16),
             child: Align(
               alignment: Alignment.centerRight,
               child: ElevatedButton(
-                onPressed: (_scannedStudents.isEmpty || _isSubmitting || _alreadyTaken)
+                onPressed: (_scannedStudents.isEmpty ||
+                    _isSubmitting ||
+                    _alreadyTaken)
                     ? null
                     : _showConfirmDialog,
                 style: ElevatedButton.styleFrom(
                   backgroundColor: tealPrimary,
                   disabledBackgroundColor: Colors.grey.shade300,
                   padding:
-                      const EdgeInsets.symmetric(horizontal: 18, vertical: 8),
+                  const EdgeInsets.symmetric(horizontal: 18, vertical: 8),
                   shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(20)),
                 ),
                 child: _isSubmitting
                     ? const SizedBox(
-                        width: 16,
-                        height: 16,
-                        child: CircularProgressIndicator(
-                            color: Colors.white, strokeWidth: 2),
-                      )
+                  width: 16,
+                  height: 16,
+                  child: CircularProgressIndicator(
+                      color: Colors.white, strokeWidth: 2),
+                )
                     : Text(
-                        _alreadyTaken ? 'Already Saved' : 'Confirm & Save',
-                        style: const TextStyle(
-                            color: Colors.white,
-                            fontWeight: FontWeight.bold,
-                            fontSize: 13),
-                      ),
+                  _alreadyTaken ? 'Already Saved' : 'Confirm & Save',
+                  style: const TextStyle(
+                      color: Colors.white,
+                      fontWeight: FontWeight.bold,
+                      fontSize: 13),
+                ),
               ),
             ),
           ),

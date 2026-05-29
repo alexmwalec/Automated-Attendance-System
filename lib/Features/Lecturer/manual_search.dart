@@ -7,13 +7,15 @@ const Color tealDark = Color(0xFF227A6D);
 const Color tealLight = Color(0xFFE0F2F0);
 
 class ManualSearch extends StatefulWidget {
-  final List<Map<String, String>> existingStudents;
+  // ← Changed from List<Map<String,String>> to a getter function
+  //   so it always reflects the live _scannedStudents list in AttendancePage
+  final List<Map<String, String>> Function() getExistingStudents;
   final void Function(Map<String, String>) onStudentAdded;
   final String courseCode;
 
   const ManualSearch({
     super.key,
-    required this.existingStudents,
+    required this.getExistingStudents,
     required this.onStudentAdded,
     required this.courseCode,
   });
@@ -72,7 +74,7 @@ class _ManualSearchState extends State<ManualSearch> {
 
         if (courseList.contains(widget.courseCode.trim().toUpperCase())) {
           searchResults.add({
-            'regNo': doc.id,
+            'regNo': doc.id.trim().toUpperCase(),
             'name': data['name']?.toString() ?? 'Unknown',
             'surname': data['surname']?.toString() ?? '',
           });
@@ -95,13 +97,10 @@ class _ManualSearchState extends State<ManualSearch> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: tealLight,
-
-      // ── HEADER ── separated from body, no search inside it
       appBar: AppBar(
         backgroundColor: tealPrimary,
         elevation: 2,
         shadowColor: tealDark.withOpacity(0.4),
-        // ← back arrow kept
         leading: IconButton(
           icon: const Icon(Icons.arrow_back, color: Colors.white),
           onPressed: () => Navigator.pop(context),
@@ -116,12 +115,9 @@ class _ManualSearchState extends State<ManualSearch> {
           ),
         ),
       ),
-
-      // ── BODY ── light teal background; search card floats on top
       body: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // ── Search Card (separated from header)
           Padding(
             padding: const EdgeInsets.fromLTRB(16, 20, 16, 0),
             child: Container(
@@ -140,7 +136,6 @@ class _ManualSearchState extends State<ManualSearch> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  // Title inside the card
                   const Text(
                     'Search student',
                     style: TextStyle(
@@ -150,8 +145,6 @@ class _ManualSearchState extends State<ManualSearch> {
                     ),
                   ),
                   const SizedBox(height: 12),
-
-                  // Search TextField
                   TextField(
                     controller: _ctrl,
                     onChanged: _onSearchChanged,
@@ -168,12 +161,12 @@ class _ManualSearchState extends State<ManualSearch> {
                           color: tealPrimary, size: 20),
                       suffixIcon: _ctrl.text.isNotEmpty
                           ? IconButton(
-                              icon: const Icon(Icons.clear, size: 18),
-                              onPressed: () {
-                                _ctrl.clear();
-                                _onSearchChanged('');
-                              },
-                            )
+                        icon: const Icon(Icons.clear, size: 18),
+                        onPressed: () {
+                          _ctrl.clear();
+                          _onSearchChanged('');
+                        },
+                      )
                           : null,
                       contentPadding: const EdgeInsets.symmetric(
                           vertical: 12, horizontal: 12),
@@ -184,12 +177,12 @@ class _ManualSearchState extends State<ManualSearch> {
                       enabledBorder: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(8),
                         borderSide:
-                            BorderSide(color: Colors.grey.shade200, width: 1),
+                        BorderSide(color: Colors.grey.shade200, width: 1),
                       ),
                       focusedBorder: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(8),
                         borderSide:
-                            const BorderSide(color: tealPrimary, width: 1.5),
+                        const BorderSide(color: tealPrimary, width: 1.5),
                       ),
                     ),
                   ),
@@ -208,7 +201,6 @@ class _ManualSearchState extends State<ManualSearch> {
               ),
             ),
 
-          // ── "All results" label
           Padding(
             padding: const EdgeInsets.fromLTRB(20, 18, 20, 6),
             child: Text(
@@ -222,90 +214,90 @@ class _ManualSearchState extends State<ManualSearch> {
             ),
           ),
 
-          // ── Results list
           Expanded(
             child: _results.isEmpty && _ctrl.text.isNotEmpty && !_isLoading
                 ? Center(
-                    child: Text(
-                      'No matching students found in this course.',
-                      style: TextStyle(
+              child: Text(
+                'No matching students found in this course.',
+                style: TextStyle(
+                  fontSize: 13,
+                  color: Colors.grey.shade600,
+                ),
+              ),
+            )
+                : ListView.builder(
+              padding:
+              const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+              itemCount: _results.length,
+              itemBuilder: (context, i) {
+                final s = _results[i];
+                final String reg = s['regNo']!;
+                final String name = s['name']!;
+                final String surname = s['surname']!;
+
+
+                final bool alreadyAdded = widget.getExistingStudents().any(
+                        (e) =>
+                    e['regNo']?.toLowerCase() == reg.toLowerCase());
+
+                return Container(
+                  margin: const EdgeInsets.only(bottom: 8),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(10),
+                    boxShadow: [
+                      BoxShadow(
+                        color: tealDark.withOpacity(0.07),
+                        blurRadius: 6,
+                        offset: const Offset(0, 2),
+                      ),
+                    ],
+                  ),
+                  child: ListTile(
+                    contentPadding: const EdgeInsets.symmetric(
+                        horizontal: 14, vertical: 4),
+                    leading: CircleAvatar(
+                      backgroundColor: tealLight,
+                      radius: 22,
+                      child: Text(
+                        name[0].toUpperCase(),
+                        style: const TextStyle(
+                          color: tealDark,
+                          fontWeight: FontWeight.bold,
+                          fontSize: 16,
+                        ),
+                      ),
+                    ),
+                    title: Text(
+                      reg,
+                      style: const TextStyle(
+                        fontWeight: FontWeight.w700,
                         fontSize: 13,
+                        color: Color(0xFF1A1A2E),
+                      ),
+                    ),
+                    subtitle: Text(
+                      '$name $surname',
+                      style: TextStyle(
+                        fontSize: 12,
                         color: Colors.grey.shade600,
                       ),
                     ),
-                  )
-                : ListView.builder(
-                    padding:
-                        const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-                    itemCount: _results.length,
-                    itemBuilder: (context, i) {
-                      final s = _results[i];
-                      final String reg = s['regNo']!;
-                      final String name = s['name']!;
-                      final String surname = s['surname']!;
-
-                      final bool alreadyAdded = widget.existingStudents.any(
-                          (e) =>
-                              e['regNo']?.toLowerCase() == reg.toLowerCase());
-
-                      return Container(
-                        margin: const EdgeInsets.only(bottom: 8),
-                        decoration: BoxDecoration(
-                          color: Colors.white,
-                          borderRadius: BorderRadius.circular(10),
-                          boxShadow: [
-                            BoxShadow(
-                              color: tealDark.withOpacity(0.07),
-                              blurRadius: 6,
-                              offset: const Offset(0, 2),
-                            ),
-                          ],
-                        ),
-                        child: ListTile(
-                          contentPadding: const EdgeInsets.symmetric(
-                              horizontal: 14, vertical: 4),
-                          leading: CircleAvatar(
-                            backgroundColor: tealLight,
-                            radius: 22,
-                            child: Text(
-                              name[0].toUpperCase(),
-                              style: const TextStyle(
-                                color: tealDark,
-                                fontWeight: FontWeight.bold,
-                                fontSize: 16,
-                              ),
-                            ),
-                          ),
-                          title: Text(
-                            reg,
-                            style: const TextStyle(
-                              fontWeight: FontWeight.w700,
-                              fontSize: 13,
-                              color: Color(0xFF1A1A2E),
-                            ),
-                          ),
-                          subtitle: Text(
-                            '$name $surname',
-                            style: TextStyle(
-                              fontSize: 12,
-                              color: Colors.grey.shade600,
-                            ),
-                          ),
-                          trailing: alreadyAdded
-                              ? const Icon(Icons.check_circle,
-                                  color: Colors.green, size: 22)
-                              : const Icon(Icons.add_circle_outline,
-                                  color: tealPrimary, size: 22),
-                          onTap: alreadyAdded
-                              ? null
-                              : () {
-                                  widget.onStudentAdded(s);
-                                  Navigator.pop(context);
-                                },
-                        ),
-                      );
+                    trailing: alreadyAdded
+                        ? const Icon(Icons.check_circle,
+                        color: Colors.green, size: 22)
+                        : const Icon(Icons.add_circle_outline,
+                        color: tealPrimary, size: 22),
+                    onTap: alreadyAdded
+                        ? null
+                        : () {
+                      widget.onStudentAdded(s);
+                      Navigator.pop(context);
                     },
                   ),
+                );
+              },
+            ),
           ),
         ],
       ),
