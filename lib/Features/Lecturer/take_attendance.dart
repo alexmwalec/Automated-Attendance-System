@@ -313,20 +313,6 @@ class _AttendancePageState extends State<AttendancePage> {
           style: TextStyle(
               color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold),
         ),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.notifications_none, color: Colors.white),
-            onPressed: () {},
-          ),
-          const Padding(
-            padding: EdgeInsets.only(right: 12),
-            child: CircleAvatar(
-              radius: 14,
-              backgroundColor: Colors.white24,
-              child: Icon(Icons.person, color: Colors.white, size: 16),
-            ),
-          ),
-        ],
       ),
       body: Column(
         children: [
