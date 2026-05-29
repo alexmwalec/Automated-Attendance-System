@@ -28,11 +28,10 @@ class _LecturerDashboardState extends State<LecturerDashboard> {
     _currentIndex = widget.initialIndex;
   }
 
+  // Only 2 inline pages; History and Assign are pushed
   final List<Widget> _pages = [
     const _DashboardPage(),
     const CourseSelectionScreen(),
-    const AttendanceHistory(),
-    const Assign(),
   ];
 
   Future<void> _logout(BuildContext context) async {
@@ -145,7 +144,6 @@ class _DashboardPageState extends State<_DashboardPage> {
       TimeOfDay end;
 
       if (endTimeStr == '--' || endTimeStr.isEmpty) {
-        // Default to 2 hours after start time if end time is missing
         end = TimeOfDay(hour: (start.hour + 2) % 24, minute: start.minute);
       } else {
         end = _parseTime(endTimeStr);
@@ -153,10 +151,8 @@ class _DashboardPageState extends State<_DashboardPage> {
 
       final startDt =
           DateTime(now.year, now.month, now.day, start.hour, start.minute);
-      var endDt =
-          DateTime(now.year, now.month, now.day, end.hour, end.minute);
+      var endDt = DateTime(now.year, now.month, now.day, end.hour, end.minute);
 
-      // If end time is before start time, assume it's next day (though rare for class)
       if (endDt.isBefore(startDt)) {
         endDt = endDt.add(const Duration(days: 1));
       }
@@ -169,7 +165,6 @@ class _DashboardPageState extends State<_DashboardPage> {
 
   TimeOfDay _parseTime(String timeStr) {
     try {
-      // Handle both "08:00 AM" and "08:00AM" and "13:00"
       final cleanStr = timeStr.trim().toUpperCase();
       final hasAmPm = cleanStr.endsWith('AM') || cleanStr.endsWith('PM');
 
@@ -190,7 +185,6 @@ class _DashboardPageState extends State<_DashboardPage> {
         return TimeOfDay(hour: hour, minute: minute);
       }
     } catch (e) {
-      // Return a time that won't likely trigger "Live" by accident if parsing fails
       return const TimeOfDay(hour: 0, minute: 0);
     }
   }
@@ -217,8 +211,7 @@ class _DashboardPageState extends State<_DashboardPage> {
 
     return StreamBuilder<List<dynamic>>(
       stream: CombineLatestStream.list(
-              [activeSessions, assignedTasks, todayAttendance])
-          .map((snapshots) {
+          [activeSessions, assignedTasks, todayAttendance]).map((snapshots) {
         final sessionDocs = snapshots[0].docs;
         final assignedDocs = snapshots[1].docs;
         final attendanceDocs = snapshots[2].docs;
@@ -263,8 +256,6 @@ class _DashboardPageState extends State<_DashboardPage> {
                 attData['room'] == d['room'];
           });
 
-          // For assigned tasks, we might not have start/end times in standard format
-          // but if we do, we can use them.
           final live = !isTaken && _isSessionLive(startTime, endTime);
 
           combined.add({
@@ -331,7 +322,7 @@ class _WelcomeCard extends StatelessWidget {
                       fontSize: 16,
                       fontWeight: FontWeight.bold,
                       color: tealPrimary)),
-              Text('Your  sessions are shown below.',
+              Text('Your sessions are shown below.',
                   style: TextStyle(fontSize: 12, color: Colors.black54)),
             ]),
       );

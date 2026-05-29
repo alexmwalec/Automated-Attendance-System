@@ -6,6 +6,7 @@ import 'dart:async';
 import 'lecturer_dashboard.dart';
 import 'assign.dart';
 import 'viewlist.dart';
+import 'attendance_state.dart'; // Import for normalizeReg function
 
 const Color tealPrimary = Color(0xFF2E9E8E);
 const Color tealDark = Color(0xFF227A6D);
@@ -30,7 +31,7 @@ class _AttendanceHistoryState extends State<AttendanceHistory>
     super.initState();
     _tabController = TabController(length: 2, vsync: this);
     _tabController.addListener(() {
-      setState(() {});
+      if (mounted) setState(() {});
     });
     _fetchAssignedCourses();
     _fetchVenues();
@@ -47,10 +48,16 @@ class _AttendanceHistoryState extends State<AttendanceHistory>
   }
 
   Future<void> _fetchVenues() async {
-    final snap = await FirebaseFirestore.instance.collection('rooms').get();
-    setState(() {
-      venues = snap.docs.map((doc) => doc.id).toList();
-    });
+    try {
+      final snap = await FirebaseFirestore.instance.collection('rooms').get();
+      if (mounted) {
+        setState(() {
+          venues = snap.docs.map((doc) => doc.id).toList();
+        });
+      }
+    } catch (e) {
+      debugPrint('Error fetching venues: $e');
+    }
   }
 
   DateTime _parseDateTime(dynamic value) {
@@ -62,18 +69,26 @@ class _AttendanceHistoryState extends State<AttendanceHistory>
   Future<void> _fetchAssignedCourses() async {
     final uid = FirebaseAuth.instance.currentUser?.uid;
     if (uid == null) return;
-    var doc =
-        await FirebaseFirestore.instance.collection('lecturers').doc(uid).get();
-    if (doc.exists) {
-      List<dynamic> rawList = doc.data()?['assignedCourses'] ?? [];
-      List<String> codes = [];
-      for (var item in rawList) {
-        String val = item.toString();
-        val.contains(',')
-            ? codes.addAll(val.split(',').map((e) => e.trim()))
-            : codes.add(val.trim());
+    try {
+      var doc = await FirebaseFirestore.instance
+          .collection('lecturers')
+          .doc(uid)
+          .get();
+      if (doc.exists) {
+        List<dynamic> rawList = doc.data()?['assignedCourses'] ?? [];
+        List<String> codes = [];
+        for (var item in rawList) {
+          String val = item.toString();
+          if (val.contains(',')) {
+            codes.addAll(val.split(',').map((e) => e.trim()));
+          } else {
+            codes.add(val.trim());
+          }
+        }
+        if (mounted) setState(() => assignedCourses = codes);
       }
-      setState(() => assignedCourses = codes);
+    } catch (e) {
+      debugPrint('Error fetching assigned courses: $e');
     }
   }
 
@@ -91,8 +106,7 @@ class _AttendanceHistoryState extends State<AttendanceHistory>
 
       final startDt =
           DateTime(now.year, now.month, now.day, start.hour, start.minute);
-      var endDt =
-          DateTime(now.year, now.month, now.day, end.hour, end.minute);
+      var endDt = DateTime(now.year, now.month, now.day, end.hour, end.minute);
 
       if (endDt.isBefore(startDt)) {
         endDt = endDt.add(const Duration(days: 1));
@@ -163,13 +177,18 @@ class _AttendanceHistoryState extends State<AttendanceHistory>
               child: const Text("Cancel")),
           TextButton(
             onPressed: () async {
-              final collection =
-                  isAssignedTask ? 'exam_assignments' : 'active_sessions';
-              await FirebaseFirestore.instance
-                  .collection(collection)
-                  .doc(docId)
-                  .delete();
-              if (mounted) Navigator.pop(context);
+              try {
+                final collection =
+                    isAssignedTask ? 'exam_assignments' : 'active_sessions';
+                await FirebaseFirestore.instance
+                    .collection(collection)
+                    .doc(docId)
+                    .delete();
+                if (mounted) Navigator.pop(context);
+              } catch (e) {
+                debugPrint('Error deleting session: $e');
+                if (mounted) Navigator.pop(context);
+              }
             },
             child: const Text("Delete",
                 style:
@@ -186,24 +205,23 @@ class _AttendanceHistoryState extends State<AttendanceHistory>
     String? selVenue = existingData?['room'] ?? existingData?['venue'];
 
     TimeOfDay startTime = existingData != null
-        ? _parseTime(existingData['startTime'])
+        ? _parseTime(existingData['startTime'] ?? '')
         : TimeOfDay.now();
     TimeOfDay endTime = existingData != null
-        ? _parseTime(existingData['endTime'])
+        ? _parseTime(existingData['endTime'] ?? '')
         : TimeOfDay.now();
 
     showDialog(
       context: context,
       builder: (context) => StatefulBuilder(
         builder: (context, setDialogState) => AlertDialog(
-          title: Text(
-              docId == null ? "Create  Session" : "Edit Session",
+          title: Text(docId == null ? "Create Session" : "Edit Session",
               style: const TextStyle(color: tealPrimary)),
           content: SingleChildScrollView(
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                DropdownButton<String>(
+                DropdownButtonFormField<String>(
                   isExpanded: true,
                   hint: const Text("Select Course"),
                   value: selCourse,
@@ -211,8 +229,14 @@ class _AttendanceHistoryState extends State<AttendanceHistory>
                       .map((e) => DropdownMenuItem(value: e, child: Text(e)))
                       .toList(),
                   onChanged: (v) => setDialogState(() => selCourse = v),
+                  decoration: const InputDecoration(
+                    border: OutlineInputBorder(),
+                    contentPadding:
+                        EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                  ),
                 ),
-                DropdownButton<String>(
+                const SizedBox(height: 12),
+                DropdownButtonFormField<String>(
                   isExpanded: true,
                   hint: const Text("Session Type"),
                   value: selType,
@@ -220,8 +244,14 @@ class _AttendanceHistoryState extends State<AttendanceHistory>
                       .map((e) => DropdownMenuItem(value: e, child: Text(e)))
                       .toList(),
                   onChanged: (v) => setDialogState(() => selType = v),
+                  decoration: const InputDecoration(
+                    border: OutlineInputBorder(),
+                    contentPadding:
+                        EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                  ),
                 ),
-                DropdownButton<String>(
+                const SizedBox(height: 12),
+                DropdownButtonFormField<String>(
                   isExpanded: true,
                   hint: const Text("Select Venue"),
                   value: (selVenue != null && venues.contains(selVenue))
@@ -231,7 +261,13 @@ class _AttendanceHistoryState extends State<AttendanceHistory>
                       .map((e) => DropdownMenuItem(value: e, child: Text(e)))
                       .toList(),
                   onChanged: (v) => setDialogState(() => selVenue = v),
+                  decoration: const InputDecoration(
+                    border: OutlineInputBorder(),
+                    contentPadding:
+                        EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                  ),
                 ),
+                const SizedBox(height: 12),
                 ListTile(
                   contentPadding: EdgeInsets.zero,
                   title: Text("Start: ${startTime.format(context)}"),
@@ -261,32 +297,38 @@ class _AttendanceHistoryState extends State<AttendanceHistory>
                 child: const Text("Cancel")),
             ElevatedButton(
               style: ElevatedButton.styleFrom(backgroundColor: tealPrimary),
-              onPressed: (selCourse == null || selType == null || selVenue == null)
-                  ? null
-                  : () async {
-                      final uid = FirebaseAuth.instance.currentUser?.uid;
-                      final data = {
-                        'lecturerId': uid,
-                        'courseCode': selCourse,
-                        'sessionType': selType,
-                        'room': selVenue,
-                        'startTime': startTime.format(context),
-                        'endTime': endTime.format(context),
-                        'updatedAt': FieldValue.serverTimestamp(),
-                      };
-                      if (docId == null) {
-                        data['createdAt'] = FieldValue.serverTimestamp();
-                        await FirebaseFirestore.instance
-                            .collection('active_sessions')
-                            .add(data);
-                      } else {
-                        await FirebaseFirestore.instance
-                            .collection('active_sessions')
-                            .doc(docId)
-                            .update(data);
-                      }
-                      if (context.mounted) Navigator.pop(context);
-                    },
+              onPressed:
+                  (selCourse == null || selType == null || selVenue == null)
+                      ? null
+                      : () async {
+                          try {
+                            final uid = FirebaseAuth.instance.currentUser?.uid;
+                            final data = {
+                              'lecturerId': uid,
+                              'courseCode': selCourse,
+                              'sessionType': selType,
+                              'room': selVenue,
+                              'startTime': startTime.format(context),
+                              'endTime': endTime.format(context),
+                              'updatedAt': FieldValue.serverTimestamp(),
+                            };
+                            if (docId == null) {
+                              data['createdAt'] = FieldValue.serverTimestamp();
+                              await FirebaseFirestore.instance
+                                  .collection('active_sessions')
+                                  .add(data);
+                            } else {
+                              await FirebaseFirestore.instance
+                                  .collection('active_sessions')
+                                  .doc(docId)
+                                  .update(data);
+                            }
+                            if (mounted) Navigator.pop(context);
+                          } catch (e) {
+                            debugPrint('Error saving session: $e');
+                            if (mounted) Navigator.pop(context);
+                          }
+                        },
               child: Text(docId == null ? "Create" : "Update",
                   style: const TextStyle(color: Colors.white)),
             )
@@ -335,12 +377,13 @@ class _AttendanceHistoryState extends State<AttendanceHistory>
       bottomNavigationBar: BottomNavigationBar(
         currentIndex: _currentIndex,
         onTap: (i) {
-          if (i == 0 || i == 1)
+          if (i == 0 || i == 1) {
             Navigator.pushAndRemoveUntil(
                 context,
                 MaterialPageRoute(
                     builder: (_) => LecturerDashboard(initialIndex: i)),
-                (r) => false);
+                (route) => false);
+          }
         },
         type: BottomNavigationBarType.fixed,
         backgroundColor: tealPrimary,
@@ -379,8 +422,7 @@ class _AttendanceHistoryState extends State<AttendanceHistory>
 
     return StreamBuilder<List<dynamic>>(
       stream: CombineLatestStream.list(
-              [manualSessions, assignedTasks, todayAttendance])
-          .map((snapshots) {
+          [manualSessions, assignedTasks, todayAttendance]).map((snapshots) {
         final manualDocs = snapshots[0].docs;
         final assignedDocs = snapshots[1].docs;
         final attendanceDocs = snapshots[2].docs;
@@ -408,7 +450,8 @@ class _AttendanceHistoryState extends State<AttendanceHistory>
           final data = doc.data() as Map<String, dynamic>;
           final bool isTaken = attendanceDocs.any((att) {
             final attData = att.data() as Map<String, dynamic>;
-            return attData['courseCode'] == (data['course'] ?? data['courseCode']) &&
+            return attData['courseCode'] ==
+                    (data['course'] ?? data['courseCode']) &&
                 attData['sessionType'] == data['sessionType'] &&
                 attData['room'] == data['room'];
           });
@@ -425,8 +468,24 @@ class _AttendanceHistoryState extends State<AttendanceHistory>
         return combined;
       }),
       builder: (context, snapshot) {
-        if (!snapshot.hasData)
+        if (snapshot.hasError) {
+          return Center(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                const Icon(Icons.error_outline, size: 48, color: Colors.red),
+                const SizedBox(height: 16),
+                Text('Error: ${snapshot.error}',
+                    style: const TextStyle(color: Colors.red)),
+              ],
+            ),
+          );
+        }
+
+        if (!snapshot.hasData) {
           return const Center(child: CircularProgressIndicator());
+        }
+
         final sessions = snapshot.data!;
 
         if (sessions.isEmpty) {
@@ -457,8 +516,8 @@ class _AttendanceHistoryState extends State<AttendanceHistory>
                 data['courseCode'] ?? data['course'] ?? 'N/A';
             final String room = data['room'] ?? data['venue'] ?? 'Not Set';
             final String invigilator = data['invigilatorName'] ?? 'Self';
-            final String time =
-                data['time'] ?? "${data['startTime']} - ${data['endTime']}";
+            final String time = data['time'] ??
+                "${data['startTime'] ?? '--'} - ${data['endTime'] ?? '--'}";
 
             bool isLive = false;
             if (!isAssignedTask && !isTaken) {
@@ -467,9 +526,8 @@ class _AttendanceHistoryState extends State<AttendanceHistory>
             }
 
             String status = isTaken ? "TAKEN" : (isLive ? "LIVE" : "SCHEDULED");
-            Color statusColor = isTaken
-                ? Colors.blue
-                : (isLive ? Colors.green : Colors.grey);
+            Color statusColor =
+                isTaken ? Colors.blue : (isLive ? Colors.green : Colors.grey);
 
             return GestureDetector(
               onTap: () => Navigator.push(
@@ -584,7 +642,8 @@ class _AttendanceHistoryState extends State<AttendanceHistory>
                                 icon: const Icon(Icons.edit_outlined,
                                     size: 16, color: tealPrimary),
                                 onPressed: () => _showSessionDialog(
-                                    docId: session['docId'], existingData: data),
+                                    docId: session['docId'],
+                                    existingData: data),
                               ),
                             ],
                           ),
@@ -610,8 +669,24 @@ class _AttendanceHistoryState extends State<AttendanceHistory>
           .orderBy('timestamp', descending: true)
           .snapshots(),
       builder: (context, snapshot) {
-        if (!snapshot.hasData)
+        if (snapshot.hasError) {
+          return Center(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                const Icon(Icons.error_outline, size: 48, color: Colors.red),
+                const SizedBox(height: 16),
+                Text('Error: ${snapshot.error}',
+                    style: const TextStyle(color: Colors.red)),
+              ],
+            ),
+          );
+        }
+
+        if (!snapshot.hasData) {
           return const Center(child: CircularProgressIndicator());
+        }
+
         final docs = snapshot.data!.docs;
         if (docs.isEmpty) {
           return const Center(

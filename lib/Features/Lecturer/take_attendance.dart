@@ -4,6 +4,7 @@ import 'package:mobile_scanner/mobile_scanner.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'manual_search.dart';
+import 'attendance_state.dart';
 
 const Color tealPrimary = Color(0xFF2E9E8E);
 const Color tealDark = Color(0xFF227A6D);
@@ -27,7 +28,6 @@ class AttendancePage extends StatefulWidget {
 
 class _AttendancePageState extends State<AttendancePage> {
   final MobileScannerController _cameraCtrl = MobileScannerController();
-  final List<Map<String, String>> _scannedStudents = [];
   List<Map<String, dynamic>> _allEligibleStudents = [];
   bool _isProcessing = false;
   bool _isLoadingStudents = true;
@@ -44,8 +44,22 @@ class _AttendancePageState extends State<AttendancePage> {
   void initState() {
     super.initState();
     _selectedSessionType = widget.sessionType;
+    // Clear any previous session state
+    AttendanceState.clear();
+    AttendanceState.markedStudents.addListener(_onMarkedStudentsChanged);
     _loadCourseStudents();
     _checkIfAlreadyTaken();
+  }
+
+  void _onMarkedStudentsChanged() {
+    if (mounted) setState(() {});
+  }
+
+  @override
+  void dispose() {
+    AttendanceState.markedStudents.removeListener(_onMarkedStudentsChanged);
+    _cameraCtrl.dispose();
+    super.dispose();
   }
 
   Future<void> _checkIfAlreadyTaken() async {
@@ -78,7 +92,11 @@ class _AttendancePageState extends State<AttendancePage> {
             .toList();
 
         if (courseList.contains(widget.courseCode.trim().toUpperCase())) {
-          filtered.add({'regNo': doc.id.trim(), ...data});
+          filtered.add({
+            'regNo': normalizeReg(doc.id),
+            'originalRegNo': doc.id,
+            ...data,
+          });
         }
       }
 
@@ -93,12 +111,6 @@ class _AttendancePageState extends State<AttendancePage> {
       debugPrint('Error loading students: $e');
       if (mounted) setState(() => _isLoadingStudents = false);
     }
-  }
-
-  @override
-  void dispose() {
-    _cameraCtrl.dispose();
-    super.dispose();
   }
 
   void _handleFailedScan(String code) {
@@ -118,43 +130,44 @@ class _AttendancePageState extends State<AttendancePage> {
         Future.delayed(const Duration(milliseconds: 800), _goManual);
       });
     } else {
-      int remaining = 3 - _failedScanCount;
+      final int remaining = 3 - _failedScanCount;
       _showSnack(
-        'Scan failed ($remaining attempt${remaining == 1 ? '' : 's'} left before manual search)',
+        'Student not registered for this course ($remaining attempt${remaining == 1 ? '' : 's'} left)',
         Colors.red,
       );
     }
   }
 
   void _onDetect(BarcodeCapture capture) async {
-    if (_isProcessing || _alreadyTaken) return;
+    if (_isProcessing || _isLoadingStudents || _alreadyTaken) return;
     for (final barcode in capture.barcodes) {
-      final code = barcode.rawValue?.trim().toUpperCase();
+      String? code = barcode.rawValue?.trim();
       if (code == null || code.isEmpty) continue;
 
       setState(() => _isProcessing = true);
 
+      final String normalizedCode = normalizeReg(code);
+      debugPrint('Scanned: $code -> Normalized: $normalizedCode');
+
       final studentData = _allEligibleStudents.firstWhere(
-        (s) => s['regNo'].toString().toUpperCase() == code,
+        (s) => normalizeReg(s['regNo'].toString()) == normalizedCode,
         orElse: () => {},
       );
 
       if (studentData.isNotEmpty) {
-        final student = {
-          'regNo': studentData['regNo'].toString(),
-          'name': studentData['name'].toString(),
-          'surname': studentData['surname'].toString(),
-        };
-
-        if (_scannedStudents.any((s) => s['regNo'] == student['regNo'])) {
-          _showSnack('${student['regNo']} already marked!', Colors.orange);
-        } else {
-          setState(() {
-            _scannedStudents.add(student);
-            _failedScanCount = 0;
-            _lastFailedCode = null;
+        if (!AttendanceState.isMarked(normalizedCode)) {
+          AttendanceState.addStudent({
+            'regNo': normalizedCode,
+            'name': studentData['name'].toString(),
+            'surname': studentData['surname'].toString(),
           });
-          _showSnack('Captured: ${student['name']}', tealDark);
+          _showSnack(
+              'Captured: ${studentData['name']} ${studentData['surname']}',
+              tealDark);
+          _failedScanCount = 0;
+          _lastFailedCode = null;
+        } else {
+          _showSnack('$normalizedCode already marked!', Colors.orange);
         }
       } else {
         _handleFailedScan(code);
@@ -181,23 +194,19 @@ class _AttendancePageState extends State<AttendancePage> {
     Navigator.push(
       context,
       MaterialPageRoute(
-        builder: (_) => ManualSearch(
-          existingStudents: _scannedStudents,
-          onStudentAdded: (student) {
-            setState(() {
-              if (!_scannedStudents
-                  .any((s) => s['regNo'] == student['regNo'])) {
-                _scannedStudents.add(student);
-              }
-            });
-          },
-          courseCode: widget.courseCode,
-        ),
+        builder: (_) => ManualSearch(courseCode: widget.courseCode),
       ),
-    ).then((_) => setState(() => _isProcessing = false));
+    ).then((_) {
+      if (mounted) setState(() => _isProcessing = false);
+    });
   }
 
   void _showConfirmDialog() {
+    final scanned = AttendanceState.markedStudents.value;
+    if (scanned.isEmpty) {
+      _showSnack('No students marked for attendance', Colors.orange);
+      return;
+    }
     showDialog(
       context: context,
       builder: (_) => AlertDialog(
@@ -233,7 +242,14 @@ class _AttendancePageState extends State<AttendancePage> {
   }
 
   Future<void> _submitToFirebase() async {
+    final scanned = AttendanceState.markedStudents.value;
+    if (scanned.isEmpty) {
+      _showSnack('No students marked for attendance', Colors.orange);
+      return;
+    }
+
     setState(() => _isSubmitting = true);
+
     try {
       final String? uid = FirebaseAuth.instance.currentUser?.uid;
 
@@ -241,34 +257,88 @@ class _AttendancePageState extends State<AttendancePage> {
           .collection('courses')
           .doc(widget.courseCode)
           .get();
-      if (!courseDoc.exists) throw Exception("Course not found");
+      if (!courseDoc.exists) throw Exception('Course not found');
 
       List<dynamic> rawEnrolled = courseDoc.data()?['enrolledStudents'] ?? [];
       List<String> expectedRegNos = [];
 
       if (rawEnrolled.isNotEmpty) {
-        String allIds = rawEnrolled[0].toString();
-        expectedRegNos = allIds.split(',').map((e) => e.trim()).toList();
+        if (rawEnrolled[0] is String &&
+            rawEnrolled[0].toString().contains(',')) {
+          // Stored as a single comma-separated string in index 0
+          expectedRegNos = rawEnrolled[0]
+              .toString()
+              .split(',')
+              .map((e) => normalizeReg(e))
+              .toList()
+              .cast<String>();
+        } else {
+          // Stored as a proper list of strings
+          expectedRegNos = rawEnrolled
+              .map((e) => normalizeReg(e.toString()))
+              .toList()
+              .cast<String>();
+        }
       }
 
-      final presentRegNos = _scannedStudents.map((s) => s['regNo']).toSet();
+      // Fall back to scanned list if course enrollment is empty
+      if (expectedRegNos.isEmpty) {
+        expectedRegNos = scanned.map((s) => s['regNo']!).toList();
+      }
+
+      final Set<String> presentRegNos =
+          scanned.map((s) => normalizeReg(s['regNo']!)).toSet();
+
       List<Map<String, dynamic>> fullAttendanceList = [];
 
-      for (String regNo in expectedRegNos) {
-        if (regNo.isEmpty) continue;
+      for (String reg in expectedRegNos) {
+        if (reg.isEmpty) continue;
+        final String normalizedReg = normalizeReg(reg);
+        final bool isPresent = presentRegNos.contains(normalizedReg);
 
-        var sDoc = await FirebaseFirestore.instance
-            .collection('students')
-            .doc(regNo)
-            .get();
-        var sData = sDoc.data();
+        DocumentSnapshot studentDoc;
+        try {
+          studentDoc = await FirebaseFirestore.instance
+              .collection('students')
+              .doc(reg)
+              .get();
+          if (!studentDoc.exists) {
+            studentDoc = await FirebaseFirestore.instance
+                .collection('students')
+                .doc(normalizedReg)
+                .get();
+          }
+        } catch (_) {
+          studentDoc = await FirebaseFirestore.instance
+              .collection('students')
+              .doc(normalizedReg)
+              .get();
+        }
 
+        final studentData = studentDoc.data() as Map<String, dynamic>?;
         fullAttendanceList.add({
-          'regNo': regNo,
-          'name': sData?['name'] ?? 'Unknown',
-          'surname': sData?['surname'] ?? '',
-          'status': presentRegNos.contains(regNo) ? 'Present' : 'Absent',
+          'regNo': reg,
+          'name': studentData?['name']?.toString() ?? 'Unknown',
+          'surname': studentData?['surname']?.toString() ?? '',
+          'status': isPresent ? 'Present' : 'Absent',
         });
+      }
+
+      // Add any scanned students not in the expected list
+      for (final scannedReg in presentRegNos) {
+        if (!expectedRegNos.map(normalizeReg).contains(scannedReg)) {
+          final studentDoc = await FirebaseFirestore.instance
+              .collection('students')
+              .doc(scannedReg)
+              .get();
+          final studentData = studentDoc.data() as Map<String, dynamic>?;
+          fullAttendanceList.add({
+            'regNo': scannedReg,
+            'name': studentData?['name']?.toString() ?? 'Unknown',
+            'surname': studentData?['surname']?.toString() ?? '',
+            'status': 'Present',
+          });
+        }
       }
 
       await FirebaseFirestore.instance.collection('attendance').add({
@@ -279,23 +349,21 @@ class _AttendancePageState extends State<AttendancePage> {
         'timestamp': FieldValue.serverTimestamp(),
         'lecturerId': uid,
         'fullAttendanceList': fullAttendanceList,
-        'totalPresent': _scannedStudents.length,
+        'totalPresent': scanned.length,
         'totalExpected': expectedRegNos.length,
+        'presentRegNos': presentRegNos.toList(),
       });
 
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-              content: Text('Attendance Saved Successfully'),
-              backgroundColor: tealPrimary),
-        );
+        _showSnack(
+            'Attendance Saved! ${scanned.length} students marked present',
+            tealPrimary);
+        await Future.delayed(const Duration(seconds: 2));
         Navigator.of(context).popUntil((r) => r.isFirst);
       }
     } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context)
-            .showSnackBar(SnackBar(content: Text('Error: $e')));
-      }
+      debugPrint('Submit error: $e');
+      if (mounted) _showSnack('Error submitting: $e', Colors.red);
     } finally {
       if (mounted) setState(() => _isSubmitting = false);
     }
@@ -303,6 +371,8 @@ class _AttendancePageState extends State<AttendancePage> {
 
   @override
   Widget build(BuildContext context) {
+    final scanned = AttendanceState.markedStudents.value;
+
     return Scaffold(
       backgroundColor: Colors.white,
       appBar: AppBar(
@@ -316,6 +386,7 @@ class _AttendancePageState extends State<AttendancePage> {
       ),
       body: Column(
         children: [
+          // ── Info bar ──
           Container(
             width: double.infinity,
             padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
@@ -324,14 +395,14 @@ class _AttendancePageState extends State<AttendancePage> {
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 Text(
-                  'COURSE : ${widget.courseCode}',
+                  'COURSE: ${widget.courseCode}',
                   style: const TextStyle(
                       color: tealDark,
                       fontWeight: FontWeight.bold,
                       fontSize: 12),
                 ),
                 Text(
-                  'SESSION TYPE : $_selectedSessionType',
+                  'SESSION: $_selectedSessionType',
                   style: const TextStyle(
                       color: tealDark,
                       fontWeight: FontWeight.bold,
@@ -340,6 +411,8 @@ class _AttendancePageState extends State<AttendancePage> {
               ],
             ),
           ),
+
+          // ── Scanner ──
           Padding(
             padding: const EdgeInsets.fromLTRB(14, 10, 14, 0),
             child: Container(
@@ -355,21 +428,18 @@ class _AttendancePageState extends State<AttendancePage> {
                 child: Stack(
                   children: [
                     MobileScanner(controller: _cameraCtrl, onDetect: _onDetect),
-
                     if (_alreadyTaken)
                       Container(
                         color: Colors.black54,
                         child: const Center(
                           child: Text(
-                            "ATTENDANCE ALREADY TAKEN",
+                            'ATTENDANCE ALREADY TAKEN',
                             style: TextStyle(
                                 color: Colors.white,
                                 fontWeight: FontWeight.bold),
                           ),
                         ),
                       ),
-
-                    // Processing overlay
                     if (_isProcessing)
                       Container(
                         color: Colors.black45,
@@ -404,7 +474,7 @@ class _AttendancePageState extends State<AttendancePage> {
                           borderRadius: BorderRadius.circular(20),
                         ),
                         child: Text(
-                          '${_scannedStudents.length}/$_totalEnrolled scanned',
+                          '${scanned.length} / $_totalEnrolled',
                           style: const TextStyle(
                             color: Colors.white,
                             fontSize: 12,
@@ -418,6 +488,8 @@ class _AttendancePageState extends State<AttendancePage> {
               ),
             ),
           ),
+
+          // ── Manual search bar ──
           Padding(
             padding: const EdgeInsets.fromLTRB(14, 12, 14, 0),
             child: GestureDetector(
@@ -454,11 +526,12 @@ class _AttendancePageState extends State<AttendancePage> {
               ),
             ),
           ),
-          const SizedBox(height: 12),
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 14),
+
+          // ── Table header ──
+          const Padding(
+            padding: EdgeInsets.fromLTRB(14, 12, 14, 0),
             child: Row(
-              children: const [
+              children: [
                 Expanded(
                   flex: 2,
                   child: Text('REG NO',
@@ -489,14 +562,32 @@ class _AttendancePageState extends State<AttendancePage> {
             ),
           ),
           const Divider(height: 8),
+
+          // ── Scanned list ──
           Expanded(
-            child: _scannedStudents.isEmpty
-                ? const SizedBox()
+            child: scanned.isEmpty
+                ? Center(
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(Icons.qr_code_scanner,
+                            size: 64, color: Colors.grey.shade400),
+                        const SizedBox(height: 16),
+                        Text('No students scanned yet',
+                            style: TextStyle(
+                                color: Colors.grey.shade600, fontSize: 14)),
+                        const SizedBox(height: 8),
+                        Text('Scan QR codes or search manually',
+                            style: TextStyle(
+                                color: Colors.grey.shade500, fontSize: 12)),
+                      ],
+                    ),
+                  )
                 : ListView.builder(
                     padding: const EdgeInsets.symmetric(horizontal: 14),
-                    itemCount: _scannedStudents.length,
+                    itemCount: scanned.length,
                     itemBuilder: (context, index) {
-                      final s = _scannedStudents[index];
+                      final s = scanned[index];
                       return Padding(
                         padding: const EdgeInsets.symmetric(vertical: 6),
                         child: Row(
@@ -527,12 +618,14 @@ class _AttendancePageState extends State<AttendancePage> {
                     },
                   ),
           ),
+
+          // ── Submit button ──
           Padding(
             padding: const EdgeInsets.fromLTRB(14, 8, 14, 16),
             child: Align(
               alignment: Alignment.centerRight,
               child: ElevatedButton(
-                onPressed: (_scannedStudents.isEmpty || _isSubmitting || _alreadyTaken)
+                onPressed: (scanned.isEmpty || _isSubmitting || _alreadyTaken)
                     ? null
                     : _showConfirmDialog,
                 style: ElevatedButton.styleFrom(
